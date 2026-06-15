@@ -8,11 +8,11 @@ mod registry;
 mod router;
 mod shell;
 
-fn main() {
-    let _ = App::new()
+fn main() -> Result<()> {
+    App::new()
         .title("Reactor WinUI Gallery (Rust)")
         .inner_size(1400.0, 900.0)
         .backdrop(Backdrop::Mica)
         .eager_templated_realization(true)
-        .render(shell::gallery_shell);
+        .render(shell::gallery_shell)
 }
