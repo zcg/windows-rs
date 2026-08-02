@@ -80,11 +80,15 @@ impl<B: Backend + 'static> Reconciler<B> {
         let rerender_r = Rc::clone(&self.request_rerender);
         let rerender_c = Rc::clone(&self.request_rerender);
         let list_id = id;
+        let on_realize = tl.raw_realize_callback();
         let realize: Rc<dyn Fn(usize)> = Rc::new(move |row_idx: usize| {
             queue_r
                 .borrow_mut()
                 .push(RealizationRequest::Realize { list_id, row_idx });
             (rerender_r)();
+            if let Some(cb) = &on_realize {
+                cb.invoke(row_idx);
+            }
         });
         let recycle: Rc<dyn Fn(usize)> = Rc::new(move |row_idx: usize| {
             queue_c

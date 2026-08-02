@@ -34,6 +34,16 @@ pub fn set_backdrop(backdrop: Option<Backdrop>) {
     let _ = with_active_host(|h| h.apply_backdrop(backdrop));
 }
 
+/// Apply the window presenter (full-screen / default / compact overlay) on the
+/// active window at runtime.
+///
+/// This is a no-op if no window has been registered yet, so call it from within
+/// a running app (an event handler, effect, or render) rather than before
+/// [`App::run`].
+pub fn set_presenter(kind: PresenterKind) {
+    let _ = with_active_host(|h| h.apply_presenter(kind));
+}
+
 /// Per-window state shared between a [`ReactorHost`], its `post_render` attach
 /// closure, and its backend. Holds the window plus the content root and any
 /// theme / title-bar requests queued before the root element exists.
@@ -212,12 +222,20 @@ impl ReactorHost {
     where
         F: FnOnce(&mut Reconciler<WinUIBackend>),
     {
-        Self::new_with_window_options(title, None, InnerConstraints::default(), root, configure)
+        Self::new_with_window_options(
+            title,
+            None,
+            None,
+            InnerConstraints::default(),
+            root,
+            configure,
+        )
     }
 
     pub fn new_with_window_options<F>(
         title: impl AsRef<str>,
         size: Option<WindowSize>,
+        size_ratio: Option<(f64, f64)>,
         constraints: InnerConstraints,
         root: Box<dyn Component>,
         configure: F,
@@ -225,7 +243,8 @@ impl ReactorHost {
     where
         F: FnOnce(&mut Reconciler<WinUIBackend>),
     {
-        let (window, resolved_dip_size, initial_dpi) = create_window(title, size, constraints)?;
+        let (window, resolved_dip_size, initial_dpi) =
+            create_window(title, size, size_ratio, constraints)?;
         let state = HostWindowState::new(window);
         let dispatcher = WinUIDispatcher::for_current_thread()?;
         let marshaller = dispatcher.marshaller();
@@ -242,7 +261,14 @@ impl ReactorHost {
         let last_attached: Rc<Cell<Option<ControlId>>> = Rc::new(Cell::new(None));
         let last_attached_for_hook = Rc::clone(&last_attached);
         let subscribed = Rc::new(Cell::new(false));
+        // 关键：闭包必须捕获 Weak 而非 Rc clone——post_render 闭包存进
+        // RenderHostInner 自身字段，捕获 Rc 会形成循环引用，导致组件树
+        // （含播放器 Player）在窗口关闭后永不 drop（播放继续跑）。
+        let render_host_weak = render_host_for_post.downgrade();
         render_host.set_post_render(move |new_id| {
+            let Some(render_host_for_post) = RenderHost::from_weak(&render_host_weak) else {
+                return;
+            };
             if last_attached_for_hook.get() == new_id {
                 return;
             }
@@ -322,6 +348,25 @@ impl ReactorHost {
         self.state.set_backdrop(backdrop);
     }
 
+    /// Set the window presenter (full-screen / default / compact overlay) at
+    /// runtime on the live window. Unlike [`Self::set_presenter`], this applies
+    /// immediately and does not require re-activation.
+    pub fn apply_presenter(&self, kind: PresenterKind) {
+        let native = match kind {
+            PresenterKind::Default => AppWindowPresenterKind::Default,
+            PresenterKind::FullScreen => AppWindowPresenterKind::FullScreen,
+            PresenterKind::CompactOverlay => AppWindowPresenterKind::CompactOverlay,
+        };
+        if let Ok(app_window) = self
+            .state
+            .window()
+            .cast::<IWindow2>()
+            .and_then(|w| w.AppWindow())
+        {
+            let _ = app_window.SetPresenterByKind(native);
+        }
+    }
+
     /// Set this window's content-root theme (light / dark / system default).
     pub fn set_requested_theme(&self, theme: RequestedTheme) {
         self.state.set_requested_theme(theme);
@@ -392,6 +437,28 @@ impl ReactorHost {
 
     pub fn stats(&self) -> RenderStats {
         self.render_host.stats()
+    }
+
+    /// 显式卸载根组件树并运行 cleanup（播放器 stop、保存进度等）。
+    ///
+    /// 必须在窗口关闭时调用——不依赖 drop 链：XAML 控件事件闭包持有
+    /// RenderHostInner 的强引用时，组件树（含播放器）可能永不 drop，
+    /// 播放器会继续解码/出声。
+    /// 先直接跑根组件实例的 cleanup（unmount 路径可能因组件树状态失败），
+    /// 再尝试完整 unmount。
+    pub fn shutdown(&self) {
+        // 0) 断开窗口内容树：XAML 控件的事件闭包（按钮 on_click 等）捕获
+        //    组件引用（播放器 Player）——窗口关闭后 XAML 树若不销毁，
+        //    闭包永不释放 → Player 永不 drop → 关闭窗口仍在播。
+        //    显式 SetContent(None) 卸载内容树，立即释放控件及其事件闭包。
+        let _ = self.state.window().SetContent(None);
+        self.render_host.with_reconciler_mut(|reconciler| {
+            // 1) 直接跑所有组件实例的 cleanup（不依赖 unmount 路径）
+            reconciler.run_root_cleanups();
+        });
+        // 2) 卸载组件树 + 阻止后续渲染。必须先于残留渲染帧对已卸载 root
+        //    的 reconcile（mirror 已清空 → positional 越界 panic）。
+        self.render_host.shutdown();
     }
 
     pub fn set_render_complete<F>(&self, f: F)
@@ -497,6 +564,7 @@ fn subscribe_size_and_dpi(
 fn create_window(
     title: impl AsRef<str>,
     size: Option<WindowSize>,
+    size_ratio: Option<(f64, f64)>,
     constraints: InnerConstraints,
 ) -> std::result::Result<(Window, WindowSize, u32), Error> {
     let window = Window::new()?;
@@ -515,7 +583,18 @@ fn create_window(
 
     let dip_size = match size {
         Some(s) => s,
-        None => get_default_display_size(hwnd, dpi),
+        None => match size_ratio {
+            // 相对显示器工作区比例：get_default_display_size 返回工作区一半，
+            // 乘 2 还原全工作区再按比例缩放。
+            Some((rw, rh)) => {
+                let base = get_default_display_size(hwnd, dpi);
+                WindowSize {
+                    width: (base.width * 2.0 * rw).round(),
+                    height: (base.height * 2.0 * rh).round(),
+                }
+            }
+            None => get_default_display_size(hwnd, dpi),
+        },
     };
 
     let dip_to_px = |dips: f64| (dips * dpi as f64 / 96.0).round() as i32;

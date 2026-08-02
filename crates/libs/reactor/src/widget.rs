@@ -306,6 +306,8 @@ pub struct TemplatedListElement {
     pub items_impl: Rc<dyn TemplatedListImpl>,
     /// Drag-reorder callback: position `i` holds the original index now shown there.
     pub on_reorder: Option<Callback<Vec<usize>>>,
+    /// 行容器 realize 回调（滚动虚拟化时触发，用于无限滚动分页）
+    pub on_realize: Option<Callback<usize>>,
 }
 
 impl Clone for TemplatedListElement {
@@ -320,6 +322,7 @@ impl Clone for TemplatedListElement {
             modifiers: self.modifiers.clone(),
             items_impl: Rc::clone(&self.items_impl),
             on_reorder: self.on_reorder.clone(),
+            on_realize: self.on_realize.clone(),
         }
     }
 }
@@ -385,6 +388,14 @@ impl TemplatedListElement {
         self.on_reorder.clone()
     }
 
+    pub fn has_realize_handler(&self) -> bool {
+        self.on_realize.is_some()
+    }
+
+    pub fn raw_realize_callback(&self) -> Option<Callback<usize>> {
+        self.on_realize.clone()
+    }
+
     pub fn raw_selection_callback(&self) -> Option<Callback<i32>> {
         self.items_impl.raw_selection_callback()
     }
@@ -422,6 +433,8 @@ pub struct TemplatedListBuilder<T: 'static> {
     modifiers: Modifiers,
     element_key: Option<String>,
     on_reorder: Option<Callback<Vec<usize>>>,
+    /// 行容器 realize 回调（滚动虚拟化时触发，用于无限滚动分页）
+    on_realize: Option<Callback<usize>>,
 }
 
 impl<T: 'static> TemplatedListBuilder<T> {
@@ -441,6 +454,7 @@ impl<T: 'static> TemplatedListBuilder<T> {
             can_drag_items: false,
             can_reorder_items: false,
             allow_drop: false,
+            on_realize: None,
             modifiers: Modifiers::default(),
             element_key: None,
             on_reorder: None,
@@ -488,6 +502,13 @@ impl<T: 'static> TemplatedListBuilder<T> {
         self
     }
 
+    /// 行容器 realize 回调（滚动虚拟化时触发）。
+    /// 用于无限滚动分页：index 接近列表末尾时加载下一页。
+    pub fn on_realize(mut self, cb: impl IntoCallback<usize>) -> Self {
+        self.on_realize = Some(cb.into_callback());
+        self
+    }
+
     pub fn with_key(mut self, k: impl Into<String>) -> Self {
         self.element_key = Some(k.into());
         self
@@ -521,6 +542,7 @@ impl<T: 'static> TemplatedListBuilder<T> {
             modifiers: self.modifiers,
             items_impl: Rc::new(cell),
             on_reorder: self.on_reorder,
+            on_realize: self.on_realize,
         })
     }
 }

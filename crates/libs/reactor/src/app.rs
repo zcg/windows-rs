@@ -117,6 +117,20 @@ pub(crate) fn register_host(host: ReactorHost) -> Result<WindowHandle> {
 
 /// Drop the host and terminate once the last window closes.
 fn on_window_closed(key: u64) {
+    // 显式卸载组件树（cleanup：播放器 stop、保存进度等）——不依赖 drop 链，
+    // XAML 事件闭包持有强引用时组件树可能永不 drop（关闭窗口仍在播）。
+    // shutdown 会运行用户 cleanup / unmount 回调，这些回调可能重新注册窗口
+    // 或触达窗口注册表；本函数持有注册表的 RefCell 借用，re-enter 会 panic。
+    // 用 fault::catch 包住，避免 panic 从 WinUI Closed 事件边界逃逸（abort 进程）。
+    eprintln!("[reactor] window closed: running shutdown");
+    fault::catch("window closed", || {
+        WINDOW_REGISTRY.with(|reg| {
+            if let Some(host) = reg.borrow().get(key) {
+                host.shutdown();
+            }
+        });
+    });
+    eprintln!("[reactor] shutdown done");
     // Drop outside the registry borrow so teardown can re-enter safely.
     let (removed, empty) = WINDOW_REGISTRY.with(|reg| reg.borrow_mut().remove(key));
     drop(removed);
@@ -129,6 +143,7 @@ fn on_window_closed(key: u64) {
 pub struct App {
     title: Option<String>,
     inner_size: Option<WindowSize>,
+    inner_size_ratio: Option<(f64, f64)>,
     inner_constraints: InnerConstraints,
     presenter: PresenterKind,
     backdrop: Option<Backdrop>,
@@ -147,6 +162,7 @@ impl App {
         Self {
             title: None,
             inner_size: None,
+            inner_size_ratio: None,
             inner_constraints: InnerConstraints::default(),
             presenter: PresenterKind::Default,
             backdrop: None,
@@ -162,6 +178,13 @@ impl App {
 
     pub fn inner_size(mut self, width: f64, height: f64) -> Self {
         self.inner_size = Some(WindowSize { width, height });
+        self
+    }
+
+    /// 初始尺寸 = 显示器工作区（DIP）的给定比例（如 0.7 = 占据工作区 70%）。
+    /// 与 `inner_size` 二选一：两者都设时 `inner_size` 优先。窗口自动居中。
+    pub fn inner_size_ratio(mut self, width_ratio: f64, height_ratio: f64) -> Self {
+        self.inner_size_ratio = Some((width_ratio, height_ratio));
         self
     }
 
@@ -265,6 +288,7 @@ impl App {
         init_app_platform()?;
         let title = self.title.unwrap_or_default();
         let size = self.inner_size;
+        let size_ratio = self.inner_size_ratio;
         let constraints = self.inner_constraints;
         let presenter = self.presenter;
         let backdrop = self.backdrop;
@@ -301,6 +325,7 @@ impl App {
                             let host = ReactorHost::new_with_window_options(
                                 &title,
                                 size,
+                                size_ratio,
                                 constraints,
                                 root,
                                 |_recon| {},
@@ -379,6 +404,7 @@ where
 pub struct ReactorWindow {
     title: Option<String>,
     inner_size: Option<WindowSize>,
+    inner_size_ratio: Option<(f64, f64)>,
     inner_constraints: InnerConstraints,
     presenter: PresenterKind,
     backdrop: Option<Backdrop>,
@@ -396,6 +422,7 @@ impl ReactorWindow {
         Self {
             title: None,
             inner_size: None,
+            inner_size_ratio: None,
             inner_constraints: InnerConstraints::default(),
             presenter: PresenterKind::Default,
             backdrop: None,
@@ -410,6 +437,13 @@ impl ReactorWindow {
 
     pub fn inner_size(mut self, width: f64, height: f64) -> Self {
         self.inner_size = Some(WindowSize { width, height });
+        self
+    }
+
+    /// 初始尺寸 = 显示器工作区（DIP）的给定比例（如 0.7 = 占据工作区 70%）。
+    /// 与 `inner_size` 二选一：两者都设时 `inner_size` 优先。窗口自动居中。
+    pub fn inner_size_ratio(mut self, width_ratio: f64, height_ratio: f64) -> Self {
+        self.inner_size_ratio = Some((width_ratio, height_ratio));
         self
     }
 
@@ -465,6 +499,7 @@ impl ReactorWindow {
         let host = ReactorHost::new_with_window_options(
             self.title.unwrap_or_default(),
             self.inner_size,
+            self.inner_size_ratio,
             self.inner_constraints,
             root,
             |_recon| {},

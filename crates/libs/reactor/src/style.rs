@@ -607,6 +607,7 @@ pub struct PointerHandlers {
     pub on_pointer_pressed: Option<Callback<PointerEventInfo>>,
     pub on_pointer_released: Option<Callback<PointerEventInfo>>,
     pub on_pointer_moved: Option<Callback<PointerEventInfo>>,
+    pub on_pointer_wheel: Option<Callback<PointerEventInfo>>,
     pub on_pointer_entered: Option<Callback<PointerEventInfo>>,
     pub on_pointer_exited: Option<Callback<()>>,
 }
@@ -618,6 +619,7 @@ impl PointerHandlers {
             && self.on_pointer_pressed.is_none()
             && self.on_pointer_released.is_none()
             && self.on_pointer_moved.is_none()
+            && self.on_pointer_wheel.is_none()
             && self.on_pointer_entered.is_none()
             && self.on_pointer_exited.is_none()
     }
@@ -631,6 +633,9 @@ pub struct PointerEventInfo {
     pub is_left_button_pressed: bool,
     pub is_right_button_pressed: bool,
     pub is_middle_button_pressed: bool,
+    /// Wheel rotation in mouse-wheel units (120 per notch). Positive = wheel
+    /// scrolled away from the user (up); only meaningful on `PointerWheelChanged`.
+    pub mouse_wheel_delta: i32,
 }
 
 /// UI Automation properties applied via [`Modifiers::accessibility`].

@@ -11136,24 +11136,51 @@ impl IPointerPointProperties {
             .map(|| result__)
         }
     }
+    pub(crate) fn MouseWheelDelta(&self) -> windows_core::Result<i32> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).MouseWheelDelta)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
 }
 #[repr(C)]
 pub struct IPointerPointProperties_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
-    ContactRect: usize,
-    IsBarrelButtonPressed: usize,
-    IsCanceled: usize,
-    IsEraser: usize,
-    IsHorizontalMouseWheel: usize,
-    IsInRange: usize,
+    // 权威槽位顺序（windows crate 完整版，IID d760ed77_4b10_57a5_b3cc_d9bf3413e996）。
+    // 之前是字母序子集，槽位全错（IsLeftButtonPressed 落在真实 Twist 槽位），
+    // 按下/滚轮判断结果不可靠——这里按真实 vtable 顺序逐个占位。
+    Pressure: usize,
     IsInverted: usize,
+    IsEraser: usize,
+    Orientation: usize,
+    XTilt: usize,
+    YTilt: usize,
+    Twist: usize,
+    ContactRect: usize,
+    ContactRectRaw: usize,
+    TouchConfidence: usize,
     pub IsLeftButtonPressed:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
+    pub IsRightButtonPressed:
         unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
     pub IsMiddleButtonPressed:
         unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
+    pub MouseWheelDelta:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut i32) -> windows_core::HRESULT,
+    IsHorizontalMouseWheel: usize,
     IsPrimary: usize,
-    pub IsRightButtonPressed:
-        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
+    IsInRange: usize,
+    IsCanceled: usize,
+    IsBarrelButtonPressed: usize,
+    IsXButton1Pressed: usize,
+    IsXButton2Pressed: usize,
+    PointerUpdateKind: usize,
+    HasUsage: usize,
+    GetUsageValue: usize,
 }
 windows_core::imp::define_interface!(
     IPointerRoutedEventArgs,
@@ -12537,7 +12564,72 @@ impl IScrollViewer {
             .ok()
         }
     }
+    pub(crate) fn VerticalOffset(&self) -> windows_core::Result<f64> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).VerticalOffset)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn ScrollableHeight(&self) -> windows_core::Result<f64> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).ScrollableHeight)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    /// ViewChanged 事件（IEventHandler<ScrollViewerViewChangedEventArgs>，
+    /// 与 TypedEventHandler<IInspectable, IInspectable> 布局兼容）。
+    pub(crate) fn ViewChanged<F>(
+        &self,
+        handler: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(
+                windows_core::Ref<windows_core::IInspectable>,
+                windows_core::Ref<windows_core::IInspectable>,
+            ) + 'static,
+    {
+        let handler: TypedEventHandler<windows_core::IInspectable, windows_core::IInspectable> = {
+            let com =
+                windows_core::imp::DelegateBox::<
+                    TypedEventHandler<windows_core::IInspectable, windows_core::IInspectable>,
+                    F,
+                >::new(
+                    &TypedEventHandlerBox::<
+                        windows_core::IInspectable,
+                        windows_core::IInspectable,
+                        F,
+                    >::VTABLE,
+                    handler,
+                );
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).ViewChanged)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&handler),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemoveViewChanged,
+            ))
+        }
+    }
 }
+// 手动扩展（非生成）：IScrollViewer 按 Windows.UI.Xaml.Controls.rdl 的真实 vtable
+// 顺序补齐 —— 槽位 #8..#42 为未使用的 get/set 属性（usize 占位），
+// 与 riddle 生成器只声明使用成员时的布局保持一致。
 #[repr(C)]
 pub struct IScrollViewer_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
@@ -12551,6 +12643,67 @@ pub struct IScrollViewer_Vtbl {
         *mut core::ffi::c_void,
         ScrollBarVisibility,
     ) -> windows_core::HRESULT,
+    // #8 IsHorizontalRailEnabled .. #42 get_ExtentWidth（属性 get/set 成对，usize 占位）
+    IsHorizontalRailEnabled: usize,
+    SetIsHorizontalRailEnabled: usize,
+    IsVerticalRailEnabled: usize,
+    SetIsVerticalRailEnabled: usize,
+    IsHorizontalScrollChainingEnabled: usize,
+    SetIsHorizontalScrollChainingEnabled: usize,
+    IsVerticalScrollChainingEnabled: usize,
+    SetIsVerticalScrollChainingEnabled: usize,
+    IsZoomChainingEnabled: usize,
+    SetIsZoomChainingEnabled: usize,
+    IsScrollInertiaEnabled: usize,
+    SetIsScrollInertiaEnabled: usize,
+    IsZoomInertiaEnabled: usize,
+    SetIsZoomInertiaEnabled: usize,
+    HorizontalScrollMode: usize,
+    SetHorizontalScrollMode: usize,
+    VerticalScrollMode: usize,
+    SetVerticalScrollMode: usize,
+    ZoomMode: usize,
+    SetZoomMode: usize,
+    HorizontalSnapPointsAlignment: usize,
+    SetHorizontalSnapPointsAlignment: usize,
+    VerticalSnapPointsAlignment: usize,
+    SetVerticalSnapPointsAlignment: usize,
+    HorizontalSnapPointsType: usize,
+    SetHorizontalSnapPointsType: usize,
+    VerticalSnapPointsType: usize,
+    SetVerticalSnapPointsType: usize,
+    ZoomSnapPointsType: usize,
+    SetZoomSnapPointsType: usize,
+    HorizontalOffset: usize,
+    ViewportWidth: usize,
+    ScrollableWidth: usize,
+    ComputedHorizontalScrollBarVisibility: usize,
+    ExtentWidth: usize,
+    // #43 get_VerticalOffset
+    pub VerticalOffset:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut f64) -> windows_core::HRESULT,
+    // #44 get_ViewportHeight
+    ViewportHeight: usize,
+    // #45 get_ScrollableHeight
+    pub ScrollableHeight:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut f64) -> windows_core::HRESULT,
+    ComputedVerticalScrollBarVisibility: usize,
+    ExtentHeight: usize,
+    MinZoomFactor: usize,
+    SetMinZoomFactor: usize,
+    MaxZoomFactor: usize,
+    SetMaxZoomFactor: usize,
+    ZoomFactor: usize,
+    ZoomSnapPoints: usize,
+    // #54/#55 event ViewChanged（Foundation::EventHandler，布局与
+    // TypedEventHandler<IInspectable, IInspectable> 兼容）
+    pub ViewChanged: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemoveViewChanged:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
     ISelectionChangedEventArgs,
@@ -16138,6 +16291,38 @@ impl IUIElement {
             ))
         }
     }
+    pub(crate) fn PointerWheelChanged<F>(
+        &self,
+        handler: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(
+                windows_core::Ref<windows_core::IInspectable>,
+                windows_core::Ref<PointerRoutedEventArgs>,
+            ) + 'static,
+    {
+        let handler: PointerEventHandler = {
+            let com = windows_core::imp::DelegateBox::<PointerEventHandler, F>::new(
+                &PointerEventHandlerBox::<F>::VTABLE,
+                handler,
+            );
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).PointerWheelChanged)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&handler),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemovePointerWheelChanged,
+            ))
+        }
+    }
     pub(crate) fn PointerEntered<F>(
         &self,
         handler: F,
@@ -16485,8 +16670,13 @@ pub struct IUIElement_Vtbl {
     RemovePointerCaptureLost: usize,
     PointerCanceled: usize,
     RemovePointerCanceled: usize,
-    PointerWheelChanged: usize,
-    RemovePointerWheelChanged: usize,
+    pub PointerWheelChanged: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemovePointerWheelChanged:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
     pub Tapped: unsafe extern "system" fn(
         *mut core::ffi::c_void,
         *mut core::ffi::c_void,

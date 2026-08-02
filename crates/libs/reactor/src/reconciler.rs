@@ -318,6 +318,19 @@ impl<B: Backend + 'static> Reconciler<B> {
         Some(id)
     }
 
+    /// 直接运行所有存活组件实例的 cleanup（播放器 stop、保存进度等）。
+    /// 窗口关闭时必须显式调用：XAML 事件闭包持有强引用时组件树可能
+    /// 永不 drop，cleanup 不会自动执行。
+    pub fn run_root_cleanups(&mut self) {
+        let ids: Vec<ControlId> = self.component_instances.keys().copied().collect();
+        eprintln!("[reactor] run_root_cleanups: {} instances", ids.len());
+        for id in ids {
+            if let Some(inst) = self.component_instances.get_mut(&id) {
+                inst.render_cx.run_cleanups();
+            }
+        }
+    }
+
     pub fn unmount(&mut self, id: ControlId) {
         let mut to_release = Vec::new();
         self.collect_subtree(id, &mut to_release);

@@ -80,21 +80,25 @@ fn reconcile_positional_live<B: Backend + 'static>(
 
     for i in 0..common {
         if reconciler.child_at(parent, i).is_none() {
-            debug_assert!(
-                false,
-                "audit 7.1.10: positional reconcile out of mirror bounds at \
-                 parent={parent:?} i={i} common={common} \
+            // mirror 与 live 脱节：位置 i 无旧控件可复用。已知触发：
+            // - 组件 mount 时 render 出 Empty（`mount_component` 返回 None、
+            //   未写入 mirror），而 live 数组仍把它当占位项；
+            // - 根已被卸载（窗口关闭 `shutdown` 清空 mirror）而渲染循环
+            //   仍以旧 root_id 跑了一帧。
+            // 逐位修复会因位置错位而错乱——整体重建 parent 的 children，
+            // 恢复 mirror 与 UI 树一致。不能 break 半途而废：break 会让
+            // mirror 永久错位、后续帧持续损坏（用户曾见"关闭窗口仍在播"）。
+            eprintln!(
+                "[reactor] positional reconcile desync at parent={parent:?} i={i} \
                  (mirror_len={mirror_len}, old_live.len={old_len}, \
-                  new_live.len={new_len}). Likely a child-tracking miss \
-                 in a recent edit to the reconciler.",
+                  new_live.len={new_len}); rebuilding children",
                 mirror_len = reconciler
                     .children_mirror
                     .get(&parent)
                     .map_or(0, |v| v.len()),
-                old_len = old_len,
-                new_len = new_len,
             );
-            break;
+            rebuild_children(reconciler, parent, new_live);
+            return;
         }
 
         let old_el = old_live.get(i).unwrap();
@@ -138,6 +142,30 @@ fn reconcile_positional_live<B: Backend + 'static>(
             if let Some(child_id) = reconciler.mount(el) {
                 reconciler.append_child_tracked(parent, child_id);
             }
+        }
+    }
+}
+
+/// 重建 `parent` 的全部 children：卸载 mirror 中的现有控件，按 `new_live`
+/// 重新挂载。用于 mirror 与 live 脱节时的安全恢复（见
+/// `reconcile_positional_live`）。`mount` 对 render-Empty 的组件返回 None，
+/// 该位置自然跳过——恢复后 mirror 与 UI 树对齐，不再越界。
+fn rebuild_children<B: Backend + 'static>(
+    reconciler: &mut Reconciler<B>,
+    parent: ControlId,
+    new_live: &LiveChildrenRef<'_>,
+) {
+    let len = live_len(reconciler, parent);
+    for k in (0..len).rev() {
+        if let Some(id) = reconciler.child_at(parent, k) {
+            reconciler.unmount(id);
+        }
+        reconciler.remove_child_tracked(parent, k);
+    }
+    for idx in 0..new_live.len() {
+        let el = new_live.get(idx).unwrap();
+        if let Some(child_id) = reconciler.mount(el) {
+            reconciler.append_child_tracked(parent, child_id);
         }
     }
 }

@@ -838,6 +838,16 @@ pub trait ElementExt: Sized {
         self
     }
 
+    /// Register a `PointerWheelChanged` handler; the callback receives the
+    /// pointer position plus `mouse_wheel_delta` (120 per notch, positive =
+    /// wheel away from the user / scroll up).
+    fn on_pointer_wheel(mut self, f: impl IntoCallback<PointerEventInfo>) -> Self {
+        if let Some(m) = self.modifiers_mut() {
+            ensure_pointer_handlers(m).on_pointer_wheel = Some(f.into_callback());
+        }
+        self
+    }
+
     /// Register a `PointerEntered` handler (pointer enters hit-test bounds);
     /// the callback receives the entry position and button state.
     fn on_pointer_entered(mut self, f: impl IntoCallback<PointerEventInfo>) -> Self {

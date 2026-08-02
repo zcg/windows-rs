@@ -359,6 +359,13 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         image: "PersonPicture.png",
     },
     ControlInfo {
+        title: "WebView2",
+        description: "Embeds a Microsoft Edge WebView2 browser control.",
+        category: "Media",
+        tag: "webview",
+        image: "WebView.png",
+    },
+    ControlInfo {
         title: "CommandBar",
         description: "A toolbar for app commands and actions.",
         category: "Menus and Toolbars",

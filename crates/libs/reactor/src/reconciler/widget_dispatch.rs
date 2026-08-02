@@ -74,6 +74,24 @@ impl<B: Backend + 'static> Reconciler<B> {
         match (old, new) {
             (Children::None, Children::None) => {}
             (Children::PositionalSingle(o), Children::PositionalSingle(n)) => {
+                // 单 child 的身份（key）变化 → 整体重建子树。key 语义：
+                // 不同 key 表示不同控件，逐位 diff 复用同 kind 容器可能残留
+                // 旧子树（如路由切换时两个页面根容器同为 vstack）。
+                if o.key() != n.key() {
+                    let old_id = self.child_at(id, 0);
+                    if let Some(old_id) = old_id {
+                        self.unmount(old_id);
+                    }
+                    match (old_id, self.mount(n)) {
+                        (Some(_), Some(new_id)) => self.replace_child_tracked(id, 0, new_id),
+                        // 旧 child 从未挂载（render 为 Empty，被过滤出 mirror/backend）：
+                        // 不能用 replace/remove 命中索引 0——backend 空集合越界 panic。
+                        (None, Some(new_id)) => self.append_child_tracked(id, new_id),
+                        (Some(_), None) => self.remove_child_tracked(id, 0),
+                        (None, None) => {}
+                    }
+                    return;
+                }
                 let oc = std::slice::from_ref(o);
                 let nc = std::slice::from_ref(n);
                 self.reconcile_children_positional(id, oc, nc);

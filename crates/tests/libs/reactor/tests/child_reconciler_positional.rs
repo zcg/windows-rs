@@ -233,6 +233,39 @@ fn empty_elements_are_filtered_out_of_positional_diff() {
 }
 
 #[test]
+fn reconcile_after_unmount_rebuilds_children_instead_of_panicking() {
+    let (mut r, id) = mount_stack(vec![
+        Element::TextBlock(TextBlock::new("a")),
+        Element::TextBlock(TextBlock::new("b")),
+    ]);
+    r.backend.clear_ops();
+
+    // 模拟窗口关闭竞态：根被卸载（shutdown 卸载了组件树、清空 mirror），
+    // 但渲染循环仍以旧 root_id 跑了一帧 → positional reconcile 撞上
+    // 空 mirror。reconciler 必须安全重建而非 panic。
+    r.unmount(id);
+
+    let old_el = make_stack(vec![
+        Element::TextBlock(TextBlock::new("a")),
+        Element::TextBlock(TextBlock::new("b")),
+    ]);
+    // new 与 old 不同（否则 can_skip_update 短路，不会走到 children reconcile）
+    let new_el = make_stack(vec![
+        Element::TextBlock(TextBlock::new("a")),
+        Element::TextBlock(TextBlock::new("c")),
+    ]);
+    let _ = r.reconcile(Some(&old_el), &new_el, Some(id), rr());
+
+    // mirror 已恢复：parent 重新挂载了 2 个 children（不再 panic）
+    assert_eq!(
+        r.children_mirror.get(&id).map_or(0, |v| v.len()),
+        2,
+        "mirror should be rebuilt after desync recovery"
+    );
+    assert_eq!(r.backend.children_of(id).len(), 2, "backend desynced");
+}
+
+#[test]
 fn remove_two_tail_children() {
     let (mut r, id) = mount_stack(vec![
         Element::TextBlock(TextBlock::new("a")),

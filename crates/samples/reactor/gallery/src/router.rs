@@ -53,6 +53,7 @@ pub fn route(tag: &str) -> Element {
 
         "image" => component(media::image_page, ()),
         "person-picture" => component(media::person_picture_page, ()),
+        "webview" => component(media::webview_page, ()),
 
         "command-bar" => component(menus::command_bar_page, ()),
         "menu-bar" => component(menus::menu_bar_page, ()),

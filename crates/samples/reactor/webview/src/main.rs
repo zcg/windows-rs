@@ -1,14 +1,15 @@
 #![windows_subsystem = "windows"]
 
 use windows_reactor::*;
-use windows_webview::{EventRegistration, WebView, webview};
+use windows_webview::{EventRegistration, ProcessFailedArgs, ProcessFailedKind, WebView, webview};
 
 const HOME: &str = "https://learn.microsoft.com/windows/apps/";
 
 fn app(cx: &mut RenderCx) -> Element {
     let (address, set_address) = cx.use_state(String::from(HOME));
     let web = cx.use_ref::<Option<WebView>>(None);
-    let registration = cx.use_ref::<Option<EventRegistration>>(None);
+    let navigation_registration = cx.use_ref::<Option<EventRegistration>>(None);
+    let process_failed_registration = cx.use_ref::<Option<EventRegistration>>(None);
 
     let on_ready = {
         let web = web.clone();
@@ -24,7 +25,36 @@ fn app(cx: &mut RenderCx) -> Element {
                     }
                 }
             };
-            *registration.borrow_mut() = ready.on_navigation_completed(reflect).ok();
+
+            {
+                let mut reg = navigation_registration.borrow_mut();
+                if let Some(old) = reg.take() {
+                    drop(old);
+                }
+                *reg = ready.on_navigation_completed(reflect).ok();
+            }
+
+            let process_failed = {
+                let web = web.clone();
+                let navigation_registration = navigation_registration.clone();
+                let process_failed_registration = process_failed_registration.clone();
+                move |args: ProcessFailedArgs| {
+                    eprintln!("webview process failed: {:?}", args.kind());
+                    if matches!(args.kind(), ProcessFailedKind::BrowserProcessExited) {
+                        *web.borrow_mut() = None;
+                        *navigation_registration.borrow_mut() = None;
+                        *process_failed_registration.borrow_mut() = None;
+                    }
+                }
+            };
+            {
+                let mut reg = process_failed_registration.borrow_mut();
+                if let Some(old) = reg.take() {
+                    drop(old);
+                }
+                *reg = ready.on_process_failed(process_failed).ok();
+            }
+
             let _ = ready.navigate(HOME);
             *web.borrow_mut() = Some(ready);
         }

@@ -1,4 +1,5 @@
 use super::*;
+use std::ffi::c_void;
 use std::rc::Rc;
 
 /// Opaque handle to the native `SwapChainPanel` control, passed to the
@@ -26,6 +27,14 @@ impl SwapChainPanelHandle {
     pub fn clear_swap_chain(&self) -> Result<()> {
         let native: bindings::ISwapChainPanelNative = self.0.cast()?;
         unsafe { native.SetSwapChain(std::ptr::null_mut()).ok() }
+    }
+
+    /// Returns the raw `ISwapChainPanelNative*` pointer (host-owned, non-owning).
+    /// Used by hosts that render into the panel's composition swap chain
+    /// without going through [`set_swap_chain`](Self::set_swap_chain).
+    pub fn panel_native_raw(&self) -> Result<*mut c_void> {
+        let native: bindings::ISwapChainPanelNative = self.0.cast()?;
+        Ok(native.as_raw())
     }
 
     /// Returns the current composition scale as `(scale_x, scale_y)`.
