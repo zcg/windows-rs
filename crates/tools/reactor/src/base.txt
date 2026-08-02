@@ -118,6 +118,8 @@ Microsoft::UI::Xaml::Controls::IRatingControl::{get_Value, ValueChanged}
 Microsoft::UI::Xaml::Controls::IRichEditBox::{get_Document, TextChanged}
 Microsoft::UI::Xaml::Controls::IRichTextBlock::{put_FontSize, put_FontFamily, put_IsTextSelectionEnabled, put_TextWrapping, put_Foreground, put_Padding, get_Blocks}
 Microsoft::UI::Xaml::Controls::IRowDefinition::put_Height
+Microsoft::UI::Xaml::Controls::IRefreshContainer::RefreshRequested
+Microsoft::UI::Xaml::Controls::IRefreshRequestedEventArgs::GetDeferral
 Microsoft::UI::Xaml::Controls::IScrollView::put_Content
 Microsoft::UI::Xaml::Controls::ISelectorBar::{get_Items, get_SelectedItem, SelectionChanged}
 Microsoft::UI::Xaml::Controls::ISelectorBarItem::{put_Text, get_Text, put_Icon}
@@ -176,6 +178,8 @@ Microsoft::UI::Xaml::Controls::RelativePanel::{SetAlignBottomWithPanel, SetAlign
 Microsoft::UI::Xaml::Controls::RichTextBlock::CreateInstance
 Microsoft::UI::Xaml::Controls::RowDefinition::CreateInstance
 Microsoft::UI::Xaml::Controls::RowDefinitionCollection
+Microsoft::UI::Xaml::Controls::RefreshPullDirection
+Microsoft::UI::Xaml::Controls::RefreshRequestedEventArgs
 Microsoft::UI::Xaml::Controls::ScrollBarVisibility
 Microsoft::UI::Xaml::Controls::ScrollingScrollBarVisibility
 Microsoft::UI::Xaml::Controls::SelectionChangedEventHandler
@@ -289,7 +293,9 @@ Microsoft::UI::Xaml::XamlTypeInfo::XamlControlsXamlMetaDataProvider::CreateInsta
 Windows::ApplicationModel::DataTransfer::DataPackageOperation
 Windows::ApplicationModel::DataTransfer::DataPackageView
 Windows::ApplicationModel::DataTransfer::IDataPackageView::{get_AvailableFormats, GetTextAsync, GetStorageItemsAsync}
+Windows::Foundation::Deferral
 Windows::Foundation::EventHandler
+Windows::Foundation::IDeferral::Complete
 Windows::Foundation::Size
 Windows::Foundation::TypedEventHandler
 Windows::Foundation::Uri::CreateUri

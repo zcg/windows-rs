@@ -429,6 +429,9 @@ pub fn dispatch(handle: &Handle, prop: Prop, value: &PropValue) -> Result<bool> 
         (Prop::PrimaryButtonText, PropValue::Str(v), Handle::ContentDialog(h)) => {
             h.SetPrimaryButtonText(v.as_str())?;
         }
+        (Prop::PullDirection, PropValue::I32(v), Handle::RefreshContainer(h)) => {
+            h.SetPullDirection(RefreshPullDirection(*v))?;
+        }
         (Prop::RowSpacing, PropValue::F64(v), Handle::Grid(h)) => {
             h.SetRowSpacing(*v)?;
         }

@@ -22,8 +22,8 @@ use windows_reactor::{
 use windows_reactor::{
     BreadcrumbBar, Canvas, ComboBox, Expander, HyperlinkButton, Image, InfoBadge, InfoBar,
     NavViewItem, NavigationView, NumberBox, PasswordBox, PersonPicture, Pivot, PivotItem,
-    ProgressBar, ProgressRing, RadioButton, RadioButtons, Shape, Slider, TabItem, TabView,
-    TitleBar, ToggleSwitch,
+    ProgressBar, ProgressRing, RadioButton, RadioButtons, RefreshContainer, Shape, Slider, TabItem,
+    TabView, TitleBar, ToggleSwitch,
 };
 
 fn one_of_every_widget() -> Vec<(&'static str, Element)> {
@@ -50,6 +50,10 @@ fn one_of_every_widget() -> Vec<(&'static str, Element)> {
         ("NumberBox", NumberBox::new(0.0).into()),
         ("ProgressBar", ProgressBar::new(50.0).into()),
         ("ProgressRing", ProgressRing::indeterminate().into()),
+        (
+            "RefreshContainer",
+            RefreshContainer::new(Element::Empty).into(),
+        ),
         ("Expander", Expander::new(Element::Empty).into()),
         ("HyperlinkButton", HyperlinkButton::new("h").into()),
         ("InfoBar", InfoBar::new("i").into()),

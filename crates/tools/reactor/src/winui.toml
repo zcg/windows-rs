@@ -191,6 +191,9 @@ Maximum = {}
 IsActive = {}
 IsIndeterminate = {}
 
+["Microsoft.UI.Xaml.Controls.RefreshContainer"]
+PullDirection = {}
+
 ["Microsoft.UI.Xaml.Controls.RadioButton"]
 Content = {}
 IsChecked = {}

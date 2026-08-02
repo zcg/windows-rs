@@ -40,6 +40,7 @@ Microsoft::UI::Xaml::Controls::IProgressRing::{put_IsActive, put_IsIndeterminate
 Microsoft::UI::Xaml::Controls::IRadioButton::put_GroupName
 Microsoft::UI::Xaml::Controls::IRadioButtons::{put_Header, put_MaxColumns, put_SelectedIndex}
 Microsoft::UI::Xaml::Controls::IRatingControl::{put_Caption, put_IsReadOnly, put_MaxRating, put_PlaceholderValue, put_Value}
+Microsoft::UI::Xaml::Controls::IRefreshContainer::put_PullDirection
 Microsoft::UI::Xaml::Controls::IRichEditBox::{put_Header, put_IsReadOnly, put_PlaceholderText}
 Microsoft::UI::Xaml::Controls::IScrollView::{put_HorizontalScrollBarVisibility, put_VerticalScrollBarVisibility}
 Microsoft::UI::Xaml::Controls::IScrollViewer::{put_HorizontalScrollBarVisibility, put_VerticalScrollBarVisibility}
@@ -76,6 +77,7 @@ Microsoft::UI::Xaml::Controls::ProgressRing::CreateInstance
 Microsoft::UI::Xaml::Controls::RadioButton::CreateInstance
 Microsoft::UI::Xaml::Controls::RadioButtons::CreateInstance
 Microsoft::UI::Xaml::Controls::RatingControl::CreateInstance
+Microsoft::UI::Xaml::Controls::RefreshContainer::CreateInstance
 Microsoft::UI::Xaml::Controls::RelativePanel::CreateInstance
 Microsoft::UI::Xaml::Controls::RichEditBox::CreateInstance
 Microsoft::UI::Xaml::Controls::ScrollView::CreateInstance

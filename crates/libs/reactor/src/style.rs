@@ -471,6 +471,8 @@ pub struct Modifiers {
     pub tooltip: Option<Box<Tooltip>>,
     pub pointer_handlers: Option<Box<PointerHandlers>>,
     pub allow_drop: Option<bool>,
+    /// 指针命中测试穿透：false 时元素不参与命中测试（上层悬浮层可穿透到下层）。
+    pub hit_test_visible: Option<bool>,
     pub drag_handlers: Option<Box<DragHandlers>>,
     /// Fast path for grid row/column placement.
     pub grid: Option<GridPlacement>,
@@ -505,6 +507,7 @@ impl Modifiers {
                 .as_deref()
                 .is_none_or(|p| p.is_empty())
             && self.allow_drop.is_none()
+            && self.hit_test_visible.is_none()
             && self.drag_handlers.as_deref().is_none_or(|d| d.is_empty())
             && self.grid.is_none()
             && self.resources.is_empty()

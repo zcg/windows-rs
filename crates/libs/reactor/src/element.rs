@@ -304,6 +304,7 @@ define_element! {
     TeachingTip,
     SelectorBar,
     RichEditBox,
+    RefreshContainer,
     RelativePanel,
     ToggleButton,
     SwapChainPanel,
@@ -1009,6 +1010,15 @@ pub trait ElementExt: Sized {
         self
     }
 
+    /// 指针命中测试穿透：false 时本元素不拦截指针事件（悬浮层/浮窗用，
+    /// 平时 opacity=0 常驻渲染也不影响下层滚动）。
+    fn is_hit_test_visible(mut self, v: bool) -> Self {
+        if let Some(m) = self.modifiers_mut() {
+            m.hit_test_visible = Some(v);
+        }
+        self
+    }
+
     fn drag_enter<F: Fn(&mut DragContext) -> DragOperation + Send + Sync + 'static>(
         mut self,
         f: F,
@@ -1188,6 +1198,7 @@ impl_element_ext!(
     TeachingTip,
     SelectorBar,
     RichEditBox,
+    RefreshContainer,
     RelativePanel,
     ToggleButton,
     SwapChainPanel,
@@ -1265,6 +1276,7 @@ impl ElementExt for Element {
             Self::TeachingTip(v) => v.key = Some(key),
             Self::SelectorBar(v) => v.key = Some(key),
             Self::RichEditBox(v) => v.key = Some(key),
+            Self::RefreshContainer(v) => v.key = Some(key),
             Self::RelativePanel(v) => v.key = Some(key),
             Self::ToggleButton(v) => v.key = Some(key),
             Self::Component(c) => c.key = Some(key),

@@ -502,6 +502,11 @@ impl<B: Backend + 'static> Reconciler<B> {
                 .set_prop(id, Prop::AllowDrop, &PropValue::Bool(v));
         }
 
+        if let Some(v) = mods.hit_test_visible {
+            self.backend
+                .set_prop(id, Prop::HitTestVisible, &PropValue::Bool(v));
+        }
+
         self.apply_theme_bindings_for(id, mods);
         self.apply_animations_for(id, mods);
         self.apply_accessibility_for(id, mods);
@@ -748,6 +753,14 @@ impl<B: Backend + 'static> Reconciler<B> {
                 id,
                 Prop::AllowDrop,
                 &PropValue::Bool(new.allow_drop.unwrap_or(false)),
+            );
+        }
+
+        if old.hit_test_visible != new.hit_test_visible {
+            self.backend.set_prop(
+                id,
+                Prop::HitTestVisible,
+                &PropValue::Bool(new.hit_test_visible.unwrap_or(true)),
             );
         }
 

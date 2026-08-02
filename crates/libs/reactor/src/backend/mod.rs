@@ -93,6 +93,7 @@ pub enum ControlKind {
     TeachingTip,
     SelectorBar,
     RichEditBox,
+    RefreshContainer,
     RelativePanel,
     ToggleButton,
     SwapChainPanel,
@@ -112,6 +113,7 @@ pub enum Prop {
     AlignTopWithPanel,
     AlignVCenterWithPanel,
     AllowDrop,
+    HitTestVisible,
     AttachedCanvasLeft,
     AttachedCanvasTop,
     AttachedCanvasZIndex,
@@ -223,6 +225,7 @@ pub enum Prop {
     PreferredPlacement,
     PrimaryButtonText,
     PrimaryCommands,
+    PullDirection,
     Resources,
     Rows,
     RowSpacing,
@@ -300,6 +303,7 @@ pub enum Event {
     PaneToggleRequested,
     PasswordChanged,
     QuerySubmitted,
+    RefreshRequested,
     SelectedDateChanged,
     SelectedDatesChanged,
     SelectedTimeChanged,
@@ -321,6 +325,7 @@ pub enum EventHandler {
     Color(Callback<(u8, u8, u8, u8)>),
     DateTime(Callback<DateTime>),
     TimeSpan(Callback<TimeSpan>),
+    Refresh(Callback<RefreshRequest>),
 }
 
 impl fmt::Debug for EventHandler {
@@ -334,6 +339,7 @@ impl fmt::Debug for EventHandler {
             Self::Color(_) => f.write_str("EventHandler::Color(..)"),
             Self::DateTime(_) => f.write_str("EventHandler::DateTime(..)"),
             Self::TimeSpan(_) => f.write_str("EventHandler::TimeSpan(..)"),
+            Self::Refresh(_) => f.write_str("EventHandler::Refresh(..)"),
         }
     }
 }
@@ -402,6 +408,13 @@ impl EventHandler {
         match self {
             Self::TimeSpan(cb) => cb.invoke(ts),
             other => panic!("EventHandler::invoke_timespan() called on {other:?}"),
+        }
+    }
+
+    pub fn invoke_refresh(&self, r: RefreshRequest) {
+        match self {
+            Self::Refresh(cb) => cb.invoke(r),
+            other => panic!("EventHandler::invoke_refresh() called on {other:?}"),
         }
     }
 }

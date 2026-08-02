@@ -67,6 +67,7 @@ widget_modules! {
     radio_button,
     radio_buttons,
     rating_control,
+    refresh_container,
     relative_panel,
     repeat_button,
     rich_edit_box,

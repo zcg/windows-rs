@@ -608,6 +608,12 @@ pub fn rating_control_bindings(w: &RatingControl) -> PropBindings {
         Binding::Prop(Prop::Value, PropValue::F64(w.value)),
     ]
 }
+pub fn refresh_container_bindings(w: &RefreshContainer) -> PropBindings {
+    vec![Binding::Prop(
+        Prop::PullDirection,
+        PropValue::I32(w.pull_direction.0),
+    )]
+}
 pub fn relative_panel_bindings(_w: &RelativePanel) -> PropBindings {
     Vec::new()
 }

@@ -96,6 +96,7 @@ define_handles! {
     RadioButtons,
     RatingControl,
     Rectangle,
+    RefreshContainer,
     RelativePanel,
     RepeatButton,
     RichEditBox,
@@ -399,6 +400,7 @@ fn classify_container(h: &Handle) -> Option<ContainerChildren<'_>> {
         Handle::Border(_) | Handle::Viewbox(_) => Some(ContainerChildren::SingleChild(h)),
         Handle::ScrollViewer(s) => Some(ContainerChildren::ContentControl(s.cast().ok()?)),
         Handle::Expander(e) => Some(ContainerChildren::ContentControl(e.cast().ok()?)),
+        Handle::RefreshContainer(rc) => Some(ContainerChildren::ContentControl(rc.cast().ok()?)),
         Handle::TabViewItem(ti) => Some(ContainerChildren::ContentControl(ti.cast().ok()?)),
         Handle::NavigationView(nv) => Some(ContainerChildren::ContentControl(nv.cast().ok()?)),
         Handle::PivotItem(pi) => Some(ContainerChildren::ContentControl(pi.cast().ok()?)),
@@ -802,6 +804,14 @@ fn try_universal_prop(handle: &Handle, prop: Prop, value: &PropValue) -> Result<
         }
         (Prop::AllowDrop, PropValue::Unset) => {
             handle.as_ui_element().SetAllowDrop(false)?;
+            Ok(true)
+        }
+        (Prop::HitTestVisible, PropValue::Bool(v)) => {
+            handle.as_ui_element().SetIsHitTestVisible(*v)?;
+            Ok(true)
+        }
+        (Prop::HitTestVisible, PropValue::Unset) => {
+            handle.as_ui_element().SetIsHitTestVisible(true)?;
             Ok(true)
         }
         (Prop::IsEnabled, PropValue::Unset) => {
@@ -2229,6 +2239,17 @@ impl Backend for WinUIBackend {
 
         let mut revokers: Vec<windows_core::EventRevoker> = Vec::new();
         match (event, handle) {
+            (Event::RefreshRequested, Handle::RefreshContainer(rc)) => {
+                let handler = handler.clone();
+                revokers.push(
+                    rc.RefreshRequested(move |_sender, args| {
+                        if let Some(a) = args.as_ref() {
+                            handler.invoke_refresh(RefreshRequest { args: a.clone() });
+                        }
+                    })
+                    .unwrap(),
+                );
+            }
             (Event::Closed, Handle::ContentDialog(d)) => {
                 revokers.push(
                     d.Closed(move |_sender, args| {
