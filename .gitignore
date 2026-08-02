@@ -8,3 +8,15 @@
 obj
 bin
 aot-publish
+
+# Local tool state and scratch files
+/.codegraph/
+/.pi/
+/.reasonix/
+/skills/
+/AGENTS.md
+/context.md
+/parallel_researcher.md
+/parallel_scout.md
+/reasonix.toml
+/webview_screenshot.png
