@@ -55,14 +55,19 @@ fn build_uri_image_source(uri: &str, decode_width: Option<u32>) -> Result<bindin
         source.cast()
     } else {
         let source = bindings::BitmapImage::new()?;
-        source.SetUriSource(&uri)?;
         // DecodePixelWidth：让解码器按目标宽度降采样，避免全分辨率解码。
         // 封面等缩略图原始尺寸（1280×720）远大于显示尺寸（~240 DIP），
         // 全尺寸解码每张 ~3.7MB 且解码慢；降采样后每张 ~0.3MB、解码快 ~10 倍。
         // 仅对位图生效（SVG 走上面分支，无此属性）。
+        // 注意：必须先设 DecodePixelWidth 再 SetUriSource——WinUI 在 SetUriSource
+        // 后即按原始尺寸异步解码，后设 DecodePixelWidth 不生效。
+        // 且须显式 DecodePixelType::Physical：默认 Logical 时 DecodePixelWidth 按
+        // DIP 解释，会被 DPI scale（如 150%）放大，降采样效果减半。
         if let Some(width) = decode_width {
+            source.SetDecodePixelType(0)?; // DecodePixelType::Physical
             source.SetDecodePixelWidth(width)?;
         }
+        source.SetUriSource(&uri)?;
         source.cast()
     }
 }
