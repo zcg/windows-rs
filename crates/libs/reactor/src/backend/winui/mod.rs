@@ -1349,11 +1349,19 @@ impl Backend for WinUIBackend {
                     .and_then(|_| l.SetX2(p.x2))
                     .and_then(|_| l.SetY2(p.y2)),
                 (Prop::ImageSource, PropValue::ImageSource(source), Handle::Image(img)) => {
-                    match build_image_source(source)? {
+                    match build_image_source(source, None)? {
                         Some(source) => img.SetSource(&source),
                         None => img.SetSource(None),
                     }
                 }
+                (
+                    Prop::ImageSource,
+                    PropValue::ImageSourceDecoded(source, decode_width),
+                    Handle::Image(img),
+                ) => match build_image_source(source, Some(*decode_width))? {
+                    Some(source) => img.SetSource(&source),
+                    None => img.SetSource(None),
+                },
                 (Prop::ImageSource, PropValue::Unset, Handle::Image(img)) => img.SetSource(None),
                 (Prop::Header, PropValue::Str(s), Handle::TabViewItem(ti)) => {
                     let tb = string_as_textblock(s)?;
@@ -3419,7 +3427,7 @@ fn mount_static_tooltip_element(el: &Element) -> Option<bindings::UIElement> {
         }
         Element::Image(img) => {
             let i = bindings::Image::new().ok()?;
-            if let Ok(Some(source)) = build_image_source(&img.source) {
+            if let Ok(Some(source)) = build_image_source(&img.source, None) {
                 diag::dropped(i.SetSource(&source));
             }
             i.cast::<bindings::UIElement>().ok()

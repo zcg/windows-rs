@@ -46,7 +46,7 @@ fn is_svg_uri(uri: &str) -> bool {
         .is_some_and(|(_, extension)| extension.eq_ignore_ascii_case("svg"))
 }
 
-fn build_uri_image_source(uri: &str) -> Result<bindings::ImageSource> {
+fn build_uri_image_source(uri: &str, decode_width: Option<u32>) -> Result<bindings::ImageSource> {
     let is_svg = is_svg_uri(uri);
     let uri = bindings::Uri::CreateUri(uri)?;
     if is_svg {
@@ -56,14 +56,24 @@ fn build_uri_image_source(uri: &str) -> Result<bindings::ImageSource> {
     } else {
         let source = bindings::BitmapImage::new()?;
         source.SetUriSource(&uri)?;
+        // DecodePixelWidth：让解码器按目标宽度降采样，避免全分辨率解码。
+        // 封面等缩略图原始尺寸（1280×720）远大于显示尺寸（~240 DIP），
+        // 全尺寸解码每张 ~3.7MB 且解码慢；降采样后每张 ~0.3MB、解码快 ~10 倍。
+        // 仅对位图生效（SVG 走上面分支，无此属性）。
+        if let Some(width) = decode_width {
+            source.SetDecodePixelWidth(width)?;
+        }
         source.cast()
     }
 }
 
-pub(super) fn build_image_source(source: &ImageSource) -> Result<Option<bindings::ImageSource>> {
+pub(super) fn build_image_source(
+    source: &ImageSource,
+    decode_width: Option<u32>,
+) -> Result<Option<bindings::ImageSource>> {
     match source {
         ImageSource::None => Ok(None),
-        ImageSource::Uri(uri) => build_uri_image_source(uri).map(Some),
+        ImageSource::Uri(uri) => build_uri_image_source(uri, decode_width).map(Some),
         ImageSource::Surface(source) => source.image_source().map(Some),
     }
 }
@@ -75,7 +85,7 @@ pub(super) fn build_icon_element(icon: &Icon) -> Result<bindings::IconElement> {
         Icon::Symbol(sym) => bindings::SymbolIcon::CreateInstanceWithSymbol(*sym)?.cast(),
         Icon::Image(source) => {
             let icon = bindings::ImageIcon::new()?;
-            if let Some(source) = build_image_source(source)? {
+            if let Some(source) = build_image_source(source, None)? {
                 icon.SetSource(&source)?;
             }
             icon.cast()

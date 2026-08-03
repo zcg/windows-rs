@@ -60,6 +60,10 @@ pub struct Image {
     pub modifiers: Modifiers,
     pub source: ImageSource,
     pub stretch: Stretch,
+    /// 位图解码目标宽度（物理像素）。设置后 `BitmapImage` 按此宽度降采样解码，
+    /// 避免缩略图全分辨率解码（省内存 + 解码快）。显示尺寸的 ~2 倍足够清晰。
+    /// 仅对 URI 位图源生效；SVG / Surface 源忽略。
+    pub decode_width: Option<u32>,
     pub mounted: Option<Callback<Option<windows_core::IInspectable>>>,
 }
 impl Default for Image {
@@ -69,6 +73,7 @@ impl Default for Image {
             modifiers: Modifiers::default(),
             source: ImageSource::default(),
             stretch: Stretch::Uniform,
+            decode_width: None,
             mounted: None,
         }
     }
@@ -144,6 +149,13 @@ impl Image {
         self
     }
 
+    /// 位图解码目标宽度（物理像素）：让解码器按此宽度降采样，而不是按原始
+    /// 分辨率全尺寸解码。对 URI 位图源生效；SVG / Surface 源忽略。
+    pub fn decode_width(mut self, width: u32) -> Self {
+        self.decode_width = Some(width);
+        self
+    }
+
     /// Callback invoked once after the native control is created, receiving an
     /// [`ImageHandle`]. Use it to observe the host rasterization (DPI) scale via
     /// [`ImageHandle::on_rasterization_scale_changed`] so an on-demand surface can
@@ -166,7 +178,10 @@ impl Widget for Image {
         if !self.source.is_none() {
             out.push(Binding::Prop(
                 Prop::ImageSource,
-                PropValue::ImageSource(self.source.clone()),
+                match self.decode_width {
+                    Some(width) => PropValue::ImageSourceDecoded(self.source.clone(), width),
+                    None => PropValue::ImageSource(self.source.clone()),
+                },
             ));
         }
         out

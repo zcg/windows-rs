@@ -269,6 +269,9 @@ pub enum PropValue {
     Unset,
     GridLengths(Vec<GridLength>),
     ImageSource(ImageSource),
+    /// 带解码目标宽度的图片源：`BitmapImage` 按 `DecodePixelWidth` 降采样解码，
+    /// 避免封面等缩略图按原始分辨率全尺寸解码（内存 + 解码耗时双省）。
+    ImageSourceDecoded(ImageSource, u32),
     LineEndpoints(LineEndpoints),
     NavMenuItems(Vec<NavViewItem>),
     StrList(Vec<String>),

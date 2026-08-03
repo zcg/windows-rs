@@ -4769,6 +4769,15 @@ impl IBitmapImage {
             .ok()
         }
     }
+    pub(crate) fn SetDecodePixelWidth(&self, value: u32) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetDecodePixelWidth)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
 }
 #[repr(C)]
 pub struct IBitmapImage_Vtbl {
@@ -4780,6 +4789,9 @@ pub struct IBitmapImage_Vtbl {
         *mut core::ffi::c_void,
         *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
+    DecodePixelWidth: usize,
+    pub SetDecodePixelWidth:
+        unsafe extern "system" fn(*mut core::ffi::c_void, u32) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
     IBitmapSource,
