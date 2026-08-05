@@ -38,6 +38,7 @@ use signature::*;
 use std::cmp::Ordering;
 use std::collections::*;
 use std::fmt::Write;
+use std::path::{Path, PathBuf};
 use tables::*;
 use tokens::*;
 use type_map::*;
@@ -51,6 +52,16 @@ mod method_names;
 mod type_closure;
 use method_names::*;
 use type_closure::*;
+
+fn report_timing(output: &Path, phase: &str, elapsed: std::time::Duration) {
+    if std::env::var_os("WINDOWS_BINDGEN_TIMINGS").is_some() {
+        eprintln!(
+            "windows-bindgen timing `{}` {phase}: {:.3} ms",
+            output.display(),
+            elapsed.as_secs_f64() * 1_000.0
+        );
+    }
+}
 
 /// Creates a new [`Bindgen`] builder for generating Windows API bindings.
 pub fn builder() -> Bindgen {
@@ -71,15 +82,21 @@ pub fn builder() -> Bindgen {
 /// ```
 #[derive(Default)]
 pub struct Bindgen {
-    input: Vec<String>,
+    input: Vec<Input>,
+    input_default: bool,
     filter: Vec<String>,
-    output: String,
+    output: PathBuf,
     derive: Vec<String>,
     implement: Option<Vec<String>>,
     rustfmt: Option<String>,
     layout: Layout,
     style: Style,
     dead_code: bool,
+}
+
+enum Input {
+    Path(PathBuf),
+    Bytes(Vec<u8>),
 }
 
 /// Output layout for the generated bindings.
@@ -147,7 +164,7 @@ impl Style {
 
     /// Minimal bindings expose input strings as `&str`.
     fn minimal_string_input(self, param: &Param) -> bool {
-        self.is_minimal() && param.is_input() && matches!(param.ty, Type::String)
+        self.is_minimal() && param.is_input_only() && matches!(param.ty, Type::String)
     }
 
     /// Minimal bindings return strings as `String`.
@@ -177,26 +194,51 @@ impl Bindgen {
         Self::default()
     }
 
-    /// Adds a `.winmd` file or directory. `"default"` selects the bundled metadata.
-    pub fn input(&mut self, input: &str) -> &mut Self {
-        self.inputs(std::iter::once(input))
+    /// Adds a `.winmd` file or directory.
+    pub fn input(&mut self, input: impl AsRef<Path>) -> &mut Self {
+        self.input.push(Input::Path(input.as_ref().to_path_buf()));
+        self
+    }
+
+    /// Adds the default Windows metadata.
+    pub fn input_default(&mut self) -> &mut Self {
+        self.input_default = true;
+        self
+    }
+
+    /// Adds a `.winmd` file from memory.
+    pub fn input_bytes(&mut self, input: &[u8]) -> &mut Self {
+        self.input.push(Input::Bytes(input.to_vec()));
+        self
+    }
+
+    /// Adds `.winmd` files from memory.
+    pub fn input_byte_sets<I, B>(&mut self, inputs: I) -> &mut Self
+    where
+        I: IntoIterator<Item = B>,
+        B: AsRef<[u8]>,
+    {
+        for input in inputs {
+            self.input_bytes(input.as_ref());
+        }
+        self
     }
 
     /// Adds `.winmd` files or directories.
     pub fn inputs<I, S>(&mut self, inputs: I) -> &mut Self
     where
         I: IntoIterator<Item = S>,
-        S: AsRef<str>,
+        S: AsRef<Path>,
     {
         for input in inputs {
-            self.input.push(input.as_ref().to_string());
+            self.input(input);
         }
         self
     }
 
     /// Sets the generated Rust file.
-    pub fn output(&mut self, output: &str) -> &mut Self {
-        self.output = output.to_string();
+    pub fn output(&mut self, output: impl AsRef<Path>) -> &mut Self {
+        self.output = output.as_ref().to_path_buf();
         self
     }
 
@@ -208,6 +250,25 @@ impl Bindgen {
     /// docs for the full grammar.
     pub fn filter(&mut self, filter: &str) -> &mut Self {
         self.filters(std::iter::once(filter))
+    }
+
+    /// Adds filter rules from a text file.
+    #[track_caller]
+    pub fn filter_file(&mut self, input: impl AsRef<Path>) -> &mut Self {
+        self.filters(cli::read_tokens(input))
+    }
+
+    /// Adds filter rules from text files.
+    #[track_caller]
+    pub fn filter_files<I, S>(&mut self, inputs: I) -> &mut Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<Path>,
+    {
+        for input in inputs {
+            self.filter_file(input);
+        }
+        self
     }
 
     /// Add multiple filter rules to include or exclude APIs.
@@ -274,25 +335,41 @@ impl Bindgen {
         self
     }
 
-    /// Include implementation traits for WinRT interfaces.
+    /// Includes implementation traits for every WinRT interface in scope.
+    #[track_caller]
+    pub fn implement_all(&mut self) -> &mut Self {
+        match &self.implement {
+            None => self.implement = Some(vec![]),
+            Some(names) if names.is_empty() => {}
+            Some(_) => panic!("cannot combine `implement_all` with selected implementations"),
+        }
+        self
+    }
+
+    /// Includes implementation traits for a WinRT interface or namespace prefix.
     ///
-    /// Each entry may be a fully-qualified type name (`Namespace.Name`) or a
-    /// namespace prefix that matches every type defined under it. When called
-    /// with no patterns (an empty iterator), `_Impl` scaffolding is emitted for
-    /// every WinRT interface in scope. When called with one or more patterns,
-    /// `_Impl` scaffolding is emitted only for types matching the patterns,
-    /// rather than for every interface/class in the filter set. The latter is
-    /// a finer-grained alternative to the broad form and can significantly
-    /// reduce build time when only a handful of interfaces need to be
-    /// implemented.
-    pub fn implement<I, S>(&mut self, names: I) -> &mut Self
+    /// The name may be a fully-qualified type name (`Namespace.Name`) or a namespace prefix that
+    /// matches every type defined under it.
+    #[track_caller]
+    pub fn implement(&mut self, name: &str) -> &mut Self {
+        assert!(
+            !self.implement.as_ref().is_some_and(Vec::is_empty),
+            "cannot combine selected implementations with `implement_all`"
+        );
+        self.implement
+            .get_or_insert_with(Vec::new)
+            .push(name.to_string());
+        self
+    }
+
+    /// Includes implementation traits for multiple WinRT interfaces or namespace prefixes.
+    pub fn implements<I, S>(&mut self, names: I) -> &mut Self
     where
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
-        let list = self.implement.get_or_insert_with(Vec::new);
         for name in names {
-            list.push(name.as_ref().to_string());
+            self.implement(name.as_ref());
         }
         self
     }
@@ -348,9 +425,11 @@ impl Bindgen {
     /// Generate the bindings.
     #[track_caller]
     pub fn write(&self) {
+        let total = std::time::Instant::now();
+
         // Validate before setting up reader and reference state.
         assert!(
-            !self.output.is_empty(),
+            !self.output.as_os_str().is_empty(),
             "output is required (call `.output()` or pass `--out`)"
         );
 
@@ -370,15 +449,17 @@ impl Bindgen {
         let sys = self.style.is_sys();
         let link = if sys { "windows_link" } else { "windows_core" };
 
-        let default_input = ["default"];
-        let input: Vec<&str> = if self.input.is_empty() {
-            default_input.to_vec()
+        let phase = std::time::Instant::now();
+        let reader_storage;
+        let reader = if self.input.is_empty() {
+            default_reader()
         } else {
-            self.input.iter().map(|s| s.as_str()).collect()
+            reader_storage = Reader::new(expand_input(&self.input, self.input_default));
+            &reader_storage
         };
+        report_timing(&self.output, "metadata", phase.elapsed());
 
-        let reader = Reader::new(expand_input(&input));
-
+        let phase = std::time::Instant::now();
         let mut references: Vec<ReferenceStage> = Vec::new();
 
         if !sys {
@@ -470,8 +551,10 @@ impl Bindgen {
             Implements::new(&names_str)
         });
 
-        let references = References::new(&reader, references);
+        let references = References::new(reader, references);
+        report_timing(&self.output, "references", phase.elapsed());
 
+        let phase = std::time::Instant::now();
         let (filter, types) = {
             let mut all_parsed = Vec::new();
             for entry in &include {
@@ -484,31 +567,33 @@ impl Bindgen {
                 }
                 all_parsed.extend(entries);
             }
-            let resolved = filter_parser::resolve_entries(&reader, &all_parsed);
+            let resolved = filter_parser::resolve_entries(reader, &all_parsed);
 
-            let mut filter = Filter::from_resolved(&reader, &resolved);
+            let mut filter = Filter::from_resolved(reader, &resolved);
 
             // Precise filters use bottom-up closure; broad filters and packages scan top-down.
             let types = if !filter.has_broad_filter && !self.layout.is_package() {
                 filter.uses_closure = true;
-                TypeClosure::build(&reader, &mut filter, &references)
+                TypeClosure::build(reader, &mut filter, &references)
             } else {
-                TypeMap::filter(&reader, &filter, &references)
+                TypeMap::filter(reader, &filter, &references, self.style.is_sys())
             };
 
             (filter, types)
         };
+        report_timing(&self.output, "selection", phase.elapsed());
 
-        let derive = Derive::new(&reader, &types, &derive_str);
+        let phase = std::time::Instant::now();
+        let derive = Derive::new(reader, &types, &derive_str);
         if let Some(implements) = &implements {
             filter.validate_implements(implements);
         }
 
-        let event_only_delegates = compute_event_only_delegates(&types, &reader);
+        let event_only_delegates = compute_event_only_delegates(&types, reader);
 
         let config = Config {
             bindgen: self,
-            reader: &reader,
+            reader,
             types: &types,
             references: &references,
             filter: &filter,
@@ -523,22 +608,34 @@ impl Bindgen {
         };
 
         let tree = TypeTree::new(&types);
+        report_timing(&self.output, "planning", phase.elapsed());
         config.write(tree);
+        report_timing(&self.output, "total", total.elapsed());
     }
 }
 
-#[track_caller]
-fn expand_input(input: &[&str]) -> Vec<File> {
-    #[track_caller]
-    fn expand_input(result: &mut Vec<String>, input: &str) {
-        let path = std::path::Path::new(input);
+fn default_reader() -> &'static Reader {
+    static READER: std::sync::OnceLock<Reader> = std::sync::OnceLock::new();
+    READER.get_or_init(|| Reader::new(default_input()))
+}
 
+#[track_caller]
+fn default_input() -> Vec<File> {
+    [windows_default::WINRT, windows_default::WIN32]
+        .into_iter()
+        .map(|bytes| File::new(bytes.to_vec()).unwrap())
+        .collect()
+}
+
+fn expand_input(input: &[Input], input_default: bool) -> Vec<File> {
+    #[track_caller]
+    fn expand_path(result: &mut Vec<File>, path: &Path) {
         if path.is_dir() {
-            let prev_len = result.len();
+            let mut paths = vec![];
 
             for path in path
                 .read_dir()
-                .unwrap_or_else(|_| panic!("failed to read directory `{input}`"))
+                .unwrap_or_else(|_| panic!("failed to read directory `{}`", path.display()))
                 .flatten()
                 .map(|entry| entry.path())
             {
@@ -547,55 +644,51 @@ fn expand_input(input: &[&str]) -> Vec<File> {
                         .extension()
                         .is_some_and(|extension| extension.eq_ignore_ascii_case("winmd"))
                 {
-                    result.push(path.to_string_lossy().to_string());
+                    paths.push(path);
                 }
             }
 
             assert!(
-                result.len() != prev_len,
-                "failed to find .winmd files in directory `{input}`"
+                !paths.is_empty(),
+                "failed to find .winmd files in directory `{}`",
+                path.display()
             );
+
+            for path in paths {
+                let bytes = std::fs::read(&path)
+                    .unwrap_or_else(|_| panic!("failed to read binary file `{}`", path.display()));
+                let file = File::new(bytes)
+                    .unwrap_or_else(|| panic!("failed to read .winmd format `{}`", path.display()));
+                result.push(file);
+            }
         } else {
-            result.push(input.to_string());
+            let Ok(bytes) = std::fs::read(path) else {
+                panic!("failed to read binary file `{}`", path.display());
+            };
+            let Some(file) = File::new(bytes) else {
+                panic!("failed to read .winmd format `{}`", path.display());
+            };
+            result.push(file);
         }
     }
 
-    let mut paths = vec![];
-    let mut use_default = false;
+    let mut result = if input_default {
+        default_input()
+    } else {
+        vec![]
+    };
 
     for input in input {
-        if *input == "default" {
-            use_default = true;
-        } else {
-            expand_input(&mut paths, input);
+        match input {
+            Input::Path(path) => expand_path(&mut result, path),
+            Input::Bytes(bytes) => result.push(
+                File::new(bytes.clone())
+                    .unwrap_or_else(|| panic!("failed to read .winmd format from memory")),
+            ),
         }
     }
 
-    let mut input = vec![];
-
-    if use_default {
-        input = [
-            std::include_bytes!("../default/Windows.winmd").to_vec(),
-            std::include_bytes!("../default/Windows.Win32.winmd").to_vec(),
-        ]
-        .into_iter()
-        .map(|bytes| File::new(bytes).unwrap())
-        .collect();
-    }
-
-    for path in &paths {
-        let Ok(bytes) = std::fs::read(path) else {
-            panic!("failed to read binary file `{path}`");
-        };
-
-        let Some(file) = File::new(bytes) else {
-            panic!("failed to read .winmd format `{path}`");
-        };
-
-        input.push(file);
-    }
-
-    input
+    result
 }
 
 /// Finds delegates used only as event-handler parameters.
@@ -696,5 +789,46 @@ mod tests {
             "Windows.Win32.Graphics.Direct3D",
             "Windows.Win32.Graphics.Direct3D11"
         ));
+    }
+
+    #[test]
+    fn default_metadata_reader_is_reused() {
+        assert!(std::ptr::eq(default_reader(), default_reader()));
+    }
+
+    #[test]
+    fn implementation_selection() {
+        let mut builder = Bindgen::new();
+        builder
+            .implement("Test.IFirst")
+            .implements(["Test.ISecond", "Other"]);
+        assert_eq!(
+            builder.implement,
+            Some(vec![
+                "Test.IFirst".to_string(),
+                "Test.ISecond".to_string(),
+                "Other".to_string()
+            ])
+        );
+
+        let mut builder = Bindgen::new();
+        builder.implement_all().implement_all();
+        assert_eq!(builder.implement, Some(vec![]));
+
+        let mut builder = Bindgen::new();
+        builder.implements(std::iter::empty::<&str>());
+        assert_eq!(builder.implement, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot combine selected implementations with `implement_all`")]
+    fn implementation_after_all_panics() {
+        Bindgen::new().implement_all().implement("Test.IFirst");
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot combine `implement_all` with selected implementations")]
+    fn implementation_all_after_selection_panics() {
+        Bindgen::new().implement("Test.IFirst").implement_all();
     }
 }

@@ -54,9 +54,12 @@ fn fixed_unsigned_value(value: u64) -> metadata::Value {
 #[derive(Default)]
 /// Builder that compiles RDL files into `.winmd` metadata.
 pub struct Reader {
-    input: Vec<String>,
-    input_str: Vec<String>,
-    output: String,
+    input: Vec<PathBuf>,
+    input_text: Vec<String>,
+    reference: Vec<PathBuf>,
+    reference_default: bool,
+    reference_bytes: Vec<Vec<u8>>,
+    output: PathBuf,
 }
 
 impl Reader {
@@ -65,46 +68,100 @@ impl Reader {
         Self::default()
     }
 
-    /// Adds an input `.rdl` file (or `.winmd` reference) or directory.
-    pub fn input(&mut self, input: &str) -> &mut Self {
-        self.input.push(input.to_string());
+    /// Adds an input `.rdl` file or directory.
+    pub fn input(&mut self, input: impl AsRef<Path>) -> &mut Self {
+        self.input.push(input.as_ref().to_path_buf());
         self
     }
 
     /// Adds inline RDL source text to compile instead of a file on disk.
-    pub fn input_str(&mut self, input: &str) -> &mut Self {
-        self.input_str.push(input.to_string());
+    pub fn input_text(&mut self, input: &str) -> &mut Self {
+        self.input_text.push(input.to_string());
         self
     }
 
-    /// Adds multiple input `.rdl` files or `.winmd` references.
-    pub fn inputs<I, S>(&mut self, inputs: I) -> &mut Self
+    /// Adds inline RDL source texts to compile instead of files on disk.
+    pub fn input_texts<I, S>(&mut self, inputs: I) -> &mut Self
     where
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
         for input in inputs {
-            self.input.push(input.as_ref().to_string());
+            self.input_text(input.as_ref());
         }
+        self
+    }
 
+    /// Adds a `.winmd` reference file or directory.
+    pub fn reference(&mut self, input: impl AsRef<Path>) -> &mut Self {
+        self.reference.push(input.as_ref().to_path_buf());
+        self
+    }
+
+    /// Adds multiple `.winmd` reference files or directories.
+    pub fn references<I, S>(&mut self, inputs: I) -> &mut Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<Path>,
+    {
+        for input in inputs {
+            self.reference(input);
+        }
+        self
+    }
+
+    /// Adds a `.winmd` reference from memory.
+    pub fn reference_bytes(&mut self, input: &[u8]) -> &mut Self {
+        self.reference_bytes.push(input.to_vec());
+        self
+    }
+
+    /// Adds `.winmd` references from memory.
+    pub fn reference_byte_sets<I, B>(&mut self, inputs: I) -> &mut Self
+    where
+        I: IntoIterator<Item = B>,
+        B: AsRef<[u8]>,
+    {
+        for input in inputs {
+            self.reference_bytes(input.as_ref());
+        }
+        self
+    }
+
+    /// Adds the default Windows metadata references.
+    pub fn reference_default(&mut self) -> &mut Self {
+        self.reference_default = true;
+        self
+    }
+
+    /// Adds multiple input `.rdl` files or directories.
+    pub fn inputs<I, S>(&mut self, inputs: I) -> &mut Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<Path>,
+    {
+        for input in inputs {
+            self.input(input);
+        }
         self
     }
 
     /// Sets the output `.winmd` file path.
-    pub fn output(&mut self, output: &str) -> &mut Self {
-        self.output = output.to_string();
+    pub fn output(&mut self, output: impl AsRef<Path>) -> &mut Self {
+        self.output = output.as_ref().to_path_buf();
         self
     }
 
     /// Compiles the inputs and writes the `.winmd` to the configured output.
     pub fn write(&self) -> Result<(), Error> {
-        if self.output.is_empty() {
+        if self.output.as_os_str().is_empty() {
             return Err(Error::new("output is required", "", 0, 0));
         }
 
-        let (rdl_paths, reference_paths) = expand_input_paths(&self.input, "rdl", "winmd")?;
+        let rdl_paths = expand_input_files(&self.input, "rdl")?;
+        let reference_paths = expand_input_files(&self.reference, "winmd")?;
 
-        let input = expand_rdl_files(&rdl_paths, &self.input_str)?;
+        let input = expand_rdl_files(&rdl_paths, &self.input_text)?;
 
         let mut index = Index::new();
 
@@ -117,19 +174,36 @@ impl Reader {
         let mut reference = vec![];
 
         for file_name in &reference_paths {
+            let source = file_name.to_string_lossy();
             reference.push(
                 metadata::reader::File::read(file_name)
-                    .ok_or_else(|| Error::new("invalid reference", file_name, 0, 0))?,
+                    .ok_or_else(|| Error::new("invalid reference", &source, 0, 0))?,
+            );
+        }
+
+        if self.reference_default {
+            reference.extend(
+                [windows_default::WINRT, windows_default::WIN32]
+                    .into_iter()
+                    .map(|bytes| metadata::reader::File::new(bytes.to_vec()).unwrap()),
+            );
+        }
+
+        for bytes in &self.reference_bytes {
+            reference.push(
+                metadata::reader::File::new(bytes.clone())
+                    .ok_or_else(|| Error::new("invalid reference", "<memory>", 0, 0))?,
             );
         }
 
         let reference = metadata::reader::Index::new(reference);
         validate_use_declarations(&input, &index, &reference)?;
 
-        let assembly_name = std::path::Path::new(&self.output)
+        let assembly_name = self
+            .output
             .file_stem()
             .and_then(|file_name| file_name.to_str())
-            .ok_or_else(|| Error::new("invalid output", &self.output, 0, 0))?;
+            .ok_or_else(|| Error::new("invalid output", &self.output.to_string_lossy(), 0, 0))?;
 
         let mut output = metadata::writer::File::new(assembly_name);
         output.set_reference(reference);
@@ -213,13 +287,14 @@ impl Reader {
         }
 
         std::fs::write(&self.output, output.into_stream())
-            .map_err(|error| Error::new(&error.to_string(), &self.output, 0, 0))
+            .map_err(|error| Error::new(&error.to_string(), &self.output.to_string_lossy(), 0, 0))
     }
 }
 
 /// Parses one `.rdl` file and returns the items it defines under `namespace`.
-pub(crate) fn item_names(path: &str, namespace: &str) -> Result<Vec<String>, Error> {
-    let input = expand_rdl_files(std::slice::from_ref(&path.to_string()), &[])?;
+pub(crate) fn item_names(path: impl AsRef<Path>, namespace: &str) -> Result<Vec<String>, Error> {
+    let path = path.as_ref().to_path_buf();
+    let input = expand_rdl_files(std::slice::from_ref(&path), &[])?;
     let mut index = Index::new();
     for file in &input {
         for item in &file.items {
@@ -252,25 +327,26 @@ fn preprocess_rdl(contents: &str) -> std::borrow::Cow<'_, str> {
     std::borrow::Cow::Owned(result)
 }
 
-fn expand_rdl_files(paths: &[String], input_str: &[String]) -> Result<Vec<File>, Error> {
+fn expand_rdl_files(paths: &[PathBuf], input_text: &[String]) -> Result<Vec<File>, Error> {
     let mut input = vec![];
 
     for path in paths {
+        let source = path.to_string_lossy();
         let Ok(contents) = std::fs::read_to_string(path) else {
-            return Err(Error::new("failed to read binary file", path, 0, 0));
+            return Err(Error::new("failed to read binary file", &source, 0, 0));
         };
 
         let contents = preprocess_rdl(&contents);
         let mut file = syn::parse_str::<File>(&contents).map_err(|error| {
             let start = error.span().start();
-            Error::new(&error.to_string(), path, start.line, start.column)
+            Error::new(&error.to_string(), &source, start.line, start.column)
         })?;
 
-        file.source.clone_from(path);
+        file.source = source.replace('\\', "/");
         input.push(file);
     }
 
-    for contents in input_str {
+    for contents in input_text {
         let contents = preprocess_rdl(contents);
         let mut file = syn::parse_str::<File>(&contents).map_err(|error| {
             let start = error.span().start();
@@ -919,16 +995,26 @@ impl Encoder<'_> {
 
     fn encode_type_ptr(&self, ty: &syn::TypePtr) -> Result<metadata::Type, Error> {
         let is_mut = ty.mutability.is_some();
-        let ty = self.encode_type(&ty.elem)?;
+        let encoded = self.encode_type(&ty.elem)?;
 
-        let ty = match ty {
-            metadata::Type::PtrMut(ty, pointers) => metadata::Type::PtrMut(ty, pointers + 1),
-            metadata::Type::PtrConst(ty, pointers) => metadata::Type::PtrConst(ty, pointers + 1),
+        let ty = match encoded {
+            metadata::Type::PtrMut(inner, pointers) if is_mut => {
+                metadata::Type::PtrMut(inner, pointers + 1)
+            }
+            metadata::Type::PtrConst(inner, pointers) if !is_mut => {
+                metadata::Type::PtrConst(inner, pointers + 1)
+            }
+            metadata::Type::PtrMut(..) | metadata::Type::PtrConst(..) => {
+                return self.err(
+                    ty.elem.as_ref(),
+                    "mixed `*mut` and `*const` pointer chains are not representable",
+                );
+            }
             _ => {
                 if is_mut {
-                    metadata::Type::PtrMut(Box::new(ty), 1)
+                    metadata::Type::PtrMut(Box::new(encoded), 1)
                 } else {
-                    metadata::Type::PtrConst(Box::new(ty), 1)
+                    metadata::Type::PtrConst(Box::new(encoded), 1)
                 }
             }
         };
@@ -1262,7 +1348,7 @@ fn use_glob_resolves_type() {
     let output = std::env::temp_dir().join("windows_rdl_use_glob_resolves_type.winmd");
 
     reader()
-        .input_str(
+        .input_text(
             r#"
 use Other::*;
 
@@ -1282,7 +1368,7 @@ mod Other {
 }
         "#,
         )
-        .output(&output.to_string_lossy())
+        .output(&output)
         .write()
         .unwrap();
 }

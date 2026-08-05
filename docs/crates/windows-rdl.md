@@ -30,6 +30,10 @@ The crate exposes two builders:
 - `reader()` compiles RDL source to `.winmd` metadata.
 - `writer()` writes canonical RDL source from `.winmd` metadata.
 
+Input, reference, and output paths accept strings, `Path`, or `PathBuf`, so build scripts can pass
+paths without converting them to UTF-8 strings. `.input_text(..)` and `.input_texts(..)` compile RDL
+source already in memory.
+
 ### RDL to winmd, and back
 
 Use `reader` to compile `.rdl` into `.winmd`. Use `writer` to regenerate canonical `.rdl` from
@@ -52,17 +56,21 @@ windows_rdl::writer()
 ```
 
 RDL can reference types it does not define. Examples include `HRESULT` and
-`Windows::Win32::System::Com::IUnknown`. Add the standard metadata as another `reader` input so
-those references resolve. The bundled metadata lives in `crates/libs/bindgen/default`.
+`Windows::Win32::System::Com::IUnknown`. Add the standard metadata so those references resolve.
 
 ```rust,no_run
 windows_rdl::reader()
     .input("example.rdl")
-    .input("crates/libs/bindgen/default")
+    .reference_default()
     .output("example.winmd")
     .write()
     .unwrap();
 ```
+
+The reader treats the default metadata as references while compiling the input RDL. Add other
+reference metadata with `.reference(path)`, `.references(paths)`, `.reference_bytes(bytes)`, or
+`.reference_byte_sets(byte_sets)`. The writer has the corresponding `.input`, `.inputs`,
+`.input_bytes`, and `.input_byte_sets` methods and treats default metadata as input to render.
 
 ### C/C++ headers to RDL
 
@@ -77,7 +85,7 @@ separate input.
 windows_clang::clang()
     .args(["-x", "c++", "--target=x86_64-pc-windows-msvc"])
     .input("Example.h")
-    .input("crates/libs/bindgen/default/Windows.Win32.winmd")
+    .reference_default()
     .output("example.rdl")
     .namespace("Example")
     .library("Example.dll")
@@ -190,7 +198,7 @@ Two in-repo tools show both uses:
   SDK metadata. The tool compiles them with the standard Win32 winmd into `extras.winmd`. Then it
   feeds that winmd to `windows_bindgen::bindgen` for [`windows-reactor`](windows-reactor.md).
 
-In both tools, `reader` also gets the standard metadata as input. That lets RDL references resolve
+In both tools, `reader` also gets the standard metadata as references. That lets RDL names resolve
 against the standard definitions.
 
 ---
@@ -234,8 +242,8 @@ cargo test -p test_clang
 
 | File | Source | Writer |
 |------|--------|--------|
-| `crates/libs/bindgen/default/Windows.winmd` | SDK Contracts winmds, merged and written through RDL | `tool_winrt` |
-| `crates/libs/bindgen/default/Windows.Win32.winmd` | Windows SDK + WDK headers scraped to RDL, um + km merged | `tool_win32` |
+| `crates/libs/default/Windows.winmd` | SDK Contracts winmds, merged and written through RDL | `tool_winrt` |
+| `crates/libs/default/Windows.Win32.winmd` | Windows SDK + WDK headers scraped to RDL, um + km merged | `tool_win32` |
 
 The committed RDL files are the reviewable source for these metadata files:
 
@@ -258,7 +266,7 @@ differs by architecture is split into per-architecture copies tagged `#[arch(X86
 
 The merge compares type structure through [`windows-metadata`](windows-metadata.md).
 `merge_arch_rdl` handles orchestration. It reads each architecture's RDL, runs the merge, and writes
-the combined output.
+the combined output. `ArchInput` stores its RDL directory and winmd as `PathBuf`.
 
 ### Published crates and namespace remap
 
@@ -286,7 +294,7 @@ changes tracked files.
 
 `tool_roundtrip` validates the reverse direction:
 
-- WinRT uses `writer(Windows.winmd).split(true)` to write `metadata/winrt`.
+- WinRT uses `writer(Windows.winmd).split()` to write `metadata/winrt`.
 - Win32 and WDK cannot recover header files from flat winmd alone. The tool reads the committed RDL
   layout to map type names back to header stems. Then it writes `metadata/win32` or `metadata/wdk`
   with `writer(winmd).partition(map)`.
@@ -304,7 +312,39 @@ RDL stable.
 | Event remove parameter names | `token` | The remove accessor takes an event token. |
 | Property and event accessors | Property or event shorthand | The writer tracks consumed `get_`, `put_`, `add_`, and `remove_` methods. |
 | Unconsumed interface methods | Full method form | Methods that are not part of shorthand stay explicit. |
+| Input direction | `#[in]` | The reader accepts `#[r#in]`; the formatter emits `#[in]`. |
 | Raw identifiers, GUID constants, and delegate ABI spelling | Canonical writer output | Text can differ while metadata stays equivalent. |
 
 The reader rejects unsupported forms with errors. It does not silently drop them. Examples include
 unsupported types, constants, callback ABIs, variadic callback parameters, and function ABIs.
+
+### Method parameter rows
+
+The winmd writer uses `MethodDef::params_by_sequence` from
+[`windows-metadata`](windows-metadata.md). Sequence 0 supplies return-type attributes. Nonzero rows
+are matched to one-based signature positions, so sparse or out-of-order metadata cannot rename or
+reflag another parameter. Every signature parameter is emitted; a missing row uses `pN` with no
+explicit direction or optional marker, which the RDL reader lowers with its existing type-based
+direction default. Duplicate and out-of-range sequences stop the write with a diagnostic.
+
+Direction and optionality come from `MethodParam::direction()` and `is_optional()`. Reserved,
+retval, and count attributes remain independent pseudos or custom attributes. The writer applies
+RDL's format boundary only when spelling them: In+Out emits both markers, while Unspecified emits
+the input spelling because RDL has no literal unspecified-direction syntax.
+
+`test_rdl::method_params` authors sparse and out-of-order rows directly, checks parameter and
+return pseudos in the generated RDL, and compiles the RDL back to dense metadata with the same
+associations. It also checks that every non-return `Param` row in the committed WinRT, Win32, and
+WDK metadata has at least one representable direction flag.
+
+### Lossless round-trip limits
+
+- **Direction flags:** RDL has no spelling for a `Param` row with neither In nor Out. Omitting both
+  invokes the type-based default, so a metadata row with neither flag reads back as In.
+- **Void return rows:** Return attributes are written after `->`. A void method has no return type
+  to carry them, so attributes on its sequence 0 row are not represented.
+- **Count relationships:** `#[len_param(N)]` and `#[size_param(N)]` store raw zero-based signature
+  positions. Reordering parameters without updating `N` changes the relationship.
+- **Pointer constness:** `metadata::Type` stores one constness bit with a pointer depth. Uniform
+  chains such as `*mut *mut T` and `*const *const T` round-trip. Mixed chains are rejected before
+  metadata is written, including chains nested inside a reference.

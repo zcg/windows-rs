@@ -10,7 +10,7 @@ use windows_rdl::{item_names, reader, write_to_file, writer};
 // Win32 and WDK RDL - so the round-trip works from that split RDL, compiling each winmd on demand.
 // Paths are relative to the workspace root, matching `tool_win32`/`tool_winrt`.
 
-const WINRT_WINMD: &str = "crates/libs/bindgen/default/Windows.winmd";
+const WINRT_WINMD: &str = "crates/libs/default/Windows.winmd";
 const WINRT_RDL: &str = "metadata/winrt";
 
 const WIN32_RDL: &str = "metadata/win32";
@@ -21,7 +21,7 @@ const WDK_RDL: &str = "metadata/wdk";
 const WDK_KM_WINMD: &str = "target/roundtrip/Windows.Win32.km.winmd";
 
 // The WinRT projection winmd, a resolution reference so the um compile resolves `ABI::Windows::*`.
-const WINRT_RESOLUTION: &str = "crates/libs/bindgen/default/Windows.winmd";
+const WINRT_RESOLUTION: &str = "crates/libs/default/Windows.winmd";
 
 // The flat namespace the header-scraped Win32 and WDK surfaces share.
 const WIN32_ROOT: &str = "Windows.Win32";
@@ -37,7 +37,8 @@ fn main() {
     // Win32: compile the committed RDL (+ seed + WinRT resolution) to a um winmd, then
     // decompile it back under the committed header layout.
     compile(
-        &[WIN32_RDL, WIN32_SEED, WINRT_RESOLUTION],
+        &[WIN32_RDL, WIN32_SEED],
+        &[WINRT_RESOLUTION],
         WIN32_UM_WINMD,
         "Win32",
     );
@@ -46,7 +47,7 @@ fn main() {
     // WDK: compile the committed km RDL against the um winmd (its Win32 dependencies resolve
     // there), then decompile it back. Only WDK-defined types are emitted, so the round-trip
     // reproduces `metadata/wdk`.
-    compile(&[WDK_RDL, WIN32_UM_WINMD], WDK_KM_WINMD, "WDK");
+    compile(&[WDK_RDL], &[WIN32_UM_WINMD], WDK_KM_WINMD, "WDK");
     partitioned("WDK", WDK_KM_WINMD, WDK_RDL, None);
 
     println!(
@@ -55,10 +56,11 @@ fn main() {
     );
 }
 
-/// Compiles RDL and winmd references into a single winmd.
-fn compile(inputs: &[&str], output: &str, label: &str) {
+/// Compiles RDL sources and winmd references into a single winmd.
+fn compile(inputs: &[&str], references: &[&str], output: &str, label: &str) {
     reader()
         .inputs(inputs)
+        .references(references)
         .output(output)
         .write()
         .unwrap_or_else(|e| panic!("{label} winmd compile failed: {e}"));
@@ -75,7 +77,7 @@ fn winrt() {
     writer()
         .input(WINRT_WINMD)
         .filters(["Windows", "!Windows.Win32"])
-        .split(true)
+        .split()
         .output(WINRT_RDL)
         .write()
         .unwrap_or_else(|e| panic!("WinRT roundtrip failed: {e}"));

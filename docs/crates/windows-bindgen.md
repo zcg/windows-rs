@@ -11,9 +11,10 @@
 `windows-sys` crates. You can also use it from `build.rs` to make a small binding set for the APIs
 that your crate calls.
 
-The crate includes the standard Windows metadata. Most projects only need an output file and a
-filter. If an API has no metadata, use [`windows-rdl`](windows-rdl.md) to create a `.winmd` file.
-Then pass that file to `windows-bindgen`.
+The crate includes the standard Windows metadata through
+[`windows-default`](windows-default.md). Most projects only need an output file and a filter. If an
+API has no metadata, use [`windows-rdl`](windows-rdl.md) to create a `.winmd` file. Then pass that
+file to `windows-bindgen`.
 
 ## Getting started
 
@@ -28,7 +29,7 @@ windows-link = "0.100"
 windows-bindgen = "0.100"
 ```
 
-Generate bindings from `build.rs` with either command-line-style arguments or the builder:
+Generate bindings from `build.rs` with command-line-style arguments, a command file, or the builder:
 
 ```rust,no_run
 windows_bindgen::bindgen([
@@ -71,8 +72,8 @@ to select a smaller surface.
 Prefix a rule with `!` to exclude it. A selected type also pulls in the types that its signatures
 require. Those dependency types are emitted as shells.
 
-For more than a few names, keep the arguments in a response file. Pass it with `--etc`. Lines that
-start with `//` are comments:
+For a complete command file, use `--etc`. Blank lines and lines whose first non-whitespace
+characters are `//` are ignored:
 
 ```text
 --out crates/libs/version/src/bindings.rs
@@ -88,7 +89,10 @@ start with `//` are comments:
 windows_bindgen::bindgen(["--etc", "bindings.txt"]);
 ```
 
-The in-repo crates use this pattern. `tool_bindings` runs
+When only the filter list is large, keep it in a filter-only file and use
+`Bindgen::filter_file`/`filter_files` or the textual `--filter-file` option.
+
+The in-repo crates use both patterns. `tool_bindings` runs
 `bindgen(["--etc", "crates/tools/bindings/src/<crate>.txt"])` for each library.
 
 ## Choosing the output shape
@@ -109,6 +113,24 @@ Style:
 
 WinRT event accessors are always collapsed into an `Event` wrapper. This applies to all styles and
 layouts. See [Event accessors](#event-accessors).
+
+### Variadic native functions
+
+Native variadic exports carry `MethodCallAttributes::VARARG` in the method signature. Only
+`--sys` emits them, because sys output can retain the literal `...` tail in a raw foreign
+declaration. Both `link!` output and `--sys --extern` preserve metadata `C` and `system` calling
+conventions. Rust lowers a Windows `system` C-variadic declaration to the compatible C variadic ABI
+on X86 while retaining `system` for fixed signatures.
+
+Default and minimal output cannot forward an unknown variadic tail through a Rust wrapper. Broad
+filters omit those exports. Selecting one by exact function name reports that rich and minimal
+bindings cannot project it and directs the caller to `--sys`; it never emits the fixed prefix as a
+callable function. Stable Rust cannot declare a `fastcall` C-variadic function, so broad sys
+generation omits that metadata shape and exact selection reports the unsupported convention.
+
+The published `windows-sys` crate therefore retains raw declarations such as
+`AuthzReportSecurityEvent(...)`, while the `windows` crate omits the 31 Win32 and WDK variadic
+exports that previously appeared as unsafe fixed-prefix wrappers.
 
 Layout:
 
@@ -156,10 +178,15 @@ and `remove_X`.
 
 ### Other useful options
 
-- `--in`, `.input(..)`, and `.inputs(..)` add `.winmd` files or directories. Use the literal
-  `"default"` to include the bundled Windows metadata.
+- `--in`, `.input(..)`, and `.inputs(..)` add `.winmd` files or directories. The builder uses the
+  standard metadata implicitly when no input is supplied. Builder inputs accept strings, `Path`, or
+  `PathBuf`. Use `.input_default()` to combine the bundled metadata with custom inputs; the textual
+  `--in default` form provides the same behavior.
+- `.output(..)` accepts a string, `Path`, or `PathBuf`.
 - `--derive` and `.derive(..)` add derives to generated types.
-- `--implement` and `.implement(..)` emit `_Impl` scaffolding for WinRT interface implementations.
+- Bare `--implement` and `.implement_all()` emit `_Impl` scaffolding for every WinRT interface in
+  scope. Use `.implement(name)` or `.implements(names)` to limit scaffolding to type names or
+  namespace prefixes.
 - `--rustfmt` and `.rustfmt(..)` set the formatter for the output.
 - `--dead-code` and `.dead_code()` emit `pub(crate)` for callable items. This lets the compiler flag
   unused generated callables.
@@ -250,7 +277,7 @@ not needed to use `windows-bindgen`.
 
 `windows-bindgen` is hand-written. It is the generator that other crates use. It reads ECMA-335
 metadata through [`windows-metadata`](windows-metadata.md). The bundled metadata inputs live in
-`crates/libs/bindgen/default`.
+the [`windows-default`](windows-default.md) crate.
 
 Two tools drive it in this repository:
 
@@ -353,7 +380,249 @@ See [`windows-rdl`](windows-rdl.md) for RDL input. Test coverage lives in
 `crates/tests/libs/clang/input/bitfields.h` and
 `crates/tests/libs/bindgen/input/struct_bitfield.rdl`.
 
+### Counted-buffer metadata
+
+`NativeArrayInfoAttribute` and `MemorySizeAttribute` can replace a raw pointer/count pair with a
+slice parameter in rich output. `windows-metadata::reader::MethodParam::buffer_relationship`
+decodes the literal signed relationship:
+
+- `CountParamIndex` identifies an element-count parameter.
+- `BytesParamIndex` identifies a byte-count parameter.
+- `CountConst` supplies a fixed element count.
+
+The metadata reader checks property names and value types. Invalid or conflicting relationships
+return `None`, which keeps the raw ABI shape. It does not interpret parameter positions, pointer
+shapes, or public projection policy.
+
+Before `CppMethod` indexes a related parameter, it rejects negative, out-of-range, and self-relative
+indexes and verifies that the count is one input scalar used by one buffer. Byte counts still
+require byte-sized elements. A fixed `CountConst` must be nonnegative and fit the maximum Rust
+object size on 32-bit Windows. If any check fails, generation keeps the pointer and count parameters
+exactly as the ABI declares them and adds no slice or array sugar.
+
+### Parameter direction and retval policy
+
+`windows-metadata::reader::MethodParam` supplies the raw direction, optional, reserved, and retval
+facts. Bindgen's local `Param::is_input_only` then applies Rust policy: `Input` and `Unspecified`
+are input-only, while `Output` and `InputOutput` take the output-capable branch. This is why an
+In+Out pointer remains `*mut T` and an eligible counted buffer becomes `&mut [T]`; treating the
+presence of `In` as input-only would incorrectly make writable storage const.
+
+Bindgen also keeps its optional-or-reserved `Option` shaping local. Metadata does not combine those
+facts, and windows-csharp does not use the same public-surface rule.
+
+A trailing parameter becomes a projected return only when it is an output-only, required,
+non-reserved, uncounted pointer. An explicit `RetValAttribute` bypasses the heuristic requirements
+that every preceding parameter be input-only, that the pointee is not void, and that it fit the
+existing 128-bit size limit; it does not bypass the other candidate checks. Without that attribute,
+any preceding `Output` or `InputOutput` parameter keeps the trailing pointer in the parameter list.
+
 ### Testing
 
 Dedicated test crates cover the generator and related metadata tools: `test_bindgen`, `test_rdl`,
-and `test_clang`.
+and `test_clang`. `variadic_fn*` covers rich, minimal, sys-link, sys-extern, `C`, `system`, and
+unsupported `fastcall` output. `buffer_relationships` covers valid, negative, out-of-range,
+self-relative, byte-counted, and fixed-count metadata. The existing `interface_out_array` golden
+pins valid counted-buffer output. `method_params` pins In+Out mutable projection, and
+`method_return` covers explicit and heuristic retval selection with In+Out, optional, reserved, and
+counted exclusions plus explicit void-pointer and large-pointee returns.
+
+## Build-tool API harmonization
+
+The major-version API pass covers `windows-default`, `windows-bindgen`, `windows-rdl`,
+`windows-clang`, and the merge/remap surface in `windows-metadata`. Compatibility with the removed
+spellings is not required.
+
+| Surface | Current contract |
+| --- | --- |
+| Default metadata | `windows-default` exposes the bundled `WINRT` and `WIN32` byte slices. |
+| Bindgen metadata | `input`/`inputs`, `input_bytes`/`input_byte_sets`, and `input_default`. |
+| RDL source | `input`/`inputs` for paths and `input_text`/`input_texts` for source in memory. |
+| RDL references | `reference(s)`, byte-set variants, and `reference_default`. |
+| Clang source | `input`/`inputs` for headers and `input_text`/`input_texts` for source in memory. |
+| Clang metadata | Reference and resolution metadata support every input form. |
+| Paths | Builders and merge plans retain `PathBuf`; strings remain valid inputs. |
+| Boolean options | `split`, `drop_lib_less`, `dead_code`, and `union_enums` are enabling methods. |
+| Implementations | `implement_all`, `implement`, and `implements` select the mode. |
+| Command files | `bindgen --etc` reads commands; `filter_file(s)` read filters. |
+| Terminals | Builder state owns configuration; terminals do not repeat it. |
+
+Bindgen keeps one intentional default difference. A builder with no metadata inputs uses the
+bundled metadata, preserving its small-build-script workflow. Once a caller supplies inputs,
+`input_default()` adds the bundled metadata explicitly. The textual adapter expresses the same
+choice as `--in default`; the programmatic builders do not recognize `"default"` as a path
+sentinel.
+
+Command files are for complete textual configurations with large filters. `--etc` keeps the
+established `bindgen` response-file contract, including nested and multiple command files.
+`--filter-file` includes a filter-only file from textual arguments or another command file.
+Programmatic callers should use the builder and `filter_file`/`filter_files`, which retain typed
+paths.
+
+### Audit result
+
+The API audit is complete. Public methods, rustdoc, crate readmes, crate pages, samples, tools, and
+tests use the current names. Remaining `"default"` arguments use bindgen's textual `--in` adapter;
+programmatic builders use explicit default methods. `windows-csharp` remains outside this API pass
+because it is a removal candidate.
+
+The affected tests and clippy targets pass. `tool_bindings`, `tool_composition`, `tool_reactor`,
+`tool_webview`, `tool_package`, `tool_winrt`, `tool_roundtrip`, and `tool_win32` regenerate without
+unexpected tracked output. This closes the API harmonization phase.
+
+## Investigation: lessons from windows-csharp
+
+The windows-csharp generator starts from the same metadata but builds a different public language
+surface. Comparing the two generators is useful when it exposes duplicated metadata decoding,
+missing ABI tests, or measured costs. C# runtime mechanisms are not assumptions that the Rust
+projection should adopt.
+
+This investigation excludes two larger API changes:
+
+- `Bindgen::write` remains the existing panic-based API. A fallible generation API needs a separate
+  design for errors produced across filtering, metadata conversion, formatting, and file output.
+- Broad-filter omission reporting remains deferred. Exact selection already reports unsupported
+  requested shapes, while broad generation intentionally retains the supported subset.
+
+### Changes supported by the comparison
+
+#### Shared literal buffer relationships
+
+Both generators decoded the same three metadata properties. That decoding now lives on
+`windows-metadata::reader::MethodParam` as `BufferRelationship`. The values stay signed and retain
+their literal metadata meaning. The Rust and C# generators separately decide whether an index is
+valid and whether the pointer/count pair can become a slice or span.
+
+This boundary removes duplicate attribute parsing without forcing the languages to share public API
+policy. It also tightens the C# path: an `I16` value on an unrelated property is no longer accepted
+as a count parameter.
+
+#### Unchanged generated files
+
+`write_to_file` now compares the completed output with the existing file and skips an identical
+write. Generation and formatting still run, so this does not make the generator itself faster. It
+does preserve the file timestamp and avoids needless downstream compilation when a build script
+regenerates committed bindings.
+
+The comparison happens after generation and formatting. This keeps output validation unchanged and
+does not introduce a separate cache or stale-input problem.
+
+### Changes not supported by the comparison
+
+#### A new signature projection plan
+
+windows-csharp has an explicit `ParamProjection` model because C# spans, strings, raw pointers, and
+generated COM companions need several distinct managed surfaces. Rust already has one shared
+`method_signature` path for WinRT methods, native COM methods, delegates, and functions.
+`CppMethod` then adds native-only buffer, retval, optional, and conversion policy.
+
+Adding another plan object would move the existing boundary without removing duplicate
+construction. A larger rewrite is not justified unless a new ABI shape causes the writers to
+derive the same policy in different places.
+
+#### Copied runtime ownership mechanisms
+
+Rust already has the runtime properties that required new machinery in C#:
+
+- interface owners are one pointer and release deterministically through `Drop`;
+- borrowed interface parameters do not create another owner;
+- vtables and generic interface identifiers are compile-time data;
+- `AsyncFuture` caches `IAsyncInfo` rather than querying it on each poll;
+- collection iteration batches through `GetMany`;
+- `EventRevoker` is an inline owner and does not allocate its own heap object.
+
+C# finalizers, synchronized owners, generated runtime support, and callback-confined borrowing solve
+managed-runtime constraints. Copying them would add state or code to Rust without addressing a Rust
+problem.
+
+Borrowed HSTRING construction also does not transfer directly. A managed `string` is already UTF-16,
+while Rust `str` is UTF-8 and must be transcoded for an HSTRING.
+
+### ABI test transfer
+
+The C# work found several cases that matter to any projection: sequence-correct parameter rows,
+native COM record returns, failed `HRESULT` cleanup, required success-null interface outputs,
+generic default-interface identifiers, malformed counted buffers, and variadic functions.
+
+The shared branch work already added the missing Rust coverage:
+
+- `method_params` covers sparse and out-of-order parameter rows and direction flags.
+- `method_return` and `com_implement` cover native record returns and retval shaping.
+- `buffer_relationships` covers valid and malformed count relationships.
+- `variadic_fn*` covers rich omission and raw sys declarations.
+- existing interface and runtime tests cover null interface conversion and generic identifiers.
+
+Duplicating C# fake-vtable harnesses in the bindgen tests would test the same generated contracts
+with more maintenance. New runtime tests should be added only when they exercise ownership or
+cleanup that a golden file cannot establish.
+
+### Generation measurements
+
+Set `WINDOWS_BINDGEN_TIMINGS` to print metadata, selection, planning, rendering, formatting,
+writing, and total times for each output:
+
+```powershell
+$env:WINDOWS_BINDGEN_TIMINGS = "1"
+cargo run -p tool_bindings --quiet
+```
+
+The first timed run showed that `tool_bindings` rebuilt the same default metadata reader for every
+output. Each rebuild took about 0.64-1.26 seconds. Selection, planning, rendering, and writing were
+usually measured in milliseconds. The 17-output run took 15.5 seconds.
+
+The default-only reader is now cached for the life of the process. Explicit metadata combinations
+still get independent readers. The same timed run then took 1.74 seconds:
+
+| Phase | Aggregate time |
+| --- | ---: |
+| Metadata | 667 ms |
+| Selection | 30 ms |
+| Planning and references | 6 ms |
+| Rendering | 70 ms |
+| Formatting | 953 ms |
+| Writing | 2 ms |
+
+Metadata initialization now occurs once, and later default-only generations reuse the immutable
+reader. This also avoids leaking one metadata index per output.
+
+Formatting is the largest remaining cost in this multi-output tool. Most outputs spend about
+50-80 ms starting and running rustfmt even when the generated file is small. Replacing rustfmt or
+its whitespace post-processing is not justified by this measurement alone. Batching or parallelizing
+independent outputs belongs in the multi-output tool rather than the `Bindgen` API.
+
+Skipping identical writes does not reduce generation or formatting time. Its benefit is avoiding
+filesystem churn and downstream rebuilds.
+
+### Runtime measurements and optimization limits
+
+The cross-language benchmark shows that ordinary windows-rs calls, casts, and collection iteration
+are already competitive. Two possible optimizations need narrower evidence:
+
+- Event add/remove churn is slower in the general language benchmark. The Rust path creates a
+  delegate box and returns an `EventRevoker`; the C# benchmark uses a raw token. Profiling must
+  separate delegate allocation, source cloning, registration, and revocation before changing the
+  public event model.
+- An inherited-interface forwarder performs QI for each call. Callers that repeat several base
+  interface calls can already cast once and reuse that interface. Adding a cache to every owner
+  would make the one-pointer representation larger or require shared side state.
+
+`BufferedIterator` already batches calls and moves values out of its buffer, and its measured vector
+iteration is strong. Replacing its `Vec` with inline storage is low priority. `init_mta` also
+intentionally keeps MTA usage alive for the process; tying its cookie to thread destruction is not
+an automatic correctness improvement.
+
+### Remaining investigation
+
+The following work needs evidence or a separate compatibility decision:
+
+| Area | Current conclusion |
+| --- | --- |
+| Event churn | Profile allocation, QI, add, and remove costs independently. |
+| Repeated inherited calls | Benchmark forwarders against one explicit cast. |
+| Flat-name collisions | Stable winner selection prevents drift but can hide an item. |
+| Multi-output formatting | Consider driver-level parallelism if generator latency matters. |
+| Iterator storage | Existing batching and benchmark results do not justify an inline buffer. |
+
+Flat-name collision diagnostics should be designed with filter diagnostics rather than added as an
+isolated warning. The current `TypeTree` sorts colliding rows and retains a stable winner, which
+makes output reproducible but does not prove that the retained item is the intended one.

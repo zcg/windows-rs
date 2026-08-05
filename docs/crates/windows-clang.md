@@ -55,20 +55,36 @@ cross-header type references resolve:
 windows_clang::clang()
     .args(["-x", "c++", "--target=x86_64-pc-windows-msvc"])
     .input("Example.h")
-    .input("crates/libs/bindgen/default/Windows.Win32.winmd")
-    .output("example.rdl")
+    .reference_default()
+    .output("rdl")
     .namespace("Example")
     .library("Example.dll")
-    .write()
+    .write_by_header()
     .unwrap();
 ```
 
 `clang_version()` returns the loaded libclang's version string; the tooling pins a specific libclang
 release so the scrape is deterministic (see `tool_win32`).
 
+Use `.input_text(..)` and `.input_texts(..)` when the C/C++ source is already in memory.
+
+### Default metadata
+
+`.reference_default()` adds the standard WinRT and Win32 metadata as references for declarations
+used by the scraped headers. `.reference(..)` and `.references(..)` add reference metadata from
+files or directories. `.reference_bytes(..)` and `.reference_byte_sets(..)` accept metadata already
+in memory. Input, reference, resolution, import library, and output paths accept strings, `Path`, or
+`PathBuf`.
+
+`.resolution_default()` is different: it adds only the WinRT metadata to the resolution set used to
+classify `ABI::Windows::*` declarations. This lets `tool_win32` distinguish real WinRT types from
+Win32 COM interop types without treating the Win32 metadata being generated as an existing
+definition. `.resolution_input(..)` and `.resolution_inputs(..)` add custom metadata from paths;
+`.resolution_bytes(..)` and `.resolution_byte_sets(..)` add it from memory.
+
 ## Consumers
 
-- `tool_win32` - owns the single committed `crates/libs/bindgen/default/Windows.Win32.winmd` for
+- `tool_win32` - owns the single committed `crates/libs/default/Windows.Win32.winmd` for
   the whole native API surface. It runs three phases: (A) scrape the Windows SDK `um`/`shared`
   headers into `metadata/win32/*.rdl` (committed) and an uncommitted
   `target/win32/Windows.Win32.winmd`; (B) scrape the WDK kernel-mode `km` headers into
@@ -124,13 +140,14 @@ Everything generic to *any* header scrape lives in `windows-clang`:
 - **Provisioning** - `ensure_libclang` / `assert_libclang_version` (the pinned `LIBCLANG_VERSION`
   wheel, fetched + cached on first use), `clang_resource_dir`, and `nuget_package` (restore a pinned
   NuGet package into the global cache).
-- **Parse + emit** - the `clang()` builder (target, args, `input`/`input_str`, `scope`,
-  `scope_headers`, `exclude_headers`, `import_library`, `drop_lib_less`), header partitioning
-  (`write_by_header`), and the per-kind cursor->RDL modules.
+- **Parse + emit** - the `clang()` builder (target, args, `input`/`input_text`/`input_texts`,
+  `scope`/`scopes`, `scope_header`/`scope_headers`, `exclude_header`/`exclude_headers`,
+  `import_library`, `drop_lib_less`), header partitioning (`write_by_header`), and the per-kind
+  cursor->RDL modules.
 - **Multi-arch orchestration** - the `Clang::scrape` terminal, `Arch` (clang triple +
   `SupportedArchitecture` bits + per-target defines), `ScrapePlan` (the orchestration-only state:
-  output paths, arches, reference winmds, seed - *not* a mirror of the builder), and `Summary`. This
-  is pure driver: nothing in it is win32- or wdk-specific.
+  `PathBuf` outputs, arches, reference winmds, seed - *not* a mirror of the builder), and `Summary`.
+  This is pure driver: nothing in it is win32- or wdk-specific.
 
 Only what is *genuinely per-scraper* stays in each tool: the NuGet package IDs and pinned versions,
 the SDK/WDK include+lib directory layout, the translation-unit source assembly (the `windows.h`
@@ -488,7 +505,7 @@ representation it already gives every interface (`windows-bindgen`, `types::from
 Phase A above produces the `um` Win32 surface. `tool_win32` then scrapes the WDK kernel-mode headers
 the same way it scrapes the SDK - a whole-header scrape, not a symbol allowlist - and merges that
 surface with the `um` surface into the single committed
-`crates/libs/bindgen/default/Windows.Win32.winmd`. Both scrapes drive the *same*
+`crates/libs/default/Windows.Win32.winmd`. Both scrapes drive the *same*
 [`scrape`](#scraper-layering-one-crate-two-levels) terminal from plain `const` slices; the km
 configuration lives in `crates/tools/win32/src/km.rs`. Two phases run in order after phase A:
 
@@ -852,6 +869,30 @@ Net: the flat `Windows.Win32` surface is collision-free except for `Network` (in
 ambiguous, reachable via its stems) and the protective `None` prelude re-export; the core-vs-`Win32`
 collisions (`WIN32_ERROR`, `NTSTATUS`, `RPC_STATUS`) are gone.
 
+### windows-csharp lang_perf consolidation
+
+Complete. `crates/samples/test_bench` now contains every canonical operation from `lang_perf`,
+uses the canonical `IterateVector` and `Error` names, and reports cppwinrt, windows-rs,
+windows-csharp, and cswinrt 2 in that order. The merged matrix covers metadata `Object`,
+`GetMany`, `IMap<string, int>` value enumeration, nullable `IReference<int>`, and
+`IAsyncOperation<int>`. The measured table is in `windows-csharp.md`, and the duplicate
+`crates/samples/lang_perf` tree has been removed.
+
+The follow-up cast audit split `Cast`, `CastOwned`, and `Interface`. Runtime classes now forward
+collision-free non-default-interface methods through QI + call + Release, with no temporary
+managed owner or interface cache; `As<T>()` remains the escapable form. HRESULT failures now
+become one raw `COMException` with the original code and any restricted or regular thread error
+description; the projection does not globally reinterpret `E_BOUNDS`.
+
+Remaining projection breadth exposed by this work:
+
+1. Map enumeration entries expose `Value`; projecting an HSTRING `Key` safely remains.
+2. The async awaiter polls `IAsyncInfo::Status`. Use the completion delegate to avoid holding a
+   thread-pool worker while an incomplete operation runs.
+3. Collection element coverage still excludes string and `IReference<T>` vector elements.
+4. Delegate inputs support metadata `Object` through callback-confined borrowed views. Other
+   non-blittable inputs and owned non-blittable returns remain unsupported.
+
 ### Testing
 
 `test_clang` holds golden fixtures that pin the header-to-RDL behavior. It exercises both the
@@ -876,7 +917,7 @@ lives in `rust-lang/rust`:
 `windows_raw_dylib` feature is enabled.
 
 Every one of the 2,641 filter names was resolved against the default metadata (the single
-`crates/libs/bindgen/default/Windows.Win32.winmd`, merged from `metadata/win32/*.rdl` and
+`crates/libs/default/Windows.Win32.winmd`, merged from `metadata/win32/*.rdl` and
 `metadata/wdk/*.rdl`) using the bindgen filter resolver. **2,596 resolve and 45 do not.** In every
 remaining case the member *constants* of a collapsed type are still present; only the wrapper
 *type name* or an invented member is missing.
@@ -1081,7 +1122,7 @@ arch-merge: [3 winmds] --metadata::merge--> merged winmd (temp)
 ```
 for arch in [x64, arm64, x86]:  headers (ref: phase A's um winmd) --> RDL --> winmd (+ arch-merge)
     --> metadata/wdk/*.rdl (committed) + target/wdk km.winmd
-merge(um winmd, km.winmd, union_enums) --> bindgen/default/Windows.Win32.winmd  (committed)
+merge(um winmd, km.winmd, union_enums) --> default/Windows.Win32.winmd  (committed)
 ```
 
 `tool_package` later re-reads `metadata/win32` + `metadata/wdk` to synthesise the

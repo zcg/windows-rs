@@ -24,7 +24,7 @@ const KM_WINMD: &str = "target/wdk/Windows.Win32.km.winmd";
 /// (for example `FILE_INFORMATION_CLASS`) carries every member. Downstream `tool_bindings` filters
 /// point `--in` at this stable in-repo winmd (and the bundled `"default"` bindings resolve against
 /// it). Re-derived on every run; treat it as generated output.
-const MERGED_WINMD: &str = "crates/libs/bindgen/default/Windows.Win32.winmd";
+const MERGED_WINMD: &str = "crates/libs/default/Windows.Win32.winmd";
 
 /// Resolution winmd(s) - `Windows.winmd`, the WinRT projection - consulted only to classify
 /// declarations in the `ABI::Windows::*` C++/WinRT projection namespace that `roregistrationapi.h`
@@ -32,7 +32,7 @@ const MERGED_WINMD: &str = "crates/libs/bindgen/default/Windows.Win32.winmd";
 /// cross-winmd reference); a type absent from it is a Win32 COM interop entity captured into the
 /// flat `Windows.Win32` metadata. Never an exclusion base - no WinRT type is skipped or emitted
 /// here.
-const RESOLUTION_WINMDS: &[&str] = &["crates/libs/bindgen/default/Windows.winmd"];
+const RESOLUTION_WINMDS: &[&str] = &["crates/libs/default/Windows.winmd"];
 
 /// Where the per-header RDL snapshot is written. Unlike the binary winmd, the
 /// `.rdl` text is committed to the repository so the canonical Windows API surface
@@ -178,6 +178,7 @@ const HEADERS: &[&str] = &[
     "dsound.h",
     "dshow.h",
     "dcomp.h",
+    "DispatcherQueue.h",
     "dwrite_3.h",
     "d2d1_3.h",
     "d3d9.h",
@@ -599,6 +600,7 @@ const IMPORT_LIBS: &[&str] = &[
     "mfreadwrite.lib",
     "dsound.lib",
     "dcomp.lib",
+    "CoreMessaging.lib",
     "d3d9.lib",
     "d3d10.lib",
     "cfgmgr32.lib",
@@ -788,7 +790,7 @@ fn main() {
     windows_metadata::merge()
         .input(UM_WINMD)
         .input(KM_WINMD)
-        .union_enums(true)
+        .union_enums()
         .output(MERGED_WINMD)
         .merge()
         .unwrap_or_else(|e| panic!("failed to merge um + km winmds into `{MERGED_WINMD}`: {e}"));
@@ -864,13 +866,11 @@ fn scrape_um() -> Summary {
         .args(CLANG_ARGS)
         .args(["-include", SAL_SHIM])
         .args(include_args)
-        .drop_lib_less(true)
-        .scope(SCOPE.iter().copied())
+        .drop_lib_less()
+        .scopes(SCOPE.iter().copied())
         .scope_headers(scope_headers.iter().copied())
         .exclude_headers(EXCLUDE_HEADERS.iter().copied());
-    for source in &sources {
-        clang.input_str(source);
-    }
+    clang.input_texts(&sources);
     for lib in &import_libs {
         clang
             .import_library(lib)
@@ -879,13 +879,13 @@ fn scrape_um() -> Summary {
 
     let summary = clang.scrape(&ScrapePlan {
         root: ROOT.to_string(),
-        rdl_dir: RDL_DIR.to_string(),
-        out_dir: OUT_DIR.to_string(),
-        winmd: UM_WINMD.to_string(),
+        rdl_dir: RDL_DIR.into(),
+        out_dir: OUT_DIR.into(),
+        winmd: UM_WINMD.into(),
         archs,
         reference_winmds: Vec::new(),
-        resolution_winmds: RESOLUTION_WINMDS.iter().map(|s| s.to_string()).collect(),
-        seed: Some(METADATA_SEED.to_string()),
+        resolution_winmds: RESOLUTION_WINMDS.iter().map(Into::into).collect(),
+        seed: Some(METADATA_SEED.into()),
         parallel: true,
     });
 
