@@ -181,6 +181,16 @@ impl Widget for NavigationView {
     widget_header!(ControlKind::NavigationView);
     fn bindings(&self) -> PropBindings {
         let mut out = generated::navigation_view_bindings(self);
+        // 顶栏搜索框必须先创建（insert 到最前）：backend 据 AutoSuggestBox=true
+        // 调 SetAutoSuggestBox(nv)，后续 AutoSuggestPlaceholder/Items 与
+        // QuerySubmitted/TextChanged/SuggestionChosen 事件挂接都依赖它已存在。
+        // 此前只 push 了 placeholder/items 却从未创建控件 → 顶栏搜索框从未渲染。
+        if self.auto_suggest_placeholder.is_some() {
+            out.insert(
+                0,
+                Binding::Prop(Prop::AutoSuggestBox, PropValue::Bool(true)),
+            );
+        }
         out.push(Binding::Prop(
             Prop::MenuItems,
             PropValue::NavMenuItems(self.menu_items.clone()),

@@ -9,6 +9,8 @@ pub struct TextBlock {
     pub font_weight: Option<u16>,
     pub text_wrapping: TextWrapping,
     pub is_text_selection_enabled: bool,
+    pub max_lines: Option<u32>,
+    pub text_trimming: Option<i32>,
 }
 impl TextBlock {
     pub fn new(content: impl Into<String>) -> Self {
@@ -28,6 +30,12 @@ impl Widget for TextBlock {
         }
         if let Some(v) = self.font_weight {
             out.push(Binding::Prop(Prop::FontWeight, PropValue::U16(v)));
+        }
+        if let Some(v) = self.max_lines {
+            out.push(Binding::Prop(Prop::MaxLines, PropValue::I32(v as i32)));
+        }
+        if let Some(v) = self.text_trimming {
+            out.push(Binding::Prop(Prop::TextTrimming, PropValue::I32(v)));
         }
         out
     }
@@ -56,6 +64,21 @@ impl TextBlock {
 
     pub fn wrap(mut self) -> Self {
         self.text_wrapping = TextWrapping::Wrap;
+        self
+    }
+
+    /// 限制最大显示行数（WinUI `MaxLines`）。与 `wrap` 组合实现"截断到 N 行"，
+    /// 保证卡片等高布局（PiliPlus `maxLines: 2` 等价）。
+    pub fn max_lines(mut self, v: u32) -> Self {
+        self.max_lines = Some(v);
+        self
+    }
+
+    /// 超出 `max_lines` 后的裁剪方式（WinUI `TextTrimming`）：
+    /// 0=None 1=CharacterEllipsis 2=WordEllipsis 3=Clip。与 `max_lines` 组合实现
+    /// "截断到 N 行 + 省略号"（PiliPlus `overflow: .ellipsis` 等价）。
+    pub fn text_trimming(mut self, v: i32) -> Self {
+        self.text_trimming = Some(v);
         self
     }
 

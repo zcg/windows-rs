@@ -13381,6 +13381,15 @@ impl ISlider {
             .ok()
         }
     }
+    pub(crate) fn SetIsThumbToolTipEnabled(&self, value: bool) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetIsThumbToolTipEnabled)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
 }
 #[repr(C)]
 pub struct ISlider_Vtbl {
@@ -13402,7 +13411,8 @@ pub struct ISlider_Vtbl {
     IsDirectionReversed: usize,
     SetIsDirectionReversed: usize,
     IsThumbToolTipEnabled: usize,
-    SetIsThumbToolTipEnabled: usize,
+    pub SetIsThumbToolTipEnabled:
+        unsafe extern "system" fn(*mut core::ffi::c_void, bool) -> windows_core::HRESULT,
     ThumbToolTipValueConverter: usize,
     SetThumbToolTipValueConverter: usize,
     Header: usize,
@@ -14922,6 +14932,24 @@ impl ITextBlock {
             .ok()
         }
     }
+    pub(crate) fn SetTextTrimming(&self, value: i32) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetTextTrimming)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn SetMaxLines(&self, value: u32) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetMaxLines)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
 }
 #[repr(C)]
 pub struct ITextBlock_Vtbl {
@@ -14952,7 +14980,8 @@ pub struct ITextBlock_Vtbl {
     pub SetTextWrapping:
         unsafe extern "system" fn(*mut core::ffi::c_void, TextWrapping) -> windows_core::HRESULT,
     TextTrimming: usize,
-    SetTextTrimming: usize,
+    pub SetTextTrimming:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i32) -> windows_core::HRESULT,
     TextAlignment: usize,
     SetTextAlignment: usize,
     pub Text: unsafe extern "system" fn(
@@ -14974,6 +15003,21 @@ pub struct ITextBlock_Vtbl {
     IsTextSelectionEnabled: usize,
     pub SetIsTextSelectionEnabled:
         unsafe extern "system" fn(*mut core::ffi::c_void, bool) -> windows_core::HRESULT,
+    // IsTextSelectionEnabled 与 MaxLines 之间还有 8 个未声明槽位（据 WinMD 实测）：
+    // get_SelectedText, get_ContentStart, get_ContentEnd, get_SelectionStart,
+    // get_SelectionEnd, get_BaselineOffset, get_SelectionHighlightColor,
+    // put_SelectionHighlightColor —— 必须用 usize 占位保持 vtable 偏移正确。
+    SelectedText: usize,
+    ContentStart: usize,
+    ContentEnd: usize,
+    SelectionStart: usize,
+    SelectionEnd: usize,
+    BaselineOffset: usize,
+    SelectionHighlightColor: usize,
+    SetSelectionHighlightColor: usize,
+    MaxLines: usize,
+    pub SetMaxLines:
+        unsafe extern "system" fn(*mut core::ffi::c_void, u32) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
     ITextBox,

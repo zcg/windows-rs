@@ -1263,6 +1263,15 @@ impl Backend for WinUIBackend {
                     s.SetStepFrequency(1.0)?;
                     s.cast::<bindings::IRangeBase>()?.SetSmallChange(1.0)
                 }
+                (Prop::IsThumbToolTipEnabled, PropValue::Bool(v), Handle::Slider(s)) => {
+                    s.SetIsThumbToolTipEnabled(*v)
+                }
+                (Prop::MaxLines, PropValue::I32(v), Handle::TextBlock(tb)) => {
+                    tb.SetMaxLines((*v).max(0) as u32)
+                }
+                (Prop::TextTrimming, PropValue::I32(v), Handle::TextBlock(tb)) => {
+                    tb.SetTextTrimming(*v)
+                }
                 (Prop::NavigateUri, PropValue::Str(s), Handle::HyperlinkButton(h)) => {
                     let uri = bindings::Uri::CreateUri(s.as_str())?;
                     h.SetNavigateUri(&uri)
@@ -2247,6 +2256,21 @@ impl Backend for WinUIBackend {
 
         let mut revokers: Vec<windows_core::EventRevoker> = Vec::new();
         match (event, handle) {
+            (Event::SliderSizeChanged, Handle::Slider(h)) => {
+                let handler = handler.clone();
+                revokers.push(
+                    h.cast::<bindings::IFrameworkElement>()
+                        .unwrap()
+                        .SizeChanged(move |_sender, args| {
+                            if let Some(a) = args.as_ref()
+                                && let Ok(s) = a.NewSize()
+                            {
+                                handler.invoke_f64(s.width as f64);
+                            }
+                        })
+                        .unwrap(),
+                );
+            }
             (Event::RefreshRequested, Handle::RefreshContainer(rc)) => {
                 let handler = handler.clone();
                 revokers.push(

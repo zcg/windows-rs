@@ -190,6 +190,7 @@ pub enum Prop {
     IsSecondaryButtonEnabled,
     IsSettingsVisible,
     IsTextSelectionEnabled,
+    IsThumbToolTipEnabled,
     IsTodayHighlighted,
     ItemHeader,
     ItemKey,
@@ -198,6 +199,7 @@ pub enum Prop {
     Margin,
     MaxColumns,
     MaxHeight,
+    MaxLines,
     Maximum,
     MaxRating,
     MaxWidth,
@@ -247,6 +249,7 @@ pub enum Prop {
     Text,
     TextWrapping,
     TextWrappingWrap,
+    TextTrimming,
     Title,
     Value,
     VerticalAlignment,
@@ -314,6 +317,7 @@ pub enum Event {
     SuggestionChosen,
     TextChanged,
     Toggled,
+    SliderSizeChanged,
     ValueChanged,
 }
 

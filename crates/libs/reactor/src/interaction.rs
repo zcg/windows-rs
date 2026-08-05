@@ -612,6 +612,15 @@ pub struct MutationTrigger<T: Send + Clone + PartialEq + 'static> {
 }
 
 impl<T: Send + Clone + PartialEq + 'static> MutationTrigger<T> {
+    /// Transition to `Loading` without spawning background work. Use when the
+    /// operation's completion is reported elsewhere (e.g. a dedicated thread
+    /// calls [`fire`](Self::fire) when done), so rendering shows the loading
+    /// state immediately instead of leaving a window where on-load handlers
+    /// can fire uncontrolled work.
+    pub fn begin(&self) {
+        self.set_state.call(MutationState::Loading);
+    }
+
     /// Fire a mutation on a background thread.
     pub fn fire<F>(&self, f: F)
     where

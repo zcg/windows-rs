@@ -89,6 +89,19 @@ impl WindowHandle {
             let _ = window.Close();
         }
     }
+
+    /// Apply the window presenter (full-screen / default) at runtime on
+    /// **this** window. Unlike the global [`set_presenter`], which targets
+    /// the *active* window, this targets this specific window — required
+    /// when multiple windows coexist (e.g. the player window can go
+    /// full-screen without the main window following and covering it).
+    pub fn apply_presenter(&self, kind: PresenterKind) {
+        WINDOW_REGISTRY.with(|reg| {
+            if let Some(host) = reg.borrow().get(self.key) {
+                host.apply_presenter(kind);
+            }
+        });
+    }
 }
 
 /// Register `host` and wire last-window-close process exit.
