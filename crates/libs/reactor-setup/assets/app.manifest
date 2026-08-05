@@ -10,6 +10,11 @@
         xmlns="urn:schemas-microsoft-com:asm.v1"
         xmlns:winrtv1="urn:schemas-microsoft-com:winrt.v1"
         xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
+    <!-- assemblyIdentity 必须存在：没有它 OS loader 不把该 manifest 视为合法
+         application manifest，会跳过其全部 windowsSettings（dpiAwareness 等）。
+         reactor-setup 历史版本缺此项，导致 runtime DLL 在加载期把进程兜底设为
+         PerMonitor V1，第三方 IME 候选窗失效。name 仅为标识，loader 不校验。 -->
+    <assemblyIdentity version="1.0.0.0" name="app" type="win32"/>
     <asmv3:file name="SessionHandleIPCProxyStub.dll">
         <asmv3:comClass clsid="{4321F616-6804-40F2-B584-B0D7708A720D}"></asmv3:comClass>
         <asmv3:comInterfaceProxyStub
@@ -2814,4 +2819,18 @@
                 name="Microsoft.Web.WebView2.Core.CoreWebView2EnvironmentOptions"
                 threadingModel="both"></winrtv1:activatableClass>
     </asmv3:file>
+    <!-- PerMonitorV2 DPI awareness：WinUI 3 桌面应用必须。
+         self-contained 运行时 DLL 在进程加载时会把进程设为 PerMonitor V1
+         （运行时 manifest 未声明时的兜底），而 reactor 在主函数里再调用
+         SetProcessDpiAwarenessContext(PMv2) 时 DPI 已锁定 → E_ACCESSDENIED
+         静默失败。第三方 IME（微信/搜狗/QQ 输入法）的候选窗是 DPI 缩放的
+         独立弹窗，依赖 PMv2；PMv1 下候选窗渲染/定位失败（组合串正常、空格
+         可提交、但候选窗不显示）。manifest 声明后 OS loader 在进程启动即以
+         PMv2 启动，早于任何 DLL 代码，运行时兜底的 V1 设置会因已锁定而
+         失败（无害）。 -->
+    <application xmlns="urn:schemas-microsoft-com:asm.v3">
+        <windowsSettings>
+            <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+        </windowsSettings>
+    </application>
 </assembly>

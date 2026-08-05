@@ -1160,6 +1160,7 @@ macro_rules! impl_element_ext {
     };
 }
 impl_element_ext!(
+    AutoSuggestBox,
     TextBlock,
     Button,
     StackPanel,
