@@ -93,6 +93,7 @@ widget_modules! {
     toggle_button,
     toggle_switch,
     tree_view,
+    variable_sized_wrap_grid,
     viewbox,
     web_view2,
 }

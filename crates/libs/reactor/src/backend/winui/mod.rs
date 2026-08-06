@@ -123,6 +123,7 @@ define_handles! {
     ToggleSwitch,
     TreeView,
     Viewbox,
+    VariableSizedWrapGrid,
     WebView2,
 }
 
@@ -522,6 +523,9 @@ fn classify_container(h: &Handle) -> Option<ContainerChildren<'_>> {
         )),
         Handle::Canvas(c) => Some(ContainerChildren::Panel(
             c.cast::<bindings::IPanel>().ok()?.Children().ok()?,
+        )),
+        Handle::VariableSizedWrapGrid(v) => Some(ContainerChildren::Panel(
+            v.cast::<bindings::IPanel>().ok()?.Children().ok()?,
         )),
         Handle::RelativePanel(r) => Some(ContainerChildren::Panel(
             r.cast::<bindings::IPanel>().ok()?.Children().ok()?,

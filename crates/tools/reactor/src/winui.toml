@@ -338,5 +338,10 @@ Toggled = { property = "IsOn" }
 SelectionMode = {}
 ItemInvoked = { manual = true, type = "Str" }
 
+["Microsoft.UI.Xaml.Controls.VariableSizedWrapGrid"]
+ItemHeight = {}
+ItemWidth = {}
+MaximumRowsOrColumns = {}
+Orientation = {}
 ["Microsoft.UI.Xaml.Controls.Viewbox"]
 Stretch = {}

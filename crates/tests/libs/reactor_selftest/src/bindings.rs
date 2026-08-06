@@ -25010,16 +25010,6 @@ impl windows_core::RuntimeType for IVariableSizedWrapGrid {
         windows_core::imp::ConstBuffer::for_interface::<Self>();
 }
 impl IVariableSizedWrapGrid {
-    pub(crate) fn ItemHeight(&self) -> windows_core::Result<f64> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).ItemHeight)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .map(|| result__)
-        }
-    }
     pub(crate) fn SetItemHeight(&self, value: f64) -> windows_core::Result<()> {
         unsafe {
             (windows_core::Interface::vtable(self).SetItemHeight)(
@@ -25027,16 +25017,6 @@ impl IVariableSizedWrapGrid {
                 value,
             )
             .ok()
-        }
-    }
-    pub(crate) fn ItemWidth(&self) -> windows_core::Result<f64> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).ItemWidth)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .map(|| result__)
         }
     }
     pub(crate) fn SetItemWidth(&self, value: f64) -> windows_core::Result<()> {
@@ -25048,16 +25028,6 @@ impl IVariableSizedWrapGrid {
             .ok()
         }
     }
-    pub(crate) fn Orientation(&self) -> windows_core::Result<Orientation> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).Orientation)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .map(|| result__)
-        }
-    }
     pub(crate) fn SetOrientation(&self, value: Orientation) -> windows_core::Result<()> {
         unsafe {
             (windows_core::Interface::vtable(self).SetOrientation)(
@@ -25065,60 +25035,6 @@ impl IVariableSizedWrapGrid {
                 value,
             )
             .ok()
-        }
-    }
-    pub(crate) fn HorizontalChildrenAlignment(&self) -> windows_core::Result<HorizontalAlignment> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).HorizontalChildrenAlignment)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .map(|| result__)
-        }
-    }
-    pub(crate) fn SetHorizontalChildrenAlignment(
-        &self,
-        value: HorizontalAlignment,
-    ) -> windows_core::Result<()> {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetHorizontalChildrenAlignment)(
-                windows_core::Interface::as_raw(self),
-                value,
-            )
-            .ok()
-        }
-    }
-    pub(crate) fn VerticalChildrenAlignment(&self) -> windows_core::Result<VerticalAlignment> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).VerticalChildrenAlignment)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .map(|| result__)
-        }
-    }
-    pub(crate) fn SetVerticalChildrenAlignment(
-        &self,
-        value: VerticalAlignment,
-    ) -> windows_core::Result<()> {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetVerticalChildrenAlignment)(
-                windows_core::Interface::as_raw(self),
-                value,
-            )
-            .ok()
-        }
-    }
-    pub(crate) fn MaximumRowsOrColumns(&self) -> windows_core::Result<i32> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).MaximumRowsOrColumns)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .map(|| result__)
         }
     }
     pub(crate) fn SetMaximumRowsOrColumns(&self, value: i32) -> windows_core::Result<()> {
@@ -25134,38 +25050,20 @@ impl IVariableSizedWrapGrid {
 #[repr(C)]
 pub struct IVariableSizedWrapGrid_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
-    pub ItemHeight:
-        unsafe extern "system" fn(*mut core::ffi::c_void, *mut f64) -> windows_core::HRESULT,
+    ItemHeight: usize,
     pub SetItemHeight:
         unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
-    pub ItemWidth:
-        unsafe extern "system" fn(*mut core::ffi::c_void, *mut f64) -> windows_core::HRESULT,
+    ItemWidth: usize,
     pub SetItemWidth:
         unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
-    pub Orientation: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut Orientation,
-    ) -> windows_core::HRESULT,
+    Orientation: usize,
     pub SetOrientation:
         unsafe extern "system" fn(*mut core::ffi::c_void, Orientation) -> windows_core::HRESULT,
-    pub HorizontalChildrenAlignment: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut HorizontalAlignment,
-    ) -> windows_core::HRESULT,
-    pub SetHorizontalChildrenAlignment: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        HorizontalAlignment,
-    ) -> windows_core::HRESULT,
-    pub VerticalChildrenAlignment: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut VerticalAlignment,
-    ) -> windows_core::HRESULT,
-    pub SetVerticalChildrenAlignment: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        VerticalAlignment,
-    ) -> windows_core::HRESULT,
-    pub MaximumRowsOrColumns:
-        unsafe extern "system" fn(*mut core::ffi::c_void, *mut i32) -> windows_core::HRESULT,
+    HorizontalChildrenAlignment: usize,
+    SetHorizontalChildrenAlignment: usize,
+    VerticalChildrenAlignment: usize,
+    SetVerticalChildrenAlignment: usize,
+    MaximumRowsOrColumns: usize,
     pub SetMaximumRowsOrColumns:
         unsafe extern "system" fn(*mut core::ffi::c_void, i32) -> windows_core::HRESULT,
 }
@@ -34640,6 +34538,23 @@ windows_core::imp::required_hierarchy!(
     UIElement,
     DependencyObject
 );
+impl VariableSizedWrapGrid {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::IActivationFactory(|f| f.ActivateInstance::<Self>())
+    }
+    fn IActivationFactory<
+        R,
+        F: FnOnce(&windows_core::imp::IGenericFactory) -> windows_core::Result<R>,
+    >(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<
+            VariableSizedWrapGrid,
+            windows_core::imp::IGenericFactory,
+        > = windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
 impl windows_core::RuntimeType for VariableSizedWrapGrid {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::for_class::<Self, IVariableSizedWrapGrid>();

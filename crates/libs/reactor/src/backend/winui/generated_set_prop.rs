@@ -331,6 +331,12 @@ pub fn dispatch(handle: &Handle, prop: Prop, value: &PropValue) -> Result<bool> 
         (Prop::IsTodayHighlighted, PropValue::Bool(v), Handle::CalendarView(h)) => {
             h.SetIsTodayHighlighted(*v)?;
         }
+        (Prop::ItemHeight, PropValue::F64(v), Handle::VariableSizedWrapGrid(h)) => {
+            h.SetItemHeight(*v)?;
+        }
+        (Prop::ItemWidth, PropValue::F64(v), Handle::VariableSizedWrapGrid(h)) => {
+            h.SetItemWidth(*v)?;
+        }
         (Prop::MaxColumns, PropValue::I32(v), Handle::RadioButtons(h)) => {
             h.SetMaxColumns(*v)?;
         }
@@ -350,6 +356,9 @@ pub fn dispatch(handle: &Handle, prop: Prop, value: &PropValue) -> Result<bool> 
             handle
                 .cast_inner::<bindings::IRangeBase>()?
                 .SetMaximum(*v)?;
+        }
+        (Prop::MaximumRowsOrColumns, PropValue::I32(v), Handle::VariableSizedWrapGrid(h)) => {
+            h.SetMaximumRowsOrColumns(*v)?;
         }
         (Prop::Message, PropValue::Str(v), Handle::InfoBar(h)) => {
             h.SetMessage(v.as_str())?;
@@ -398,6 +407,9 @@ pub fn dispatch(handle: &Handle, prop: Prop, value: &PropValue) -> Result<bool> 
             h.SetOrientation(Orientation(*v))?;
         }
         (Prop::Orientation, PropValue::I32(v), Handle::StackPanel(h)) => {
+            h.SetOrientation(Orientation(*v))?;
+        }
+        (Prop::Orientation, PropValue::I32(v), Handle::VariableSizedWrapGrid(h)) => {
             h.SetOrientation(Orientation(*v))?;
         }
         (Prop::PaneDisplayMode, PropValue::I32(v), Handle::NavigationView(h)) => {

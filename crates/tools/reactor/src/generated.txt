@@ -57,6 +57,7 @@ Microsoft::UI::Xaml::Controls::ITitleBar::{put_IsBackButtonEnabled, put_IsBackBu
 Microsoft::UI::Xaml::Controls::IToggleSplitButton::put_IsChecked
 Microsoft::UI::Xaml::Controls::IToggleSwitch::{put_Header, put_IsOn, put_OffContent, put_OnContent}
 Microsoft::UI::Xaml::Controls::ITreeView::put_SelectionMode
+Microsoft::UI::Xaml::Controls::IVariableSizedWrapGrid::{put_ItemHeight, put_ItemWidth, put_MaximumRowsOrColumns, put_Orientation}
 Microsoft::UI::Xaml::Controls::IViewbox::put_Stretch
 Microsoft::UI::Xaml::Controls::Image::CreateInstance
 Microsoft::UI::Xaml::Controls::InfoBadge::CreateInstance
@@ -99,4 +100,5 @@ Microsoft::UI::Xaml::Controls::TitleBar::CreateInstance
 Microsoft::UI::Xaml::Controls::ToggleSplitButton::CreateInstance
 Microsoft::UI::Xaml::Controls::ToggleSwitch::CreateInstance
 Microsoft::UI::Xaml::Controls::TreeView::CreateInstance
+Microsoft::UI::Xaml::Controls::VariableSizedWrapGrid::CreateInstance
 Microsoft::UI::Xaml::Controls::Viewbox::CreateInstance

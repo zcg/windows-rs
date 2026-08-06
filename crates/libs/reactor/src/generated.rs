@@ -946,6 +946,17 @@ pub fn tree_view_bindings(w: &TreeView) -> PropBindings {
         Binding::Prop(Prop::SelectionMode, PropValue::I32(w.selection_mode.0)),
     ]
 }
+pub fn variable_sized_wrap_grid_bindings(w: &VariableSizedWrapGrid) -> PropBindings {
+    vec![
+        Binding::Prop(Prop::ItemHeight, PropValue::F64(w.item_height)),
+        Binding::Prop(Prop::ItemWidth, PropValue::F64(w.item_width)),
+        Binding::Prop(
+            Prop::MaximumRowsOrColumns,
+            PropValue::I32(w.maximum_rows_or_columns),
+        ),
+        Binding::Prop(Prop::Orientation, PropValue::I32(w.orientation.0)),
+    ]
+}
 pub fn viewbox_bindings(w: &Viewbox) -> PropBindings {
     vec![Binding::Prop(Prop::Stretch, PropValue::I32(w.stretch.0))]
 }
