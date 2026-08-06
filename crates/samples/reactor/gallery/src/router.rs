@@ -62,6 +62,9 @@ pub fn route(tag: &str) -> Element {
         "line" => component(media::line_page, ()),
 
         "command-bar" => component(menus::command_bar_page, ()),
+        "app-bar-button" => component(menus::app_bar_button_page, ()),
+        "app-bar-toggle-button" => component(menus::app_bar_toggle_button_page, ()),
+        "app-bar-separator" => component(menus::app_bar_separator_page, ()),
         "menu-bar" => component(menus::menu_bar_page, ()),
         "selector-bar" => component(menus::selector_bar_page, ()),
 

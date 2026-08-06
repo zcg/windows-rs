@@ -141,8 +141,6 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         tag: "toggle-split-button",
         image: "ToggleSplitButton.png",
     },
-        image: "ToggleSwitch.png",
-    },
     ControlInfo {
         title: "FlipView",
         description: "Presents one item at a time with flipping navigation.",
@@ -415,6 +413,27 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         category: "Menus and Toolbars",
         tag: "command-bar",
         image: "CommandBar.png",
+    },
+    ControlInfo {
+        title: "AppBarButton",
+        description: "A button for an AppBar or CommandBar.",
+        category: "Menus and Toolbars",
+        tag: "app-bar-button",
+        image: "AppBarButton.png",
+    },
+    ControlInfo {
+        title: "AppBarToggleButton",
+        description: "A toggle button for an AppBar or CommandBar.",
+        category: "Menus and Toolbars",
+        tag: "app-bar-toggle-button",
+        image: "AppBarToggleButton.png",
+    },
+    ControlInfo {
+        title: "AppBarSeparator",
+        description: "A separator between AppBarButtons.",
+        category: "Menus and Toolbars",
+        tag: "app-bar-separator",
+        image: "AppBarSeparator.png",
     },
     ControlInfo {
         title: "MenuBar",
