@@ -47,6 +47,7 @@ pub fn route(tag: &str) -> Element {
         "grid" => component(layout::grid_page, ()),
         "relative-panel" => component(layout::relative_panel_page, ()),
         "scroll-view" => component(layout::scroll_view_page, ()),
+        "scroll-viewer" => component(layout::scroll_viewer_page, ()),
         "split-view" => component(layout::split_view_page, ()),
         "stack-panel" => component(layout::stack_panel_page, ()),
         "viewbox" => component(layout::viewbox_page, ()),
@@ -54,6 +55,7 @@ pub fn route(tag: &str) -> Element {
         "image" => component(media::image_page, ()),
         "person-picture" => component(media::person_picture_page, ()),
         "webview" => component(media::webview_page, ()),
+        "icon-element" => component(media::icon_element_page, ()),
         "shape" => component(media::shape_page, ()),
         "line" => component(media::line_page, ()),
 

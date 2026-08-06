@@ -324,6 +324,13 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         image: "ScrollView.png",
     },
     ControlInfo {
+        title: "ScrollViewer",
+        description: "Scrolls content with configurable scroll bar visibility.",
+        category: "Layout",
+        tag: "scroll-viewer",
+        image: "ScrollViewer.png",
+    },
+    ControlInfo {
         title: "SplitView",
         description: "A collapsible pane and content area.",
         category: "Layout",
@@ -364,6 +371,13 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         category: "Media",
         tag: "webview",
         image: "WebView.png",
+    },
+    ControlInfo {
+        title: "IconElement",
+        description: "Symbol, font, and bitmap icons for buttons and command surfaces.",
+        category: "Media",
+        tag: "icon-element",
+        image: "IconElement.png",
     },
     ControlInfo {
         title: "Shape",
