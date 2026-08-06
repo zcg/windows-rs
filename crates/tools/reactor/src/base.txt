@@ -59,8 +59,6 @@ Microsoft::UI::Xaml::Controls::Flyout::CreateInstance
 Microsoft::UI::Xaml::Controls::Grid::{SetColumn, SetColumnSpan, SetRow, SetRowSpan}
 Microsoft::UI::Xaml::Controls::GridView::CreateInstance
 Microsoft::UI::Xaml::Controls::ImageIcon::CreateInstance
-Microsoft::UI::Xaml::Controls::IAppBarButton::{put_Label, get_Label, put_Icon}
-Microsoft::UI::Xaml::Controls::IAppBarToggleButton::{put_Label, put_Icon}
 Microsoft::UI::Xaml::Controls::IAutoSuggestBox::{put_Text, get_Text, QuerySubmitted, TextChanged, SuggestionChosen}
 Microsoft::UI::Xaml::Controls::IAutoSuggestBoxQuerySubmittedEventArgs::get_QueryText
 Microsoft::UI::Xaml::Controls::IAutoSuggestBoxSuggestionChosenEventArgs::get_SelectedItem
@@ -96,11 +94,9 @@ Microsoft::UI::Xaml::Controls::IImage::put_Source
 Microsoft::UI::Xaml::Controls::IInfoBar::Closed
 Microsoft::UI::Xaml::Controls::IItemsControl::{get_Items, put_ItemsSource, put_ItemTemplate}
 Microsoft::UI::Xaml::Controls::IListBox::{}
-Microsoft::UI::Xaml::Controls::IListViewBase::{put_SelectionMode, put_CanDragItems, put_CanReorderItems, ScrollIntoView, ContainerContentChanging, DragItemsCompleted}
 Microsoft::UI::Xaml::Controls::IContainerContentChangingEventArgs::{get_ItemContainer, get_ItemIndex, get_InRecycleQueue, put_Handled}
 Microsoft::UI::Xaml::Controls::IMenuBar::get_Items
 Microsoft::UI::Xaml::Controls::IMenuBarItem::{get_Items, put_Title}
-Microsoft::UI::Xaml::Controls::IMenuFlyout::get_Items
 Microsoft::UI::Xaml::Controls::IMenuFlyoutItem::{put_Text, get_Text, Click}
 Microsoft::UI::Xaml::Controls::IMenuFlyoutSubItem::{get_Items, put_Text}
 Microsoft::UI::Xaml::Controls::INavigationView2::{put_IsBackButtonVisible, BackRequested}
@@ -119,7 +115,6 @@ Microsoft::UI::Xaml::Controls::IPivotItem::put_Header
 Microsoft::UI::Xaml::Controls::IRadioButtons::{SelectionChanged, get_Items, get_SelectedIndex}
 Microsoft::UI::Xaml::Controls::IRatingControl::{get_Value, ValueChanged}
 Microsoft::UI::Xaml::Controls::IRichEditBox::{get_Document, TextChanged}
-Microsoft::UI::Xaml::Controls::IRichTextBlock::{put_FontSize, put_FontFamily, put_IsTextSelectionEnabled, put_TextWrapping, put_Foreground, put_Padding, get_Blocks}
 Microsoft::UI::Xaml::Controls::IRowDefinition::put_Height
 Microsoft::UI::Xaml::Controls::IRefreshContainer::RefreshRequested
 Microsoft::UI::Xaml::Controls::IRefreshRequestedEventArgs::GetDeferral
@@ -382,3 +377,36 @@ Microsoft::UI::Xaml::Controls::FontIcon
 Microsoft::UI::Xaml::Controls::SymbolIcon
 Microsoft::UI::Xaml::Controls::BitmapIcon
 Microsoft::UI::Xaml::Controls::IconSourceElement
+Microsoft::UI::Xaml::Controls::IPipsPager
+Microsoft::UI::Xaml::Controls::IFlipView
+Microsoft::UI::Xaml::Controls::IGridView
+Microsoft::UI::Xaml::Controls::IListView
+Microsoft::UI::Xaml::Controls::IItemsRepeater
+Microsoft::UI::Xaml::Controls::IItemsView
+Microsoft::UI::Xaml::Controls::IToggleSplitButton
+Microsoft::UI::Xaml::Controls::ISwipeControl
+Microsoft::UI::Xaml::Controls::IToolTip
+Microsoft::UI::Xaml::Controls::Primitives::IPopup
+Microsoft::UI::Xaml::Controls::IMenuFlyout
+Microsoft::UI::Xaml::Controls::IAppBarButton
+Microsoft::UI::Xaml::Controls::IAppBarToggleButton
+Microsoft::UI::Xaml::Controls::IAppBarSeparator
+Microsoft::UI::Xaml::Controls::ICommandBarFlyout
+Microsoft::UI::Xaml::Controls::IFlyout
+Microsoft::UI::Xaml::Controls::IAnimatedIcon
+Microsoft::UI::Xaml::Controls::IAnimatedVisualPlayer
+Microsoft::UI::Xaml::Controls::IParallaxView
+Microsoft::UI::Xaml::Controls::ISemanticZoom
+Microsoft::UI::Xaml::Controls::IVariableSizedWrapGrid
+Microsoft::UI::Xaml::Controls::IAnnotatedScrollBar
+Microsoft::UI::Xaml::Controls::IMediaPlayerElement
+Microsoft::UI::Xaml::Controls::IRichTextBlock
+Microsoft::UI::Xaml::Shapes::ILine
+Microsoft::UI::Xaml::Media::IRadialGradientBrush
+Microsoft::UI::Xaml::Media::IThemeShadow
+Microsoft::UI::Xaml::Input::IStandardUICommand
+Microsoft::UI::Xaml::Input::IXamlUICommand
+Microsoft::UI::Xaml::Controls::IListViewBase
+Microsoft::UI::Xaml::Controls::IMenuFlyoutItem
+Microsoft::UI::Xaml::Controls::IMenuFlyoutSubItem
+Microsoft::UI::Xaml::Controls::IToggleMenuFlyoutItem
