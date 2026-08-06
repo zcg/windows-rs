@@ -410,3 +410,9 @@ Microsoft::UI::Xaml::Controls::IListViewBase
 Microsoft::UI::Xaml::Controls::IMenuFlyoutItem
 Microsoft::UI::Xaml::Controls::IMenuFlyoutSubItem
 Microsoft::UI::Xaml::Controls::IToggleMenuFlyoutItem
+Microsoft::UI::Xaml::Controls::SwipeItem::CreateInstance
+Microsoft::UI::Xaml::Controls::ISwipeItem
+Microsoft::UI::Xaml::Controls::SwipeItems::CreateInstance
+Microsoft::UI::Xaml::Controls::ISwipeItems
+Microsoft::UI::Xaml::Controls::SwipeMode
+Microsoft::UI::Xaml::Controls::SwipeControl::CreateInstance

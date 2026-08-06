@@ -88,6 +88,7 @@ pub enum ControlKind {
     SplitButton,
     AutoSuggestBox,
     SplitView,
+    SwipeControl,
     MenuBar,
     ScrollView,
     TreeView,

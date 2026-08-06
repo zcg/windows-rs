@@ -20999,6 +20999,318 @@ pub struct ISwipeControl_Vtbl {
     pub Close: unsafe extern "system" fn(*mut core::ffi::c_void) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
+    ISwipeControlFactory,
+    ISwipeControlFactory_Vtbl,
+    0x6e9213f4_30c1_56ca_9905_46aa1a83dfc1
+);
+impl windows_core::RuntimeType for ISwipeControlFactory {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct ISwipeControlFactory_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub CreateInstance: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    ISwipeItem,
+    ISwipeItem_Vtbl,
+    0x5e8d4950_b826_510a_b309_77afcdc65b1f
+);
+impl windows_core::RuntimeType for ISwipeItem {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+impl ISwipeItem {
+    pub(crate) fn Text(&self) -> windows_core::Result<String> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).Text)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| {
+                let hstring: windows_core::HSTRING = core::mem::transmute(result__);
+                hstring.to_string_lossy()
+            })
+        }
+    }
+    pub(crate) fn SetText(&self, value: &str) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetText)(
+                windows_core::Interface::as_raw(self),
+                core::mem::transmute_copy(&windows_core::HSTRING::from(value)),
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn IconSource(&self) -> windows_core::Result<IconSource> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).IconSource)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        }
+    }
+    pub(crate) fn SetIconSource<P0>(&self, value: P0) -> windows_core::Result<()>
+    where
+        P0: windows_core::Param<IconSource>,
+    {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetIconSource)(
+                windows_core::Interface::as_raw(self),
+                value.param().abi(),
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn Background(&self) -> windows_core::Result<Brush> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).Background)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        }
+    }
+    pub(crate) fn SetBackground<P0>(&self, value: P0) -> windows_core::Result<()>
+    where
+        P0: windows_core::Param<Brush>,
+    {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetBackground)(
+                windows_core::Interface::as_raw(self),
+                value.param().abi(),
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn Foreground(&self) -> windows_core::Result<Brush> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).Foreground)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        }
+    }
+    pub(crate) fn SetForeground<P0>(&self, value: P0) -> windows_core::Result<()>
+    where
+        P0: windows_core::Param<Brush>,
+    {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetForeground)(
+                windows_core::Interface::as_raw(self),
+                value.param().abi(),
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn Command(&self) -> windows_core::Result<ICommand> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).Command)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        }
+    }
+    pub(crate) fn SetCommand<P0>(&self, value: P0) -> windows_core::Result<()>
+    where
+        P0: windows_core::Param<ICommand>,
+    {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetCommand)(
+                windows_core::Interface::as_raw(self),
+                value.param().abi(),
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn CommandParameter(&self) -> windows_core::Result<windows_core::IInspectable> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).CommandParameter)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        }
+    }
+    pub(crate) fn SetCommandParameter<P0>(&self, value: P0) -> windows_core::Result<()>
+    where
+        P0: windows_core::Param<windows_core::IInspectable>,
+    {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetCommandParameter)(
+                windows_core::Interface::as_raw(self),
+                value.param().abi(),
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn BehaviorOnInvoked(&self) -> windows_core::Result<SwipeBehaviorOnInvoked> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).BehaviorOnInvoked)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn SetBehaviorOnInvoked(
+        &self,
+        value: SwipeBehaviorOnInvoked,
+    ) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetBehaviorOnInvoked)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn Invoked<F>(&self, handler: F) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(windows_core::Ref<SwipeItem>, windows_core::Ref<SwipeItemInvokedEventArgs>) + 'static,
+    {
+        let handler: TypedEventHandler<SwipeItem, SwipeItemInvokedEventArgs> = {
+            let com = windows_core::imp::DelegateBox::<
+                TypedEventHandler<SwipeItem, SwipeItemInvokedEventArgs>,
+                F,
+            >::new(
+                &TypedEventHandlerBox::<SwipeItem, SwipeItemInvokedEventArgs, F>::VTABLE,
+                handler,
+            );
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).Invoked)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&handler),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemoveInvoked,
+            ))
+        }
+    }
+}
+#[repr(C)]
+pub struct ISwipeItem_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub Text: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub SetText: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub IconSource: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub SetIconSource: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub Background: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub SetBackground: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub Foreground: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub SetForeground: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub Command: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub SetCommand: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub CommandParameter: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub SetCommandParameter: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub BehaviorOnInvoked: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut SwipeBehaviorOnInvoked,
+    ) -> windows_core::HRESULT,
+    pub SetBehaviorOnInvoked: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        SwipeBehaviorOnInvoked,
+    ) -> windows_core::HRESULT,
+    pub Invoked: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemoveInvoked:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    ISwipeItemFactory,
+    ISwipeItemFactory_Vtbl,
+    0x011513e1_1adc_5a69_a74f_623fcc18a51c
+);
+impl windows_core::RuntimeType for ISwipeItemFactory {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct ISwipeItemFactory_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub CreateInstance: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    ISwipeItemInvokedEventArgs,
+    ISwipeItemInvokedEventArgs_Vtbl,
+    0x7bf51c95_53a2_5a0d_bb32_2b4b1f7d2f20
+);
+impl windows_core::RuntimeType for ISwipeItemInvokedEventArgs {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct ISwipeItemInvokedEventArgs_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
     ISwipeItems,
     ISwipeItems_Vtbl,
     0x40d3022b_c82b_5565_a4e4_ad9d7a66b1a9
@@ -21007,9 +21319,53 @@ impl windows_core::RuntimeType for ISwipeItems {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::for_interface::<Self>();
 }
+impl ISwipeItems {
+    pub(crate) fn Mode(&self) -> windows_core::Result<SwipeMode> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).Mode)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn SetMode(&self, value: SwipeMode) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetMode)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+}
 #[repr(C)]
 pub struct ISwipeItems_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
+    pub Mode:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut SwipeMode) -> windows_core::HRESULT,
+    pub SetMode:
+        unsafe extern "system" fn(*mut core::ffi::c_void, SwipeMode) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    ISwipeItemsFactory,
+    ISwipeItemsFactory_Vtbl,
+    0x9a5d7d77_39bd_5b81_ab4e_f44aca6ede3f
+);
+impl windows_core::RuntimeType for ISwipeItemsFactory {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct ISwipeItemsFactory_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub CreateInstance: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
     ISymbolIcon,
@@ -31823,6 +32179,22 @@ impl windows_core::RuntimeName for SwapChainPanel {
 unsafe impl Send for SwapChainPanel {}
 unsafe impl Sync for SwapChainPanel {}
 #[repr(transparent)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct SwipeBehaviorOnInvoked(pub i32);
+impl SwipeBehaviorOnInvoked {
+    pub const Auto: Self = Self(0);
+    pub const Close: Self = Self(1);
+    pub const RemainOpen: Self = Self(2);
+}
+impl windows_core::TypeKind for SwipeBehaviorOnInvoked {
+    type TypeKind = windows_core::CopyType;
+}
+impl windows_core::RuntimeType for SwipeBehaviorOnInvoked {
+    const SIGNATURE: windows_core::imp::ConstBuffer = windows_core::imp::ConstBuffer::from_slice(
+        b"enum(Microsoft.UI.Xaml.Controls.SwipeBehaviorOnInvoked;i4)",
+    );
+}
+#[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SwipeControl(windows_core::IUnknown);
 windows_core::imp::interface_hierarchy!(
@@ -31838,6 +32210,27 @@ windows_core::imp::required_hierarchy!(
     UIElement,
     DependencyObject
 );
+impl SwipeControl {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::ISwipeControlFactory(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).CreateInstance)(
+                windows_core::Interface::as_raw(this),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        })
+    }
+    fn ISwipeControlFactory<R, F: FnOnce(&ISwipeControlFactory) -> windows_core::Result<R>>(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<SwipeControl, ISwipeControlFactory> =
+            windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
 impl windows_core::RuntimeType for SwipeControl {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::for_class::<Self, ISwipeControl>();
@@ -31859,6 +32252,82 @@ unsafe impl Send for SwipeControl {}
 unsafe impl Sync for SwipeControl {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SwipeItem(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    SwipeItem,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(SwipeItem, DependencyObject);
+impl SwipeItem {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::ISwipeItemFactory(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).CreateInstance)(
+                windows_core::Interface::as_raw(this),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        })
+    }
+    fn ISwipeItemFactory<R, F: FnOnce(&ISwipeItemFactory) -> windows_core::Result<R>>(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<SwipeItem, ISwipeItemFactory> =
+            windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
+impl windows_core::RuntimeType for SwipeItem {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, ISwipeItem>();
+}
+unsafe impl windows_core::Interface for SwipeItem {
+    type Vtable = <ISwipeItem as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <ISwipeItem as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for SwipeItem {
+    type Target = ISwipeItem;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for SwipeItem {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.SwipeItem";
+}
+unsafe impl Send for SwipeItem {}
+unsafe impl Sync for SwipeItem {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SwipeItemInvokedEventArgs(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    SwipeItemInvokedEventArgs,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+impl windows_core::RuntimeType for SwipeItemInvokedEventArgs {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, ISwipeItemInvokedEventArgs>();
+}
+unsafe impl windows_core::Interface for SwipeItemInvokedEventArgs {
+    type Vtable = <ISwipeItemInvokedEventArgs as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <ISwipeItemInvokedEventArgs as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for SwipeItemInvokedEventArgs {
+    type Target = ISwipeItemInvokedEventArgs;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for SwipeItemInvokedEventArgs {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.SwipeItemInvokedEventArgs";
+}
+unsafe impl Send for SwipeItemInvokedEventArgs {}
+unsafe impl Sync for SwipeItemInvokedEventArgs {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SwipeItems(windows_core::IUnknown);
 windows_core::imp::interface_hierarchy!(
     SwipeItems,
@@ -31866,6 +32335,27 @@ windows_core::imp::interface_hierarchy!(
     windows_core::IInspectable
 );
 windows_core::imp::required_hierarchy!(SwipeItems, DependencyObject);
+impl SwipeItems {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::ISwipeItemsFactory(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).CreateInstance)(
+                windows_core::Interface::as_raw(this),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        })
+    }
+    fn ISwipeItemsFactory<R, F: FnOnce(&ISwipeItemsFactory) -> windows_core::Result<R>>(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<SwipeItems, ISwipeItemsFactory> =
+            windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
 impl windows_core::RuntimeType for SwipeItems {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::for_class::<Self, ISwipeItems>();
@@ -31885,6 +32375,21 @@ impl windows_core::RuntimeName for SwipeItems {
 }
 unsafe impl Send for SwipeItems {}
 unsafe impl Sync for SwipeItems {}
+#[repr(transparent)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct SwipeMode(pub i32);
+impl SwipeMode {
+    pub const Reveal: Self = Self(0);
+    pub const Execute: Self = Self(1);
+}
+impl windows_core::TypeKind for SwipeMode {
+    type TypeKind = windows_core::CopyType;
+}
+impl windows_core::RuntimeType for SwipeMode {
+    const SIGNATURE: windows_core::imp::ConstBuffer = windows_core::imp::ConstBuffer::from_slice(
+        b"enum(Microsoft.UI.Xaml.Controls.SwipeMode;i4)",
+    );
+}
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Symbol(pub i32);

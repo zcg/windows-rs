@@ -79,6 +79,7 @@ widget_modules! {
     slider,
     split_button,
     split_view,
+    swipe_control,
     stack_panel,
     surface_image_source,
     swap_chain_panel,
