@@ -64,8 +64,8 @@ fn build_uri_image_source(uri: &str, decode_width: Option<u32>) -> Result<bindin
         // 且须显式 DecodePixelType::Physical：默认 Logical 时 DecodePixelWidth 按
         // DIP 解释，会被 DPI scale（如 150%）放大，降采样效果减半。
         if let Some(width) = decode_width {
-            source.SetDecodePixelType(0)?; // DecodePixelType::Physical
-            source.SetDecodePixelWidth(width)?;
+            source.SetDecodePixelType(bindings::DecodePixelType::Physical)?;
+            source.SetDecodePixelWidth(width as i32)?;
         }
         source.SetUriSource(&uri)?;
         source.cast()

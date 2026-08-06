@@ -2402,6 +2402,21 @@ impl windows_core::RuntimeName for DatePickerSelectedValueChangedEventArgs {
 unsafe impl Send for DatePickerSelectedValueChangedEventArgs {}
 unsafe impl Sync for DatePickerSelectedValueChangedEventArgs {}
 #[repr(transparent)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct DecodePixelType(pub i32);
+impl DecodePixelType {
+    pub const Physical: Self = Self(0);
+    pub const Logical: Self = Self(1);
+}
+impl windows_core::TypeKind for DecodePixelType {
+    type TypeKind = windows_core::CopyType;
+}
+impl windows_core::RuntimeType for DecodePixelType {
+    const SIGNATURE: windows_core::imp::ConstBuffer = windows_core::imp::ConstBuffer::from_slice(
+        b"enum(Microsoft.UI.Xaml.Media.Imaging.DecodePixelType;i4)",
+    );
+}
+#[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Deferral(windows_core::IUnknown);
 windows_core::imp::interface_hierarchy!(
@@ -5015,7 +5030,7 @@ impl IBitmapImage {
             .ok()
         }
     }
-    pub(crate) fn SetDecodePixelWidth(&self, value: u32) -> windows_core::Result<()> {
+    pub(crate) fn SetDecodePixelWidth(&self, value: i32) -> windows_core::Result<()> {
         unsafe {
             (windows_core::Interface::vtable(self).SetDecodePixelWidth)(
                 windows_core::Interface::as_raw(self),
@@ -5024,7 +5039,7 @@ impl IBitmapImage {
             .ok()
         }
     }
-    pub(crate) fn SetDecodePixelType(&self, value: i32) -> windows_core::Result<()> {
+    pub(crate) fn SetDecodePixelType(&self, value: DecodePixelType) -> windows_core::Result<()> {
         unsafe {
             (windows_core::Interface::vtable(self).SetDecodePixelType)(
                 windows_core::Interface::as_raw(self),
@@ -5046,12 +5061,12 @@ pub struct IBitmapImage_Vtbl {
     ) -> windows_core::HRESULT,
     DecodePixelWidth: usize,
     pub SetDecodePixelWidth:
-        unsafe extern "system" fn(*mut core::ffi::c_void, u32) -> windows_core::HRESULT,
+        unsafe extern "system" fn(*mut core::ffi::c_void, i32) -> windows_core::HRESULT,
     DecodePixelHeight: usize,
     SetDecodePixelHeight: usize,
     DecodePixelType: usize,
     pub SetDecodePixelType:
-        unsafe extern "system" fn(*mut core::ffi::c_void, i32) -> windows_core::HRESULT,
+        unsafe extern "system" fn(*mut core::ffi::c_void, DecodePixelType) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
     IBitmapSource,
@@ -13790,6 +13805,15 @@ impl ISlider {
             .ok()
         }
     }
+    pub(crate) fn SetIsThumbToolTipEnabled(&self, value: bool) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetIsThumbToolTipEnabled)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
     pub(crate) fn SetHeader<P0>(&self, value: P0) -> windows_core::Result<()>
     where
         P0: windows_core::Param<windows_core::IInspectable>,
@@ -13798,15 +13822,6 @@ impl ISlider {
             (windows_core::Interface::vtable(self).SetHeader)(
                 windows_core::Interface::as_raw(self),
                 value.param().abi(),
-            )
-            .ok()
-        }
-    }
-    pub(crate) fn SetIsThumbToolTipEnabled(&self, value: bool) -> windows_core::Result<()> {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetIsThumbToolTipEnabled)(
-                windows_core::Interface::as_raw(self),
-                value,
             )
             .ok()
         }
@@ -15313,6 +15328,15 @@ impl ITextBlock {
             .ok()
         }
     }
+    pub(crate) fn SetTextTrimming(&self, value: TextTrimming) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetTextTrimming)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
     pub(crate) fn Text(&self) -> windows_core::Result<String> {
         unsafe {
             let mut result__ = core::mem::zeroed();
@@ -15353,16 +15377,7 @@ impl ITextBlock {
             .ok()
         }
     }
-    pub(crate) fn SetTextTrimming(&self, value: i32) -> windows_core::Result<()> {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetTextTrimming)(
-                windows_core::Interface::as_raw(self),
-                value,
-            )
-            .ok()
-        }
-    }
-    pub(crate) fn SetMaxLines(&self, value: u32) -> windows_core::Result<()> {
+    pub(crate) fn SetMaxLines(&self, value: i32) -> windows_core::Result<()> {
         unsafe {
             (windows_core::Interface::vtable(self).SetMaxLines)(
                 windows_core::Interface::as_raw(self),
@@ -15402,7 +15417,7 @@ pub struct ITextBlock_Vtbl {
         unsafe extern "system" fn(*mut core::ffi::c_void, TextWrapping) -> windows_core::HRESULT,
     TextTrimming: usize,
     pub SetTextTrimming:
-        unsafe extern "system" fn(*mut core::ffi::c_void, i32) -> windows_core::HRESULT,
+        unsafe extern "system" fn(*mut core::ffi::c_void, TextTrimming) -> windows_core::HRESULT,
     TextAlignment: usize,
     SetTextAlignment: usize,
     pub Text: unsafe extern "system" fn(
@@ -15424,10 +15439,6 @@ pub struct ITextBlock_Vtbl {
     IsTextSelectionEnabled: usize,
     pub SetIsTextSelectionEnabled:
         unsafe extern "system" fn(*mut core::ffi::c_void, bool) -> windows_core::HRESULT,
-    // IsTextSelectionEnabled 与 MaxLines 之间还有 8 个未声明槽位（据 WinMD 实测）：
-    // get_SelectedText, get_ContentStart, get_ContentEnd, get_SelectionStart,
-    // get_SelectionEnd, get_BaselineOffset, get_SelectionHighlightColor,
-    // put_SelectionHighlightColor —— 必须用 usize 占位保持 vtable 偏移正确。
     SelectedText: usize,
     ContentStart: usize,
     ContentEnd: usize,
@@ -15438,7 +15449,7 @@ pub struct ITextBlock_Vtbl {
     SetSelectionHighlightColor: usize,
     MaxLines: usize,
     pub SetMaxLines:
-        unsafe extern "system" fn(*mut core::ffi::c_void, u32) -> windows_core::HRESULT,
+        unsafe extern "system" fn(*mut core::ffi::c_void, i32) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
     ITextBox,
@@ -17059,38 +17070,6 @@ impl IUIElement {
             ))
         }
     }
-    pub(crate) fn PointerWheelChanged<F>(
-        &self,
-        handler: F,
-    ) -> windows_core::Result<windows_core::EventRevoker>
-    where
-        F: Fn(
-                windows_core::Ref<windows_core::IInspectable>,
-                windows_core::Ref<PointerRoutedEventArgs>,
-            ) + 'static,
-    {
-        let handler: PointerEventHandler = {
-            let com = windows_core::imp::DelegateBox::<PointerEventHandler, F>::new(
-                &PointerEventHandlerBox::<F>::VTABLE,
-                handler,
-            );
-            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
-        };
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            let token__ = (windows_core::Interface::vtable(self).PointerWheelChanged)(
-                windows_core::Interface::as_raw(self),
-                windows_core::Interface::as_raw(&handler),
-                &mut result__,
-            )
-            .map(|| result__)?;
-            Ok(windows_core::EventRevoker::new(
-                self.clone(),
-                token__,
-                windows_core::Interface::vtable(self).RemovePointerWheelChanged,
-            ))
-        }
-    }
     pub(crate) fn PointerCaptureLost<F>(
         &self,
         handler: F,
@@ -17152,6 +17131,38 @@ impl IUIElement {
                 self.clone(),
                 token__,
                 windows_core::Interface::vtable(self).RemovePointerCanceled,
+            ))
+        }
+    }
+    pub(crate) fn PointerWheelChanged<F>(
+        &self,
+        handler: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(
+                windows_core::Ref<windows_core::IInspectable>,
+                windows_core::Ref<PointerRoutedEventArgs>,
+            ) + 'static,
+    {
+        let handler: PointerEventHandler = {
+            let com = windows_core::imp::DelegateBox::<PointerEventHandler, F>::new(
+                &PointerEventHandlerBox::<F>::VTABLE,
+                handler,
+            );
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).PointerWheelChanged)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&handler),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemovePointerWheelChanged,
             ))
         }
     }
@@ -23760,6 +23771,22 @@ impl core::ops::Not for TextSetOptions {
     fn not(self) -> Self {
         Self(self.0.not())
     }
+}
+#[repr(transparent)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct TextTrimming(pub i32);
+impl TextTrimming {
+    pub const None: Self = Self(0);
+    pub const CharacterEllipsis: Self = Self(1);
+    pub const WordEllipsis: Self = Self(2);
+    pub const Clip: Self = Self(3);
+}
+impl windows_core::TypeKind for TextTrimming {
+    type TypeKind = windows_core::CopyType;
+}
+impl windows_core::RuntimeType for TextTrimming {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::from_slice(b"enum(Microsoft.UI.Xaml.TextTrimming;i4)");
 }
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]

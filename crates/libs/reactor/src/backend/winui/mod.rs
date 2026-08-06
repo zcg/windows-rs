@@ -1454,10 +1454,16 @@ impl Backend for WinUIBackend {
                     s.SetIsThumbToolTipEnabled(*v)
                 }
                 (Prop::MaxLines, PropValue::I32(v), Handle::TextBlock(tb)) => {
-                    tb.SetMaxLines((*v).max(0) as u32)
+                    tb.SetMaxLines((*v).max(0))
                 }
                 (Prop::TextTrimming, PropValue::I32(v), Handle::TextBlock(tb)) => {
-                    tb.SetTextTrimming(*v)
+                    let kind = match *v {
+                        1 => bindings::TextTrimming::CharacterEllipsis,
+                        2 => bindings::TextTrimming::WordEllipsis,
+                        3 => bindings::TextTrimming::Clip,
+                        _ => bindings::TextTrimming::None,
+                    };
+                    tb.SetTextTrimming(kind)
                 }
                 (Prop::NavigateUri, PropValue::Str(s), Handle::HyperlinkButton(h)) => {
                     let uri = bindings::Uri::CreateUri(s.as_str())?;

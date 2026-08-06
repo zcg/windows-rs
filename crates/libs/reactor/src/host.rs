@@ -427,7 +427,11 @@ impl ReactorHost {
             });
         });
         let queue = DispatcherQueue::GetForCurrentThread()?;
-        queue.TryEnqueueWithPriority(DispatcherQueuePriority::High, &handler)?;
+        // 必须排在首次渲染（Normal）之后：kick() 已先把 render_loop 以 Normal
+        // 入队，这里用 High 会抢先执行 → 窗口先于 SetContent/SetExtendsContentIntoTitleBar
+        // 可见，整窗（含标题栏区）闪现默认白底（直播/播放窗口"标题栏短暂变白"）。
+        // DispatcherQueue 同优先级按入队顺序 FIFO，Normal 即可保证渲染先完成。
+        queue.TryEnqueueWithPriority(DispatcherQueuePriority::Normal, &handler)?;
         Ok(())
     }
 
