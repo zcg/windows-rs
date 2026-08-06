@@ -77,3 +77,19 @@ pub use widget::*;
 pub use widgets::*;
 pub use windows_core::{Error, Interface, Result};
 pub use windows_time::{DateTime, TimeSpan};
+
+/// Copy text to the system clipboard. Returns an error if the clipboard
+/// is unavailable or the operation fails.
+pub fn clipboard_set_text(text: &str) -> Result<()> {
+    let package = bindings::DataPackage::new()?;
+    package.SetText(text)?;
+    bindings::Clipboard::SetContent(&package)?;
+    bindings::Clipboard::Flush()
+}
+
+/// Read the current text from the system clipboard, if it contains text.
+pub fn clipboard_get_text() -> Option<String> {
+    let view = bindings::Clipboard::GetContent().ok()?;
+    let operation = view.GetTextAsync().ok()?;
+    operation.GetResults().ok().map(|h| h.to_string_lossy())
+}

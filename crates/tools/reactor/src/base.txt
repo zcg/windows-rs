@@ -417,3 +417,8 @@ Microsoft::UI::Xaml::Controls::ISwipeItems
 Microsoft::UI::Xaml::Controls::SwipeMode
 Microsoft::UI::Xaml::Controls::SwipeControl::CreateInstance
 Microsoft::UI::Xaml::Controls::MediaPlayerElement::CreateInstance
+Windows::ApplicationModel::DataTransfer::Clipboard::{SetContent, GetContent, Flush, Clear}
+Windows::ApplicationModel::DataTransfer::IDataPackage::SetText
+Windows::ApplicationModel::DataTransfer::IDataPackageView::{GetTextAsync, Contains}
+Windows::ApplicationModel::DataTransfer::DataPackage
+Windows::ApplicationModel::DataTransfer::DataPackage::CreateInstance

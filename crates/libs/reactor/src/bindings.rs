@@ -1918,6 +1918,53 @@ impl windows_core::RuntimeName for ChoosingItemContainerEventArgs {
 }
 unsafe impl Send for ChoosingItemContainerEventArgs {}
 unsafe impl Sync for ChoosingItemContainerEventArgs {}
+pub struct Clipboard;
+impl Clipboard {
+    pub(crate) fn GetContent() -> windows_core::Result<DataPackageView> {
+        Self::IClipboardStatics(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).GetContent)(
+                windows_core::Interface::as_raw(this),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        })
+    }
+    pub(crate) fn SetContent<P0>(content: P0) -> windows_core::Result<()>
+    where
+        P0: windows_core::Param<DataPackage>,
+    {
+        Self::IClipboardStatics(|this| unsafe {
+            (windows_core::Interface::vtable(this).SetContent)(
+                windows_core::Interface::as_raw(this),
+                content.param().abi(),
+            )
+            .ok()
+        })
+    }
+    pub(crate) fn Flush() -> windows_core::Result<()> {
+        Self::IClipboardStatics(|this| unsafe {
+            (windows_core::Interface::vtable(this).Flush)(windows_core::Interface::as_raw(this))
+                .ok()
+        })
+    }
+    pub(crate) fn Clear() -> windows_core::Result<()> {
+        Self::IClipboardStatics(|this| unsafe {
+            (windows_core::Interface::vtable(this).Clear)(windows_core::Interface::as_raw(this))
+                .ok()
+        })
+    }
+    fn IClipboardStatics<R, F: FnOnce(&IClipboardStatics) -> windows_core::Result<R>>(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<Clipboard, IClipboardStatics> =
+            windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
+impl windows_core::RuntimeName for Clipboard {
+    const NAME: &'static str = "Windows.ApplicationModel.DataTransfer.Clipboard";
+}
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Color {
@@ -2720,6 +2767,50 @@ impl windows_core::RuntimeType for CornerRadius {
 }
 pub type DPI_AWARENESS_CONTEXT = *mut core::ffi::c_void;
 pub const DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2: DPI_AWARENESS_CONTEXT = -4 as _;
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DataPackage(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    DataPackage,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+impl DataPackage {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::IActivationFactory(|f| f.ActivateInstance::<Self>())
+    }
+    fn IActivationFactory<
+        R,
+        F: FnOnce(&windows_core::imp::IGenericFactory) -> windows_core::Result<R>,
+    >(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<
+            DataPackage,
+            windows_core::imp::IGenericFactory,
+        > = windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
+impl windows_core::RuntimeType for DataPackage {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IDataPackage>();
+}
+unsafe impl windows_core::Interface for DataPackage {
+    type Vtable = <IDataPackage as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IDataPackage as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for DataPackage {
+    type Target = IDataPackage;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for DataPackage {
+    const NAME: &'static str = "Windows.ApplicationModel.DataTransfer.DataPackage";
+}
+unsafe impl Send for DataPackage {}
+unsafe impl Sync for DataPackage {}
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct DataPackageOperation(pub u32);
@@ -7664,6 +7755,29 @@ pub struct IChoosingItemContainerEventArgs_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
 }
 windows_core::imp::define_interface!(
+    IClipboardStatics,
+    IClipboardStatics_Vtbl,
+    0xc627e291_34e2_4963_8eed_93cbb0ea3d70
+);
+impl windows_core::RuntimeType for IClipboardStatics {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IClipboardStatics_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub GetContent: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub SetContent: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub Flush: unsafe extern "system" fn(*mut core::ffi::c_void) -> windows_core::HRESULT,
+    pub Clear: unsafe extern "system" fn(*mut core::ffi::c_void) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
     IClosable,
     IClosable_Vtbl,
     0x30d5a829_7fa4_4026_83bb_d75bae4ea99e
@@ -8803,6 +8917,44 @@ pub struct IControl_Vtbl {
     ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
+    IDataPackage,
+    IDataPackage_Vtbl,
+    0x61ebf5c7_efea_4346_9554_981d7e198ffe
+);
+impl windows_core::RuntimeType for IDataPackage {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+impl IDataPackage {
+    pub(crate) fn SetText(&self, value: &str) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetText)(
+                windows_core::Interface::as_raw(self),
+                core::mem::transmute_copy(&windows_core::HSTRING::from(value)),
+            )
+            .ok()
+        }
+    }
+}
+#[repr(C)]
+pub struct IDataPackage_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    GetView: usize,
+    Properties: usize,
+    RequestedOperation: usize,
+    SetRequestedOperation: usize,
+    OperationCompleted: usize,
+    RemoveOperationCompleted: usize,
+    Destroyed: usize,
+    RemoveDestroyed: usize,
+    SetData: usize,
+    SetDataProvider: usize,
+    pub SetText: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
     IDataPackageView,
     IDataPackageView_Vtbl,
     0x7b840471_5900_4d85_a90b_10cb85fe3552
@@ -8822,6 +8974,17 @@ impl IDataPackageView {
                 &mut result__,
             )
             .and_then(|| windows_core::Type::from_abi(result__))
+        }
+    }
+    pub(crate) fn Contains(&self, formatid: &str) -> windows_core::Result<bool> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).Contains)(
+                windows_core::Interface::as_raw(self),
+                core::mem::transmute_copy(&windows_core::HSTRING::from(formatid)),
+                &mut result__,
+            )
+            .map(|| result__)
         }
     }
     pub(crate) fn GetTextAsync(
@@ -8861,7 +9024,11 @@ pub struct IDataPackageView_Vtbl {
         *mut core::ffi::c_void,
         *mut *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
-    Contains: usize,
+    pub Contains: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut bool,
+    ) -> windows_core::HRESULT,
     GetDataAsync: usize,
     pub GetTextAsync: unsafe extern "system" fn(
         *mut core::ffi::c_void,
