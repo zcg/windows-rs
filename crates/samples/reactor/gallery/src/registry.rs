@@ -891,6 +891,14 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         tag: "xaml-ui-command",
         image: "XamlUICommand.png",
     },
+
+    ControlInfo {
+        title: "System Backdrops",
+        description: "System Backdrops sample.",
+        category: "Design Guidance",
+        tag: "system-backdrops",
+        image: "SystemBackdrops.png",
+    },
 ];
 
 pub fn controls_in_category(category: &str) -> Vec<&'static ControlInfo> {

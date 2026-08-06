@@ -88,6 +88,7 @@ pub fn route(tag: &str) -> Element {
         "type-ramp" => component(text::type_ramp_page, ()),
 
         "typography" => component(design::typography_page, ()),
+        "system-backdrops" => component(design::system_backdrops_page, ()),
         "accessibility-color-contrast" => component(design::accessibility_color_contrast_page, ()),
         "accessibility-keyboard" => component(design::accessibility_keyboard_page, ()),
         "accessibility-screen-reader" => component(design::accessibility_screen_reader_page, ()),

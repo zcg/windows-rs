@@ -107,3 +107,5 @@ pub use xaml_comp_interop::xaml_comp_interop_page;
 pub use xaml_resources::xaml_resources_page;
 pub use xaml_styles::xaml_styles_page;
 pub use xaml_ui_command::xaml_ui_command_page;
+pub mod system_backdrops;
+pub use system_backdrops::system_backdrops_page;
