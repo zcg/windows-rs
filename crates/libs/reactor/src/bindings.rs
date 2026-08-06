@@ -8,6 +8,107 @@ windows_core::link!("user32.dll" "system" fn SetProcessDpiAwarenessContext(value
 windows_core::link!("user32.dll" "system" fn SetWindowPos(hwnd : HWND, hwndinsertafter : HWND, x : i32, y : i32, cx : i32, cy : i32, uflags : u32) -> windows_core::BOOL);
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AnimatedIcon(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    AnimatedIcon,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    AnimatedIcon,
+    IconElement,
+    FrameworkElement,
+    UIElement,
+    DependencyObject
+);
+impl windows_core::RuntimeType for AnimatedIcon {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IAnimatedIcon>();
+}
+unsafe impl windows_core::Interface for AnimatedIcon {
+    type Vtable = <IAnimatedIcon as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IAnimatedIcon as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for AnimatedIcon {
+    type Target = IAnimatedIcon;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for AnimatedIcon {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.AnimatedIcon";
+}
+unsafe impl Send for AnimatedIcon {}
+unsafe impl Sync for AnimatedIcon {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AnimatedVisualPlayer(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    AnimatedVisualPlayer,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    AnimatedVisualPlayer,
+    FrameworkElement,
+    UIElement,
+    DependencyObject
+);
+impl windows_core::RuntimeType for AnimatedVisualPlayer {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IAnimatedVisualPlayer>();
+}
+unsafe impl windows_core::Interface for AnimatedVisualPlayer {
+    type Vtable = <IAnimatedVisualPlayer as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IAnimatedVisualPlayer as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for AnimatedVisualPlayer {
+    type Target = IAnimatedVisualPlayer;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for AnimatedVisualPlayer {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.AnimatedVisualPlayer";
+}
+unsafe impl Send for AnimatedVisualPlayer {}
+unsafe impl Sync for AnimatedVisualPlayer {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AnnotatedScrollBar(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    AnnotatedScrollBar,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    AnnotatedScrollBar,
+    Control,
+    FrameworkElement,
+    UIElement,
+    DependencyObject
+);
+impl windows_core::RuntimeType for AnnotatedScrollBar {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IAnnotatedScrollBar>();
+}
+unsafe impl windows_core::Interface for AnnotatedScrollBar {
+    type Vtable = <IAnnotatedScrollBar as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IAnnotatedScrollBar as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for AnnotatedScrollBar {
+    type Target = IAnnotatedScrollBar;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for AnnotatedScrollBar {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.AnnotatedScrollBar";
+}
+unsafe impl Send for AnnotatedScrollBar {}
+unsafe impl Sync for AnnotatedScrollBar {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AppBar(windows_core::IUnknown);
 windows_core::imp::interface_hierarchy!(AppBar, windows_core::IUnknown, windows_core::IInspectable);
 windows_core::imp::required_hierarchy!(
@@ -3967,6 +4068,45 @@ impl windows_core::RuntimeName for HyperlinkButton {
 }
 unsafe impl Send for HyperlinkButton {}
 unsafe impl Sync for HyperlinkButton {}
+windows_core::imp::define_interface!(
+    IAnimatedIcon,
+    IAnimatedIcon_Vtbl,
+    0xf705dfda_8196_56d0_8dcf_2b66c2aed791
+);
+impl windows_core::RuntimeType for IAnimatedIcon {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IAnimatedIcon_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
+    IAnimatedVisualPlayer,
+    IAnimatedVisualPlayer_Vtbl,
+    0x17f024f0_1692_51dd_a4da_f4ed648d614c
+);
+impl windows_core::RuntimeType for IAnimatedVisualPlayer {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IAnimatedVisualPlayer_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
+    IAnnotatedScrollBar,
+    IAnnotatedScrollBar_Vtbl,
+    0x0f4904a9_b6f9_5834_8d5d_59bc3b7b7ee2
+);
+impl windows_core::RuntimeType for IAnnotatedScrollBar {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IAnnotatedScrollBar_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
 windows_core::imp::define_interface!(
     IAppBar,
     IAppBar_Vtbl,
@@ -8949,6 +9089,19 @@ impl windows_core::RuntimeType for IIconElement {
 pub struct IIconElement_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
 }
+windows_core::imp::define_interface!(
+    IIconSourceElement,
+    IIconSourceElement_Vtbl,
+    0xab6f4473_1f6b_5b24_8259_1d38e90a110a
+);
+impl windows_core::RuntimeType for IIconSourceElement {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IIconSourceElement_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
 windows_core::imp::define_interface!(IImage, IImage_Vtbl, 0x220d3d8d_66de_53a1_a215_ba9c165565ab);
 impl windows_core::RuntimeType for IImage {
     const SIGNATURE: windows_core::imp::ConstBuffer =
@@ -9353,6 +9506,32 @@ pub struct IItemsControl_Vtbl {
         *mut core::ffi::c_void,
         *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    IItemsRepeater,
+    IItemsRepeater_Vtbl,
+    0x9dabac84_fe81_53d1_a041_7a3befea505f
+);
+impl windows_core::RuntimeType for IItemsRepeater {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IItemsRepeater_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
+    IItemsView,
+    IItemsView_Vtbl,
+    0xbbb195d8_6a7f_5a42_9866_25fd5a4473ab
+);
+impl windows_core::RuntimeType for IItemsView {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IItemsView_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
 }
 windows_core::imp::define_interface!(
     IKeyboardAccelerator,
@@ -9814,6 +9993,19 @@ impl windows_core::RuntimeType for IListViewItem {
 }
 #[repr(C)]
 pub struct IListViewItem_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
+    IMediaPlayerElement,
+    IMediaPlayerElement_Vtbl,
+    0xc314a38c_780c_558a_98cd_0a8deb467fcf
+);
+impl windows_core::RuntimeType for IMediaPlayerElement {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IMediaPlayerElement_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
 }
 windows_core::imp::define_interface!(
@@ -11153,6 +11345,19 @@ pub struct IParagraph_Vtbl {
     ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
+    IParallaxView,
+    IParallaxView_Vtbl,
+    0xe6f4a919_1116_53ae_96c6_efddc59786f3
+);
+impl windows_core::RuntimeType for IParallaxView {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IParallaxView_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
     IPasswordBox,
     IPasswordBox_Vtbl,
     0x6d3ccff7_aaee_5adc_8298_33300fa119da
@@ -11386,6 +11591,19 @@ pub struct IPersonPictureFactory_Vtbl {
         *mut *mut core::ffi::c_void,
         *mut *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    IPipsPager,
+    IPipsPager_Vtbl,
+    0xde7fc5d5_9446_5693_bbf3_fd7f943a567c
+);
+impl windows_core::RuntimeType for IPipsPager {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IPipsPager_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
 }
 windows_core::imp::define_interface!(IPivot, IPivot_Vtbl, 0x1c6438e5_ecac_5fb6_8e8e_00de7e922303);
 impl windows_core::RuntimeType for IPivot {
@@ -11739,6 +11957,15 @@ pub struct IPointerRoutedEventArgs_Vtbl {
         *mut *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
 }
+windows_core::imp::define_interface!(IPopup, IPopup_Vtbl, 0x4e3ab19d_2f95_579c_9535_906c58629437);
+impl windows_core::RuntimeType for IPopup {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IPopup_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
 windows_core::imp::define_interface!(
     IProgressBar,
     IProgressBar_Vtbl,
@@ -11876,6 +12103,19 @@ pub struct IProgressRingFactory_Vtbl {
         *mut *mut core::ffi::c_void,
         *mut *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    IRadialGradientBrush,
+    IRadialGradientBrush_Vtbl,
+    0x5d493ce1_b844_546a_b772_b3bcba7e98ee
+);
+impl windows_core::RuntimeType for IRadialGradientBrush {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IRadialGradientBrush_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
 }
 windows_core::imp::define_interface!(
     IRadioButton,
@@ -13664,6 +13904,19 @@ pub struct ISelectorItem_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
 }
 windows_core::imp::define_interface!(
+    ISemanticZoom,
+    ISemanticZoom_Vtbl,
+    0x7e14616d_55ef_548c_a997_c923e302718f
+);
+impl windows_core::RuntimeType for ISemanticZoom {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct ISemanticZoom_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
     ISetterBase,
     ISetterBase_Vtbl,
     0x5a7c1347_cda3_55be_bfef_5c7582213980
@@ -13674,6 +13927,19 @@ impl windows_core::RuntimeType for ISetterBase {
 }
 #[repr(C)]
 pub struct ISetterBase_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
+    IShadow,
+    IShadow_Vtbl,
+    0xcc12fd6a_50aa_5eb3_9a0e_b938b454c439
+);
+impl windows_core::RuntimeType for IShadow {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IShadow_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
 }
 windows_core::imp::define_interface!(IShape, IShape_Vtbl, 0x9941aad3_6af2_5ba2_9085_8506d5f2485e);
@@ -14225,6 +14491,19 @@ pub struct IStackPanelFactory_Vtbl {
     ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
+    IStandardUICommand,
+    IStandardUICommand_Vtbl,
+    0x5f395d50_5449_59ab_9cb2_4e3700033f03
+);
+impl windows_core::RuntimeType for IStandardUICommand {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IStandardUICommand_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
     IStorageItem,
     IStorageItem_Vtbl,
     0x4207a996_ca2f_42f7_bde8_8b10457a7f30
@@ -14592,6 +14871,19 @@ pub struct ISwapChainPanelNative_Vtbl {
         *mut core::ffi::c_void,
         *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    ISwipeControl,
+    ISwipeControl_Vtbl,
+    0x337800fe_f51d_5f6b_9d35_e7f5de10a97c
+);
+impl windows_core::RuntimeType for ISwipeControl {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct ISwipeControl_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
 }
 windows_core::imp::define_interface!(
     ISymbolIcon,
@@ -15756,6 +16048,19 @@ pub struct ITextElement_Vtbl {
         unsafe extern "system" fn(*mut core::ffi::c_void, FontWeight) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
+    IThemeShadow,
+    IThemeShadow_Vtbl,
+    0xc264208a_d1f4_58ae_8a88_fc59148bee69
+);
+impl windows_core::RuntimeType for IThemeShadow {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IThemeShadow_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
     ITimePicker,
     ITimePicker_Vtbl,
     0xed4baa33_c240_5934_9229_82d37b26f846
@@ -16245,6 +16550,32 @@ pub struct IToggleButtonFactory_Vtbl {
         *mut *mut core::ffi::c_void,
         *mut *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    IToggleMenuFlyoutItem,
+    IToggleMenuFlyoutItem_Vtbl,
+    0x1803f260_67e4_5bc1_a63a_123510167bb8
+);
+impl windows_core::RuntimeType for IToggleMenuFlyoutItem {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IToggleMenuFlyoutItem_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
+    IToggleSplitButton,
+    IToggleSplitButton_Vtbl,
+    0x5c0f247b_bd00_5509_88a8_b09007ae22b0
+);
+impl windows_core::RuntimeType for IToggleSplitButton {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IToggleSplitButton_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
 }
 windows_core::imp::define_interface!(
     IToggleSwitch,
@@ -17585,6 +17916,19 @@ pub struct IUriRuntimeClassFactory_Vtbl {
     ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
+    IVariableSizedWrapGrid,
+    IVariableSizedWrapGrid_Vtbl,
+    0xbfecd12b_e16a_58a0_af5f_4672627462d5
+);
+impl windows_core::RuntimeType for IVariableSizedWrapGrid {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IVariableSizedWrapGrid_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
     IViewbox,
     IViewbox_Vtbl,
     0x510683e8_d0fe_5ef4_85bd_e1131076ac22
@@ -17916,6 +18260,19 @@ pub struct IWindowNative_Vtbl {
     ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
+    IXamlCompositionBrushBase,
+    IXamlCompositionBrushBase_Vtbl,
+    0xfeaead28_5cd0_5e58_bcea_8670f832aca9
+);
+impl windows_core::RuntimeType for IXamlCompositionBrushBase {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IXamlCompositionBrushBase_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
     IXamlControlsResources,
     IXamlControlsResources_Vtbl,
     0x918ca043_f42c_5805_861b_62d6d1d0c162
@@ -18223,6 +18580,19 @@ windows_core::imp::interface_hierarchy!(
 pub struct IXamlType_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
 }
+windows_core::imp::define_interface!(
+    IXamlUICommand,
+    IXamlUICommand_Vtbl,
+    0xa457f2cb_51e0_541c_9c42_dd1dcbdf58fb
+);
+impl windows_core::RuntimeType for IXamlUICommand {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IXamlUICommand_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct IconElement(windows_core::IUnknown);
@@ -18251,6 +18621,40 @@ impl windows_core::RuntimeName for IconElement {
 }
 unsafe impl Send for IconElement {}
 unsafe impl Sync for IconElement {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct IconSourceElement(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    IconSourceElement,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    IconSourceElement,
+    IconElement,
+    FrameworkElement,
+    UIElement,
+    DependencyObject
+);
+impl windows_core::RuntimeType for IconSourceElement {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IIconSourceElement>();
+}
+unsafe impl windows_core::Interface for IconSourceElement {
+    type Vtable = <IIconSourceElement as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IIconSourceElement as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for IconSourceElement {
+    type Target = IIconSourceElement;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for IconSourceElement {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.IconSourceElement";
+}
+unsafe impl Send for IconSourceElement {}
+unsafe impl Sync for IconSourceElement {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Image(windows_core::IUnknown);
@@ -18682,6 +19086,73 @@ unsafe impl Send for ItemsControl {}
 unsafe impl Sync for ItemsControl {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ItemsRepeater(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    ItemsRepeater,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    ItemsRepeater,
+    FrameworkElement,
+    UIElement,
+    DependencyObject
+);
+impl windows_core::RuntimeType for ItemsRepeater {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IItemsRepeater>();
+}
+unsafe impl windows_core::Interface for ItemsRepeater {
+    type Vtable = <IItemsRepeater as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IItemsRepeater as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for ItemsRepeater {
+    type Target = IItemsRepeater;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for ItemsRepeater {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.ItemsRepeater";
+}
+unsafe impl Send for ItemsRepeater {}
+unsafe impl Sync for ItemsRepeater {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ItemsView(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    ItemsView,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    ItemsView,
+    Control,
+    FrameworkElement,
+    UIElement,
+    DependencyObject
+);
+impl windows_core::RuntimeType for ItemsView {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IItemsView>();
+}
+unsafe impl windows_core::Interface for ItemsView {
+    type Vtable = <IItemsView as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IItemsView as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for ItemsView {
+    type Target = IItemsView;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for ItemsView {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.ItemsView";
+}
+unsafe impl Send for ItemsView {}
+unsafe impl Sync for ItemsView {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct KeyboardAccelerator(windows_core::IUnknown);
 windows_core::imp::interface_hierarchy!(
     KeyboardAccelerator,
@@ -19071,6 +19542,40 @@ pub const MONITOR_DEFAULTTONEAREST: i32 = 2;
 pub type MddBootstrapInitializeOptions = i32;
 pub const MddBootstrapInitializeOptions_OnNoMatch_ShowUI: MddBootstrapInitializeOptions = 8;
 pub const MddBootstrapInitializeOptions_OnPackageIdentity_NOOP: MddBootstrapInitializeOptions = 16;
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MediaPlayerElement(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    MediaPlayerElement,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    MediaPlayerElement,
+    Control,
+    FrameworkElement,
+    UIElement,
+    DependencyObject
+);
+impl windows_core::RuntimeType for MediaPlayerElement {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IMediaPlayerElement>();
+}
+unsafe impl windows_core::Interface for MediaPlayerElement {
+    type Vtable = <IMediaPlayerElement as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IMediaPlayerElement as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for MediaPlayerElement {
+    type Target = IMediaPlayerElement;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for MediaPlayerElement {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.MediaPlayerElement";
+}
+unsafe impl Send for MediaPlayerElement {}
+unsafe impl Sync for MediaPlayerElement {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MenuBar(windows_core::IUnknown);
@@ -20050,6 +20555,34 @@ unsafe impl Send for Paragraph {}
 unsafe impl Sync for Paragraph {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ParallaxView(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    ParallaxView,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(ParallaxView, FrameworkElement, UIElement, DependencyObject);
+impl windows_core::RuntimeType for ParallaxView {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IParallaxView>();
+}
+unsafe impl windows_core::Interface for ParallaxView {
+    type Vtable = <IParallaxView as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IParallaxView as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for ParallaxView {
+    type Target = IParallaxView;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for ParallaxView {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.ParallaxView";
+}
+unsafe impl Send for ParallaxView {}
+unsafe impl Sync for ParallaxView {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PasswordBox(windows_core::IUnknown);
 windows_core::imp::interface_hierarchy!(
     PasswordBox,
@@ -20170,6 +20703,40 @@ impl windows_core::RuntimeName for PersonPicture {
 }
 unsafe impl Send for PersonPicture {}
 unsafe impl Sync for PersonPicture {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PipsPager(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    PipsPager,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    PipsPager,
+    Control,
+    FrameworkElement,
+    UIElement,
+    DependencyObject
+);
+impl windows_core::RuntimeType for PipsPager {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IPipsPager>();
+}
+unsafe impl windows_core::Interface for PipsPager {
+    type Vtable = <IPipsPager as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IPipsPager as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for PipsPager {
+    type Target = IPipsPager;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for PipsPager {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.PipsPager";
+}
+unsafe impl Send for PipsPager {}
+unsafe impl Sync for PipsPager {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Pivot(windows_core::IUnknown);
@@ -20472,6 +21039,30 @@ unsafe impl Send for PointerRoutedEventArgs {}
 unsafe impl Sync for PointerRoutedEventArgs {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Popup(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(Popup, windows_core::IUnknown, windows_core::IInspectable);
+windows_core::imp::required_hierarchy!(Popup, FrameworkElement, UIElement, DependencyObject);
+impl windows_core::RuntimeType for Popup {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IPopup>();
+}
+unsafe impl windows_core::Interface for Popup {
+    type Vtable = <IPopup as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IPopup as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for Popup {
+    type Target = IPopup;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for Popup {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.Primitives.Popup";
+}
+unsafe impl Send for Popup {}
+unsafe impl Sync for Popup {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ProgressBar(windows_core::IUnknown);
 windows_core::imp::interface_hierarchy!(
     ProgressBar,
@@ -20590,6 +21181,39 @@ pub struct RECT {
     pub bottom: i32,
 }
 pub const RPC_E_CHANGED_MODE: windows_core::HRESULT = windows_core::HRESULT(0x80010106_u32 as _);
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RadialGradientBrush(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    RadialGradientBrush,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    RadialGradientBrush,
+    XamlCompositionBrushBase,
+    Brush,
+    DependencyObject
+);
+impl windows_core::RuntimeType for RadialGradientBrush {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IRadialGradientBrush>();
+}
+unsafe impl windows_core::Interface for RadialGradientBrush {
+    type Vtable = <IRadialGradientBrush as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IRadialGradientBrush as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for RadialGradientBrush {
+    type Target = IRadialGradientBrush;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for RadialGradientBrush {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Media.RadialGradientBrush";
+}
+unsafe impl Send for RadialGradientBrush {}
+unsafe impl Sync for RadialGradientBrush {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RadioButton(windows_core::IUnknown);
@@ -22140,6 +22764,40 @@ unsafe impl Send for SelectorItem {}
 unsafe impl Sync for SelectorItem {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SemanticZoom(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    SemanticZoom,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    SemanticZoom,
+    Control,
+    FrameworkElement,
+    UIElement,
+    DependencyObject
+);
+impl windows_core::RuntimeType for SemanticZoom {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, ISemanticZoom>();
+}
+unsafe impl windows_core::Interface for SemanticZoom {
+    type Vtable = <ISemanticZoom as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <ISemanticZoom as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for SemanticZoom {
+    type Target = ISemanticZoom;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for SemanticZoom {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.SemanticZoom";
+}
+unsafe impl Send for SemanticZoom {}
+unsafe impl Sync for SemanticZoom {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SetterBase(windows_core::IUnknown);
 windows_core::imp::interface_hierarchy!(
     SetterBase,
@@ -22166,6 +22824,30 @@ impl windows_core::RuntimeName for SetterBase {
 }
 unsafe impl Send for SetterBase {}
 unsafe impl Sync for SetterBase {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Shadow(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(Shadow, windows_core::IUnknown, windows_core::IInspectable);
+windows_core::imp::required_hierarchy!(Shadow, DependencyObject);
+impl windows_core::RuntimeType for Shadow {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IShadow>();
+}
+unsafe impl windows_core::Interface for Shadow {
+    type Vtable = <IShadow as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IShadow as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for Shadow {
+    type Target = IShadow;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for Shadow {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Media.Shadow";
+}
+unsafe impl Send for Shadow {}
+unsafe impl Sync for Shadow {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Shape(windows_core::IUnknown);
@@ -22604,6 +23286,34 @@ impl windows_core::RuntimeName for StackPanel {
 unsafe impl Send for StackPanel {}
 unsafe impl Sync for StackPanel {}
 #[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StandardUICommand(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    StandardUICommand,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(StandardUICommand, XamlUICommand, DependencyObject);
+impl windows_core::RuntimeType for StandardUICommand {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IStandardUICommand>();
+}
+unsafe impl windows_core::Interface for StandardUICommand {
+    type Vtable = <IStandardUICommand as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IStandardUICommand as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for StandardUICommand {
+    type Target = IStandardUICommand;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for StandardUICommand {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Input.StandardUICommand";
+}
+unsafe impl Send for StandardUICommand {}
+unsafe impl Sync for StandardUICommand {}
+#[repr(transparent)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Stretch(pub i32);
 impl Stretch {
@@ -22823,6 +23533,41 @@ impl windows_core::RuntimeName for SwapChainPanel {
 }
 unsafe impl Send for SwapChainPanel {}
 unsafe impl Sync for SwapChainPanel {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SwipeControl(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    SwipeControl,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    SwipeControl,
+    ContentControl,
+    Control,
+    FrameworkElement,
+    UIElement,
+    DependencyObject
+);
+impl windows_core::RuntimeType for SwipeControl {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, ISwipeControl>();
+}
+unsafe impl windows_core::Interface for SwipeControl {
+    type Vtable = <ISwipeControl as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <ISwipeControl as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for SwipeControl {
+    type Target = ISwipeControl;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for SwipeControl {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.SwipeControl";
+}
+unsafe impl Send for SwipeControl {}
+unsafe impl Sync for SwipeControl {}
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Symbol(pub i32);
@@ -23789,6 +24534,34 @@ impl windows_core::RuntimeType for TextWrapping {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::from_slice(b"enum(Microsoft.UI.Xaml.TextWrapping;i4)");
 }
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ThemeShadow(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    ThemeShadow,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(ThemeShadow, Shadow, DependencyObject);
+impl windows_core::RuntimeType for ThemeShadow {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IThemeShadow>();
+}
+unsafe impl windows_core::Interface for ThemeShadow {
+    type Vtable = <IThemeShadow as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IThemeShadow as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for ThemeShadow {
+    type Target = IThemeShadow;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for ThemeShadow {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Media.ThemeShadow";
+}
+unsafe impl Send for ThemeShadow {}
+unsafe impl Sync for ThemeShadow {}
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Thickness {
@@ -24033,6 +24806,78 @@ impl windows_core::RuntimeName for ToggleButton {
 }
 unsafe impl Send for ToggleButton {}
 unsafe impl Sync for ToggleButton {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ToggleMenuFlyoutItem(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    ToggleMenuFlyoutItem,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    ToggleMenuFlyoutItem,
+    MenuFlyoutItem,
+    MenuFlyoutItemBase,
+    Control,
+    FrameworkElement,
+    UIElement,
+    DependencyObject
+);
+impl windows_core::RuntimeType for ToggleMenuFlyoutItem {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IToggleMenuFlyoutItem>();
+}
+unsafe impl windows_core::Interface for ToggleMenuFlyoutItem {
+    type Vtable = <IToggleMenuFlyoutItem as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IToggleMenuFlyoutItem as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for ToggleMenuFlyoutItem {
+    type Target = IToggleMenuFlyoutItem;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for ToggleMenuFlyoutItem {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.ToggleMenuFlyoutItem";
+}
+unsafe impl Send for ToggleMenuFlyoutItem {}
+unsafe impl Sync for ToggleMenuFlyoutItem {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ToggleSplitButton(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    ToggleSplitButton,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    ToggleSplitButton,
+    SplitButton,
+    ContentControl,
+    Control,
+    FrameworkElement,
+    UIElement,
+    DependencyObject
+);
+impl windows_core::RuntimeType for ToggleSplitButton {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IToggleSplitButton>();
+}
+unsafe impl windows_core::Interface for ToggleSplitButton {
+    type Vtable = <IToggleSplitButton as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IToggleSplitButton as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for ToggleSplitButton {
+    type Target = IToggleSplitButton;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for ToggleSplitButton {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.ToggleSplitButton";
+}
+unsafe impl Send for ToggleSplitButton {}
+unsafe impl Sync for ToggleSplitButton {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ToggleSwitch(windows_core::IUnknown);
@@ -24599,6 +25444,40 @@ impl windows_core::RuntimeName for Uri {
 unsafe impl Send for Uri {}
 unsafe impl Sync for Uri {}
 #[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VariableSizedWrapGrid(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    VariableSizedWrapGrid,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    VariableSizedWrapGrid,
+    Panel,
+    FrameworkElement,
+    UIElement,
+    DependencyObject
+);
+impl windows_core::RuntimeType for VariableSizedWrapGrid {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IVariableSizedWrapGrid>();
+}
+unsafe impl windows_core::Interface for VariableSizedWrapGrid {
+    type Vtable = <IVariableSizedWrapGrid as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IVariableSizedWrapGrid as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for VariableSizedWrapGrid {
+    type Target = IVariableSizedWrapGrid;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for VariableSizedWrapGrid {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.VariableSizedWrapGrid";
+}
+unsafe impl Send for VariableSizedWrapGrid {}
+unsafe impl Sync for VariableSizedWrapGrid {}
+#[repr(transparent)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct VerticalAlignment(pub i32);
 impl VerticalAlignment {
@@ -25045,6 +25924,34 @@ unsafe impl Send for WindowEventArgs {}
 unsafe impl Sync for WindowEventArgs {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct XamlCompositionBrushBase(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    XamlCompositionBrushBase,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(XamlCompositionBrushBase, Brush, DependencyObject);
+impl windows_core::RuntimeType for XamlCompositionBrushBase {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IXamlCompositionBrushBase>();
+}
+unsafe impl windows_core::Interface for XamlCompositionBrushBase {
+    type Vtable = <IXamlCompositionBrushBase as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IXamlCompositionBrushBase as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for XamlCompositionBrushBase {
+    type Target = IXamlCompositionBrushBase;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for XamlCompositionBrushBase {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Media.XamlCompositionBrushBase";
+}
+unsafe impl Send for XamlCompositionBrushBase {}
+unsafe impl Sync for XamlCompositionBrushBase {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct XamlControlsResources(windows_core::IUnknown);
 windows_core::imp::interface_hierarchy!(
     XamlControlsResources,
@@ -25234,6 +26141,34 @@ impl windows_core::RuntimeName for XamlRootChangedEventArgs {
 }
 unsafe impl Send for XamlRootChangedEventArgs {}
 unsafe impl Sync for XamlRootChangedEventArgs {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct XamlUICommand(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    XamlUICommand,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(XamlUICommand, DependencyObject);
+impl windows_core::RuntimeType for XamlUICommand {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IXamlUICommand>();
+}
+unsafe impl windows_core::Interface for XamlUICommand {
+    type Vtable = <IXamlUICommand as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IXamlUICommand as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for XamlUICommand {
+    type Target = IXamlUICommand;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for XamlUICommand {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Input.XamlUICommand";
+}
+unsafe impl Send for XamlUICommand {}
+unsafe impl Sync for XamlUICommand {}
 #[repr(C)]
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct XmlnsDefinition {
