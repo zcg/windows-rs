@@ -56,6 +56,7 @@ widget_modules! {
     info_badge,
     info_bar,
     list_box,
+    media_player_element,
     menu_bar,
     navigation_view,
     number_box,

@@ -300,6 +300,7 @@ define_element! {
     AutoSuggestBox,
     SplitView,
     SwipeControl,
+    MediaPlayerElement,
     MenuBar,
     ScrollView,
     TreeView,

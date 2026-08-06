@@ -13253,60 +13253,6 @@ impl windows_core::RuntimeType for IMediaPlayerElement {
         windows_core::imp::ConstBuffer::for_interface::<Self>();
 }
 impl IMediaPlayerElement {
-    pub(crate) fn Source(&self) -> windows_core::Result<IMediaPlaybackSource> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).Source)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .and_then(|| windows_core::Type::from_abi(result__))
-        }
-    }
-    pub(crate) fn SetSource<P0>(&self, value: P0) -> windows_core::Result<()>
-    where
-        P0: windows_core::Param<IMediaPlaybackSource>,
-    {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetSource)(
-                windows_core::Interface::as_raw(self),
-                value.param().abi(),
-            )
-            .ok()
-        }
-    }
-    pub(crate) fn TransportControls(&self) -> windows_core::Result<MediaTransportControls> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).TransportControls)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .and_then(|| windows_core::Type::from_abi(result__))
-        }
-    }
-    pub(crate) fn SetTransportControls<P0>(&self, value: P0) -> windows_core::Result<()>
-    where
-        P0: windows_core::Param<MediaTransportControls>,
-    {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetTransportControls)(
-                windows_core::Interface::as_raw(self),
-                value.param().abi(),
-            )
-            .ok()
-        }
-    }
-    pub(crate) fn AreTransportControlsEnabled(&self) -> windows_core::Result<bool> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).AreTransportControlsEnabled)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .map(|| result__)
-        }
-    }
     pub(crate) fn SetAreTransportControlsEnabled(&self, value: bool) -> windows_core::Result<()> {
         unsafe {
             (windows_core::Interface::vtable(self).SetAreTransportControlsEnabled)(
@@ -13314,57 +13260,6 @@ impl IMediaPlayerElement {
                 value,
             )
             .ok()
-        }
-    }
-    pub(crate) fn PosterSource(&self) -> windows_core::Result<ImageSource> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).PosterSource)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .and_then(|| windows_core::Type::from_abi(result__))
-        }
-    }
-    pub(crate) fn SetPosterSource<P0>(&self, value: P0) -> windows_core::Result<()>
-    where
-        P0: windows_core::Param<ImageSource>,
-    {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetPosterSource)(
-                windows_core::Interface::as_raw(self),
-                value.param().abi(),
-            )
-            .ok()
-        }
-    }
-    pub(crate) fn Stretch(&self) -> windows_core::Result<Stretch> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).Stretch)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .map(|| result__)
-        }
-    }
-    pub(crate) fn SetStretch(&self, value: Stretch) -> windows_core::Result<()> {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetStretch)(
-                windows_core::Interface::as_raw(self),
-                value,
-            )
-            .ok()
-        }
-    }
-    pub(crate) fn AutoPlay(&self) -> windows_core::Result<bool> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).AutoPlay)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .map(|| result__)
         }
     }
     pub(crate) fn SetAutoPlay(&self, value: bool) -> windows_core::Result<()> {
@@ -13376,98 +13271,42 @@ impl IMediaPlayerElement {
             .ok()
         }
     }
-    pub(crate) fn IsFullWindow(&self) -> windows_core::Result<bool> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).IsFullWindow)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .map(|| result__)
-        }
-    }
-    pub(crate) fn SetIsFullWindow(&self, value: bool) -> windows_core::Result<()> {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetIsFullWindow)(
-                windows_core::Interface::as_raw(self),
-                value,
-            )
-            .ok()
-        }
-    }
-    pub(crate) fn MediaPlayer(&self) -> windows_core::Result<MediaPlayer> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).MediaPlayer)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .and_then(|| windows_core::Type::from_abi(result__))
-        }
-    }
-    pub(crate) fn SetMediaPlayer<P0>(&self, mediaplayer: P0) -> windows_core::Result<()>
-    where
-        P0: windows_core::Param<MediaPlayer>,
-    {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetMediaPlayer)(
-                windows_core::Interface::as_raw(self),
-                mediaplayer.param().abi(),
-            )
-            .ok()
-        }
-    }
 }
 #[repr(C)]
 pub struct IMediaPlayerElement_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
-    pub Source: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub SetSource: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub TransportControls: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub SetTransportControls: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub AreTransportControlsEnabled:
-        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
+    Source: usize,
+    SetSource: usize,
+    TransportControls: usize,
+    SetTransportControls: usize,
+    AreTransportControlsEnabled: usize,
     pub SetAreTransportControlsEnabled:
         unsafe extern "system" fn(*mut core::ffi::c_void, bool) -> windows_core::HRESULT,
-    pub PosterSource: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub SetPosterSource: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub Stretch:
-        unsafe extern "system" fn(*mut core::ffi::c_void, *mut Stretch) -> windows_core::HRESULT,
-    pub SetStretch:
-        unsafe extern "system" fn(*mut core::ffi::c_void, Stretch) -> windows_core::HRESULT,
-    pub AutoPlay:
-        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
+    PosterSource: usize,
+    SetPosterSource: usize,
+    Stretch: usize,
+    SetStretch: usize,
+    AutoPlay: usize,
     pub SetAutoPlay:
         unsafe extern "system" fn(*mut core::ffi::c_void, bool) -> windows_core::HRESULT,
-    pub IsFullWindow:
-        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
-    pub SetIsFullWindow:
-        unsafe extern "system" fn(*mut core::ffi::c_void, bool) -> windows_core::HRESULT,
-    pub MediaPlayer: unsafe extern "system" fn(
+}
+windows_core::imp::define_interface!(
+    IMediaPlayerElementFactory,
+    IMediaPlayerElementFactory_Vtbl,
+    0x51aca342_65a0_5db6_8082_bd54a8d14999
+);
+impl windows_core::RuntimeType for IMediaPlayerElementFactory {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IMediaPlayerElementFactory_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub CreateInstance: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
         *mut core::ffi::c_void,
         *mut *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub SetMediaPlayer: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
@@ -27690,6 +27529,32 @@ windows_core::imp::required_hierarchy!(
     UIElement,
     DependencyObject
 );
+impl MediaPlayerElement {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::IMediaPlayerElementFactory(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).CreateInstance)(
+                windows_core::Interface::as_raw(this),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        })
+    }
+    fn IMediaPlayerElementFactory<
+        R,
+        F: FnOnce(&IMediaPlayerElementFactory) -> windows_core::Result<R>,
+    >(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<
+            MediaPlayerElement,
+            IMediaPlayerElementFactory,
+        > = windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
 impl windows_core::RuntimeType for MediaPlayerElement {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::for_class::<Self, IMediaPlayerElement>();

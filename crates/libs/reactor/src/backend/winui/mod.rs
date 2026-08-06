@@ -83,6 +83,7 @@ define_handles! {
     Line,
     ListBox,
     ListView,
+    MediaPlayerElement,
     MenuBar,
     NavigationView,
     NumberBox,

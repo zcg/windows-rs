@@ -416,3 +416,4 @@ Microsoft::UI::Xaml::Controls::SwipeItems::CreateInstance
 Microsoft::UI::Xaml::Controls::ISwipeItems
 Microsoft::UI::Xaml::Controls::SwipeMode
 Microsoft::UI::Xaml::Controls::SwipeControl::CreateInstance
+Microsoft::UI::Xaml::Controls::MediaPlayerElement::CreateInstance

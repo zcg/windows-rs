@@ -347,6 +347,15 @@ pub fn list_box_bindings(w: &ListBox) -> PropBindings {
         Binding::Prop(Prop::SelectedIndex, PropValue::I32(w.selected_index)),
     ]
 }
+pub fn media_player_element_bindings(w: &MediaPlayerElement) -> PropBindings {
+    vec![
+        Binding::Prop(
+            Prop::AreTransportControlsEnabled,
+            PropValue::Bool(w.are_transport_controls_enabled),
+        ),
+        Binding::Prop(Prop::AutoPlay, PropValue::Bool(w.auto_play)),
+    ]
+}
 pub fn menu_bar_bindings(w: &MenuBar) -> PropBindings {
     vec![Binding::Event(
         Event::ItemClicked,

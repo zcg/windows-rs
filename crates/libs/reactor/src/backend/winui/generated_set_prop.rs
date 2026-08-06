@@ -9,6 +9,12 @@ pub fn dispatch(handle: &Handle, prop: Prop, value: &PropValue) -> Result<bool> 
         (Prop::AcceptsReturn, PropValue::Bool(v), Handle::TextBox(h)) => {
             h.SetAcceptsReturn(*v)?;
         }
+        (Prop::AreTransportControlsEnabled, PropValue::Bool(v), Handle::MediaPlayerElement(h)) => {
+            h.SetAreTransportControlsEnabled(*v)?;
+        }
+        (Prop::AutoPlay, PropValue::Bool(v), Handle::MediaPlayerElement(h)) => {
+            h.SetAutoPlay(*v)?;
+        }
         (Prop::CanReorderTabs, PropValue::Bool(v), Handle::TabView(h)) => {
             h.SetCanReorderTabs(*v)?;
         }

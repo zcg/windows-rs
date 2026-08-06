@@ -135,6 +135,9 @@ SelectedIndex = {}
 IsEnabled = {}
 SelectionChanged = { manual = true, type = "I32" }
 
+["Microsoft.UI.Xaml.Controls.MediaPlayerElement"]
+AreTransportControlsEnabled = {}
+AutoPlay = {}
 ["Microsoft.UI.Xaml.Controls.MenuBar"]
 ItemClicked = { manual = true, type = "Str" }
 
