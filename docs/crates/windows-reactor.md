@@ -43,6 +43,11 @@ options are `title`, `inner_size`, `backdrop` (for example `Backdrop::Mica`), `i
 `.ico` file), `fullscreen`, and `presenter`. `render(app)` takes your
 `Fn(&mut RenderCx) -> Element` and runs the message loop.
 
+`App::on_exit` runs once on the UI thread immediately before Reactor exits the process after the
+final window closes. The callback must finish synchronously. Use it for cleanup or process-lifetime
+instrumentation that cannot run after `App::render`, since the normal final-window path terminates
+the process.
+
 Reactor catches panics at the FFI boundaries it owns (render and event callbacks, and
 `ErrorBoundary`) and converts them to errors, so they never unwind across the WinUI ABI. It does not
 install a global panic hook. For panics that escape those boundaries, add `panic = "abort"` to your
@@ -92,10 +97,11 @@ Build elements with plain builder functions. Each returns a widget that becomes 
 - Buttons: `button(content)` with `.on_click(..)`, `.accent()`, `.subtle()`, `.enabled(..)`,
   `.icon(..)`, `.flyout(..)`, `.menu_flyout(..)`.
 - Icons: any control that takes an icon (`button`, `NavViewItem`, command-bar buttons,
-  `selector_bar_item`) accepts `impl Into<Icon>`. `Icon` has three kinds: `Symbol(Symbol)` for a
-  built-in system glyph (a bare `Symbol` converts automatically, so `.icon(Symbol::Home)` keeps
-  working), `Icon::image(source)` for a raster or SVG image (`ImageIcon`), and `Icon::font(glyph)`
-  or `Icon::font_family(glyph, family)` for a font glyph (`FontIcon`). Sample:
+  `selector_bar_item`) accepts `impl Into<Icon>`. A bare `Symbol` creates a `SymbolIcon`;
+  `Icon::image(source)` creates a full-color `ImageIcon` from raster, SVG, or surface data;
+  `Icon::bitmap_icon(uri, show_as_monochrome)` creates a native `BitmapIcon`; `Icon::font(glyph)`
+  and `Icon::font_family(glyph, family)` create a `FontIcon`; and `Icon::path(data)` creates a
+  `PathIcon` from XAML path mini-language data. Sample:
   `cargo run -p reactor_samples --example icon_elements`.
 - Images: `Image::new(source)` accepts a URI or `ImageSource`. URI paths ending in `.svg`
   (case-insensitive, before any query or fragment) use the platform SVG decoder; other URIs use
@@ -109,11 +115,35 @@ About 60 WinUI controls are wrapped, including `check_box`, `combo_box`, `slider
 `calendar_view`, `content_dialog`, `info_bar`, `teaching_tip`, and `command_bar`. See the [full
 catalog](https://github.com/microsoft/windows-rs/tree/master/crates/libs/reactor/src/widgets).
 
+`TabItem::with_key` supplies the stable identity returned by `TabView::on_close_requested`. Adding,
+changing, or removing that key updates the existing native `TabViewItem`; removing it also clears
+the WinUI `Tag` instead of retaining stale callback identity. See the `tab_view_item_key` sample.
+
 Layout and appearance modifiers are available on any `Element` through the `ElementExt` trait:
 `.margin(..)`, `.padding(..)`, `.width(..)`, `.height(..)`, `.horizontal_alignment(..)`,
 `.vertical_alignment(..)` (with `HorizontalAlignment` and `VerticalAlignment`), `.background(..)`,
 `.foreground(..)`, `.opacity(..)`, and transition helpers such as `.with_opacity_transition(..)`.
 Spacing values use `Thickness` (with `Thickness::uniform(..)`).
+
+`transition(enter, exit)` runs lifecycle animations when an element enters or leaves the WinUI
+visual tree. The logical Reactor element is removed synchronously; WinUI Composition retains its
+departing visual until the implicit hide animation finishes. This keeps keyed and positional child
+indices exact during reconciliation instead of reinserting a temporary "ghost" element. Opacity
+and scale are supported, including both in one animation group:
+
+```rust
+# use std::time::Duration;
+# use windows_reactor::*;
+button("Animated")
+    .transition(
+        Some(AnimationConfig::fade_in(Duration::from_millis(200))),
+        Some(AnimationConfig::fade_out(Duration::from_millis(300))),
+    );
+```
+
+An explicit `.animate(..)` on the same element takes precedence over its enter transition because
+both target the initial property animation. The exit transition remains registered. See the
+`exit_transition` sample.
 
 ## Handling events
 
@@ -122,6 +152,35 @@ keyboard handlers live on `ElementExt`: `.on_tapped(..)`, `.on_pointer_pressed(.
 `.on_pointer_released(..)`, `.on_pointer_moved(..)`, `.on_pointer_entered(..)`,
 `.on_pointer_exited(..)`, `.keyboard_accelerator(..)`. You can pass a `SetState` or `Dispatch`
 directly wherever a handler is expected (through `IntoCallback`).
+
+`PointerEventInfo::x` and `y` are relative to the element receiving the event. `window_x` and
+`window_y` are relative to the overall window, so drag deltas remain stable when the element moves
+while handling the gesture. A moving drag handle can also lose hit testing when the cursor outruns
+layout. Add `.capture_pointer_on_press()` to keep receiving events until release, begin the drag
+only when `PointerEventInfo::capture_succeeded` is true, and clear drag state from
+`.on_pointer_capture_lost(..)` and `.on_pointer_canceled(..)`. See the `pointer_resize` sample.
+
+`NavigationView::on_pane_open_changed` reports the settled `IsPaneOpen` property, including
+light-dismiss and adaptive changes made by WinUI. `on_display_mode_changed` reports the actual
+`NavigationViewDisplayMode` (`Minimal`, `Compact`, or `Expanded`), while `pane_display_mode`
+continues to configure the layout policy (`Auto`, `Left`, `Top`, and so on):
+
+```rust
+# use windows_reactor::*;
+# let items = [NavViewItem::new("Home")];
+# let content = text_block("Content");
+# let pane_open = true;
+NavigationView::new(items, content)
+    .pane_open(pane_open)
+    .on_pane_open_changed(|_| {})
+    .pane_display_mode(NavigationViewPaneDisplayMode::Auto)
+    .on_display_mode_changed(|_| {});
+```
+
+The callbacks observe dependency properties rather than guessing state from pane transition
+events. Transition events can be canceled and do not cover every property change. Observers are
+attached only for callbacks the element requests, so an unused callback adds no native observer or
+reconciliation work. See the `responsive_navigation` sample.
 
 ### Handler identity
 
@@ -218,7 +277,8 @@ The [`crates/samples/reactor`](../../crates/samples/reactor) tree is the best re
 
 - `samples`: the smallest app plus an `examples/` folder with about 90 focused per-control and
   per-hook examples (`counter`, `calculator`, `navigation_view`, `list_view`, `content_dialog`,
-  `color_picker`, `secondary_window`, and more).
+  `keyed_list_reorder`, `lightweight_resources`, `pointer_resize`, `color_picker`,
+  `secondary_window`, and more).
 - `apps`: complete applications (`notepad`, `solitaire`, `minesweeper`, `tictactoe`, `dotsweeper`).
 - `gallery`: a WinUI-gallery-style shell with navigation across many controls.
 - `direct2d` and `swap_chain_panel`: hosting Direct2D and Direct3D content.
@@ -403,8 +463,8 @@ Two crates measure reconciler performance. `test_reactor_bench` is a headless mi
 `RecordingBackend` and reports ns/op plus bytes/op and allocs/op - the right instrument for
 Rust-side reconciler cost (structural skip, keyed diff, allocation). `test_reactor_perf` is a live
 WinUI stress app (a 70x70 stock grid) whose `--churn` flag additionally forces native control
-create/destroy. The "Future considerations" section below uses both to evaluate three C# perf
-techniques.
+create/destroy. Its [`readme`](../../crates/tests/libs/reactor_perf/readme.md) describes the matched
+Microsoft.UI.Reactor comparison.
 
 ### Reactor and canvas naming
 
@@ -412,243 +472,28 @@ techniques.
 The rule: canvas keeps the short name (it owns user-facing draw loops) and reactor takes a
 domain-prefixed alternative.
 
-## Future considerations: learnings from Microsoft.UI.Reactor (C#)
+### Resource ownership and typed values
 
-This section records a comparison against the C# sibling framework Microsoft.UI.Reactor, captured
-for later evaluation. It is not a committed plan. The C# project is roughly five times larger by
-line count, but most of that lives in optional feature areas (charting, docking, markdown, a Yoga
-flex-layout port, a data grid, a CLI, Roslyn analyzers, devtools). The core reconciler, hooks
-runtime, and DSL are close in design to this crate's, and in a few places this crate is already
-ahead.
+`ElementExt::resources` accepts an iterator when every entry has the same Rust value type.
+`resource_overrides` uses a consuming builder when one resource dictionary contains different
+WinUI value types:
 
-### What the Rust core already does (do not reinvent)
+```rust
+# use windows_reactor::*;
+button("Delete").resource_overrides(|resources| {
+    resources
+        .set("ButtonBackground", Color::rgb(178, 34, 34))
+        .set("ButtonBorderThemeThickness", Thickness::uniform(0.0))
+        .set("ControlCornerRadius", CornerRadius::uniform(8.0))
+});
+```
 
-| Capability | Rust location | C# equivalent |
-| --- | --- | --- |
-| Keyed diff with LIS move-minimization | `reconciler/child.rs` (`reconcile_keyed_middle`, `compute_lis`) | `ChildReconciler.RunKeyedMiddleCore` |
-| Common prefix/suffix strip before the middle diff | `reconciler/child.rs` (`reconcile_keyed_live`) | `ChildReconciler.ReconcileKeyed` |
-| Structural skip-unchanged with theme and dirty gates | `element.rs` (`can_skip_update`), `reconciler.rs` (`update`) | `Element.CanSkipUpdate`, `ChildDiffHints` |
-| Render coalescing across many state writes | `engine.rs` (`request_render`) | delegated to the caller's `requestRerender` in Core |
-| List virtualization with row recycling | `reconciler/templated.rs` (realize/recycle) | virtualized list controls |
-| Accessibility modifiers, theme tokens, implicit transitions, error boundaries, FFI panic capture | `element.rs`, `style.rs`, `fault.rs` | equivalents present |
-| Off-thread state writes | `engine.rs` (`use_async_state`, `AsyncSetState`, `UiMarshaller`); sync `SetState`/`Updater`/`Dispatch` are `!Send` | `RenderContext.MarshalIfOffUIThread` |
-| Effect/memo dependency comparison | `engine.rs` (generic `Deps`/`PartialEq` over tuples and arrays) | `RenderContext.UseEffect<T1>` `params object[]` special-case |
+Each native element tracks only the keys that Reactor inserted. Updating the builder removes
+missing Reactor-owned keys before inserting current values, including when the new builder is
+empty. Native or application code can keep unrelated entries in the same resource dictionary.
 
-The render-coalescing case is worth calling out: the C# Core has no dedicated batch queue and
-invokes `requestRerender` synchronously, leaving batching to the host. This crate's
-dispatcher-scheduled coalescing in `request_render` is the cleaner design and should stay.
-
-Two core behaviors were re-checked against the C# runtime and are non-gaps where Rust's type system
-does the work C# does at runtime. **Off-thread state writes**: C#'s `MarshalIfOffUIThread` inspects
-the calling thread on every `UseState`/`UseReducer` write and either marshals to the dispatcher or
-throws. Rust splits this statically - the synchronous `SetState`/`Updater`/`Dispatch` capture
-`Rc<RefCell<..>>` and are therefore `!Send`, so moving one to another thread is a compile error, and
-the legitimate off-thread path is the explicit `use_async_state` -> `AsyncSetState` (backed by
-`Arc<Mutex<..>>`, `Send`) that auto-marshals through the host's `UiMarshaller`. The common path pays
-no per-write thread check. **Single-array dependencies**: C#'s `UseEffect<T1>`/`UseMemo`/`UseCallback`
-special-case a lone `object[]` dependency to compare it element-wise, working around `params object[]`
-overload ambiguity. Rust's `Deps`/`PartialEq` over tuples and arrays already compares element-wise
-with no such ambiguity, so no special case is needed.
-
-### Candidate performance optimizations (evaluated - see measured findings below)
-
-The C# framework carries three allocation- and object-reuse techniques this crate does not:
-per-type native control pooling (`ElementPool`), a per-render changed-index hint table
-(`ChildDiffHints`), and `ArrayPool`-rented scratch buffers in the keyed diff. They are listed here
-as candidates, not recommendations. Much of their value in C# comes from fighting managed GC
-pressure and expensive managed allocation - constraints this crate does not share. Rust builds the
-virtual `Element` tree, the `FxHashMap`/`Vec` scratch used by the keyed diff, and per-render
-closures with a fast allocator and no GC, so a technique that pays for itself in C# can be net
-negative here once its bookkeeping and branching are added.
-
-Each was treated as a hypothesis to be proven, not adopted. The two instruments used are
-`test_reactor_bench` (a headless reconciler micro-suite ported from C#'s `PerfBench.ControlModel` -
-it brackets only the reconcile body against `RecordingBackend` and reports ns/op plus bytes/op and
-allocs/op from a counting global allocator) and a `--churn` scenario added to `test_reactor_perf`
-(which drives real WinUI controls, so it is the only instrument that measures native control
-create/destroy cost). Neither backend inflates the other's blind spot: the headless bench never
-touches WinUI, and the churn scenario isolates the native path the headless bench cannot see.
-
-| Candidate | Mechanism | Why it may not help in Rust | What would have to be proven |
-| --- | --- | --- | --- |
-| Native control pooling | Keep a per-type stack of released WinUI controls and rent on mount instead of destroying and recreating. | The pooled object is the native XAML/COM control, whose creation cost is language-independent - but keyed diffing already reuses and moves controls, so churn only occurs on kind-mismatch remounts (`update`'s `!kind_matches` arm) and unkeyed list shrink/grow. Steady-state and keyed-reorder workloads never destroy same-typed controls, so there is nothing to pool. Reset discipline (clearing every mutated property on return) is also a known source of stale-state bugs. | A churn-heavy scenario (repeated add/remove of same-typed controls, or frequent kind-mismatch swaps) where native control creation dominates the frame, and pooling removes it, with no stale-state regressions in the selftest suite. |
-| Changed-index diff hints | Carry a hint on a container recording which child indices changed, so a render skips straight to changed children instead of running `can_skip_update` on every sibling. | `can_skip_update` is already a discriminant check plus a shallow field compare with early-out, not a deep walk. The hint only pays off when the same child `Vec` survives across renders by reference, but render functions here rebuild their child vectors every render by design, so there is usually no stable identity to key a hint on. The idiomatic escape hatch already exists: memoize a subtree with a `Component` and `should_update`, or `use_memo`. | A large stable-list scenario (for example the 70x70 grid) where per-tick `can_skip_update` calls measurably dominate, and a hint or memoized subtree removes that cost below what `should_update` memoization already achieves. |
-| Scratch-buffer reuse in keyed diff | Reuse the `FxHashMap`, `Vec<i32>`, `Vec<bool>`, and LIS `FxHashSet` allocated by `reconcile_keyed_middle` across reconciles. | The positional fast path (`reconcile_positional_live`) allocates none of these, and the keyed middle only allocates when keys are present and the prefix/suffix strip does not cover the whole list. Rust allocation of these small structures is cheap, so reuse mostly trades a fast allocation for permanent retained memory and added lifetime complexity. | A large keyed-reorder scenario where these allocations show up in a profile as a real share of reconcile time, and a reused scratch arena cuts it without inflating idle working set. |
-
-A caveat for all three: the current `test_reactor_perf` steady-state scenario is a positional 70x70
-stock grid that updates a `--percent` share of cells per tick. It exercises
-`reconcile_positional_live` and `can_skip_update` but never the keyed middle diff or control churn.
-The evaluation below therefore adds the missing coverage - the headless keyed benches and the
-`--churn` scenario - and reports what the numbers say.
-
-### Measured findings
-
-Numbers below are from `test_reactor_bench` (release, headless) and `test_reactor_perf --headless
---percent 0` with and without `--churn`, on one development machine. Absolute values are
-machine-specific; the ratios and scaling are the point. Reproduce with `cargo run -p
-test_reactor_bench --release` and `cargo run -p test_reactor_perf --release -- --headless --percent
-0 --churn --churn-count 400`.
-
-Headless micro-suite (ns/op is best-of-reps; bytes/op and allocs/op from the counting allocator):
-
-| bench | N | ns/op | bytes/op | allocs/op | skip | diff | crt |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| mount_unmount | 64 | 20,598 | 18,076 | 281 | 0 | 0 | 65 |
-| mount_unmount | 512 | 156,634 | 144,340 | 2,085 | 0 | 0 | 513 |
-| update_1_changed | 64 | 2,265 | 658 | 7 | 63 | 2 | 0 |
-| update_1_changed | 512 | 14,213 | 658 | 7 | 511 | 2 | 0 |
-| update_1_changed | 4096 | 125,631 | 658 | 7 | 4095 | 2 | 0 |
-| update_all_changed | 512 | 146,972 | 202,678 | 2,562 | 0 | 513 | 0 |
-| update_no_change | 512 | 7,060 | 0 | 0 | 1 | 0 | 0 |
-| keyed_reverse | 64 | 6,640 | 7,620 | 11 | 64 | 1 | 0 |
-| keyed_reverse | 512 | 94,238 | 58,244 | 11 | 512 | 1 | 0 |
-| keyed_rotate1 | 512 | 100,835 | 82,828 | 33 | 512 | 1 | 0 |
-
-WinUI churn scenario (native control create/destroy, averaged over both add and remove ticks):
-
-| scenario | churn/tick | avg created/render | Avg Diff | Avg Reconcile | Avg FPS |
-| --- | --- | --- | --- | --- | --- |
-| no churn | 0 | 0 | 1.0 ms | 2.0 ms | 58.2 |
-| churn 400 | 400 | 199 | 9.3 ms | 10.2 ms | 57.0 |
-| churn 800 | 800 | 400 | 16.7 ms | 17.6 ms | 43.7 |
-
-**Diff hints - do not add.** `update_1_changed` isolates the per-sibling skip-walk: one changed
-leaf among N children forces N-1 `can_skip_update` calls. The per-skip cost is only about 27-31 ns
-((125,631 - 14,213) / (4095 - 511)), and the walk allocates nothing (bytes/op is a constant 658 -
-just the one changed leaf, independent of N). More important, a changed-index hint cannot remove
-the dominant half of that cost: `update_no_change` shows the root `can_skip_update` deep-equality
-compare alone is about 7 us for 512 nodes, and a single-leaf change pays that 7 us to fail the root
-compare *plus* about 7 us for the child walk (14.2 us total). A per-child hint would only skip the
-second half, and only if the render layer produced the hint cheaply - but render functions rebuild
-their child vectors every render by design, so there is no stable identity to hang a hint on. The
-existing escape hatch (`Component` + `should_update`, or `use_memo`) already collapses an unchanged
-subtree to the single O(1) root compare. As churn rises the skip share vanishes entirely
-(`update_all_changed`: 0 skips). Ceiling is roughly 2x on the sparsest possible update, with no
-allocation win and real added complexity. Not worth it.
-
-**Scratch-buffer reuse in the keyed diff - do not add.** The keyed benches take the full key-map +
-LIS path every op, yet allocate only 11-33 times per reconcile (constant in count - `keyed_reverse`
-is 11 allocs whether N is 64 or 512; only the sizes grow). At 94-101 us/op the allocation is a small
-fraction of reconcile time, and the positional fast path allocates none of it. With no GC, a
-retained scratch arena would trade a handful of cheap allocations for permanent working-set and
-added lifetime complexity, saving microseconds at most. Not worth it.
-
-**Native control pooling - defer, revisit only for churn-heavy non-virtualized UIs.** This is the
-only candidate with a real cost signal. `mount_unmount` shows the Rust-side create+destroy is about
-0.3 us per control (156,634 ns / 513), but the WinUI churn scenario shows the *native* control
-create/destroy is about 37 us each ((16.7 - 1.0) ms / ~400 net controls per cycle) - roughly 100x
-the Rust-side cost and language-independent, exactly the cost a pool removes. The catch is workload:
-the steady-state grid and every keyed-reorder bench create zero controls (`crt` is 0 in all of them;
-keyed diffing reuses and moves controls instead of recreating). Native churn happens only on
-kind-mismatch remounts (`update`'s `!kind_matches` arm) and unkeyed list shrink/grow, and the main
-real-world source of that - long scrolling lists - is already covered by the row recycling in
-`reconciler/templated.rs`. A general `ElementPool` also needs per-type reset discipline (clearing
-every mutated property on return), a known stale-state bug source. Verdict: no general pool now. If
-a real application shows sustained same-typed churn that virtualization does not cover, scope a pool
-narrowly to the kind-mismatch remount path and prove it against a `--churn` run with no selftest
-regressions.
-
-Net: all three C# techniques are GC-era answers. Two (diff hints, scratch reuse) buy nothing
-measurable here and add complexity; the third (pooling) targets a real but narrow cost that the
-crate's existing virtualization already covers for the common case. The default stands: do nothing
-absent a specific application profile that shows otherwise.
-
-### Cross-language comparison against Microsoft.UI.Reactor (C#)
-
-The evaluation above measures Rust in isolation. To size the language difference directly,
-`test_reactor_perf` was aligned to the C# stress harness and run head to head against it. Three
-changes made the two apples-to-apples: the Rust grid was set to 70x70 (4900 cells) to match C#'s
-`StockDataSource` (was 80x60); both drive the seed-42 `NetRandom`/`Random(42)` dirty-cell stream, so
-the same cells change each tick; and `test_reactor_perf` gained a `--json` mode plus a counting
-global allocator that emits the same headline metrics and allocation accounting as the C#
-`PerfTracker` (`avgReconcileMs`, `avgDiffMs`, `rendersPerSec`, `avgFps`, `allocBytesPerRender`, GC
-gen0/1/2).
-
-The right C# counterpart is `StressPerf.ReactorOptimized`, not `StressPerf.Reactor`. Both drive real
-WinUI, but the naive `StressPerf.Reactor` rebuilds all 4900 Elements every tick, while
-`ReactorOptimized` uses `UseMemoCellsByIndex` to rebuild only changed cells - which is what the Rust
-harness's dirty-cell path already does. Comparing against the Optimized variant is the fair test;
-the naive numbers are included only as the upper bound C# pays without that hint.
-
-Sweep of `--percent` 0/10/50/100, headless, 10 s per point, same machine, Release/optimized both
-sides (Rust `--headless --percent N --duration 10 --json`; C#
-`StressPerf.ReactorOptimized --headless --percent N --duration 10 --json`):
-
-| percent | Avg Reconcile (ms) Rust / C# | Avg Diff (ms) Rust / C# | renders/s Rust / C# | Avg FPS Rust / C# | Alloc/render Rust / C# | GC gen0/1/2 Rust / C# |
-| --- | --- | --- | --- | --- | --- | --- |
-| 0 | 2.42 / 11.91 | 0.99 / 11.16 | 23.6 / 14.4 | 57.9 / 56.8 | 3.60M / 0.86M | 0/0/0 / 16/15/13 |
-| 10 | 3.50 / 19.62 | 2.49 / 17.55 | 23.9 / 12.3 | 50.8 / 26.1 | 3.97M / 2.13M | 0/0/0 / 30/28/18 |
-| 50 | 7.92 / 35.60 | 7.02 / 29.78 | 8.8 / 4.2 | 11.9 / 9.6 | 5.16M / 5.06M | 0/0/0 / 19/19/8 |
-| 100 | 10.82 / 51.07 | 10.01 / 41.87 | 6.0 / 3.1 | 7.9 / 7.7 | 6.12M / 7.84M | 0/0/0 / 21/20/7 |
-
-Naive `StressPerf.Reactor` (full rebuild every tick, for reference): p=10 reconcile 44.1 ms (tree
-20.1 + diff 24.0), 20.4 FPS; p=100 reconcile 68.8 ms (tree 21.6 + diff 47.3), 6.8 FPS.
-
-What the numbers say:
-
-- **Reconcile is 4.5-5.6x faster in Rust** across the sweep (2.42 vs 11.91 ms at p=0, up to 10.82 vs
-  51.07 ms at p=100), against the *optimized* C# variant. Against naive C# the gap is ~12x at p=10.
-  Throughput is roughly 2x higher and stays above 20 renders/s at low churn where C# has already
-  dropped to 12-14.
-- **Zero GC versus frequent gen2 collections.** Rust runs the entire sweep with no garbage
-  collector; C# takes 16-30 gen0 and 7-18 gen2 collections per 10 s window. Gen2 collections are the
-  usual source of frame hitches, and they appear even in the optimized variant.
-- **Allocation is a wash, and at low churn Rust allocates more** (3.60M vs 0.86M bytes/render at
-  p=0), crossing over near p=50 and coming out ahead at p=100 (6.12M vs 7.84M). This is a harness
-  choice, not an inherent cost: the Rust scenario clones the full 4900-element cells vec every render
-  (`s.cells.borrow()[..vis].to_vec()`), so its allocation is dominated by a constant ~3.5M baseline
-  regardless of churn, whereas C#'s `UseMemoCellsByIndex` reuses unchanged Element records. Matching
-  that reuse in the harness would cut the Rust baseline, but note it changes nothing about the speed
-  result - Rust wins on reconcile time even while allocating more, because the allocator is cheap and
-  there is no collector to pay back later. This is the concrete reason the GC-era caching techniques
-  above do not port: the pressure they relieve is not there.
-
-Caveat on the headless micro-suite. `test_reactor_bench` is *not* cross-comparable to C#'s
-`PerfBench.ControlModel`. The Rust bench measures only the reconcile body against `RecordingBackend`
-(no native controls), while the C# `ControlModel` Reactor variant calls `Reconciler.Mount` and
-creates real WinUI controls, so it measures a native-inclusive layer. They sit at different levels
-and their ns/op figures should not be placed side by side. The stress-app sweep above is the valid
-full-stack cross-language comparison; the micro-suite stays a Rust-only instrument.
-
-### Hook gaps (incremental, low risk)
-
-This crate provides `use_state`, `use_reducer`, `use_reducer_fn`, `use_ref`, `use_memo`,
-`use_callback`, `use_effect`, `use_effect_with_cleanup`, `use_context`, `use_resource`,
-`use_mutation`, `use_color_scheme`, `use_open_window`, `use_async_state`, `use_inner_size`, and
-`use_dpi`. The C# set adds these worth considering:
-
-| Hook | Purpose | Notes |
-| --- | --- | --- |
-| `use_reduced_motion`, `use_high_contrast` | Accessibility signals from the system | Cheap; reduced-motion should gate the existing implicit-transition system. |
-| `use_infinite_resource` | Paged async fetch | This crate has `use_resource` and `use_mutation` but no pagination. |
-| `use_focus`, `use_element_ref`, `use_focus_trap` | Imperative focus escape hatches | Useful for dialogs and keyboard navigation. |
-| `use_breakpoint` | Responsive layout from window size | Thin wrapper over `use_inner_size`. |
-| `use_persisted` | State persisted across runs | Design question: where persistence lives. |
-| `use_observable`, `use_collection` | Bridges to externally mutated model state | Less idiomatic in Rust; lowest priority. |
-
-### DSL ergonomics
-
-This crate has `group` (a fragment flattened into the parent child list), `Element::Empty`, and
-`Option<Element>` for conditional children. The C# DSL adds `When`/`If`/`ForEach` combinators and a
-keyed `Memo(key, ...)` wrapper. A small `when(cond, || el)` helper and a keyed memo wrapper for
-virtualized rows would read better at near-zero cost. These are ergonomics, not performance, and do
-not need the benchmark gate above.
-
-### Known bug (fix regardless of the comparison)
-
-`ElementExt::transition(enter, exit)` sets an exit transition that the reconciler never consumes:
-`enter_transition` is read during reconciliation but the exit configuration is dropped. This is
-already tracked in the repo-wide open-investigations list. Fix it independently of any feature work
-here.
-
-### Larger feature areas (product decisions, likely out of scope)
-
-The C# framework is much bigger mainly because of subsystems that are strategic product bets rather
-than gaps in this crate: a flex/Yoga layout engine, a commanding abstraction (a command record
-bundling label, icon, shortcut, and action - this crate has only the `command_bar` widget),
-type-safe navigation and routing with a back stack (this crate has the `navigation_view` control but
-no router), keyframe animation, markdown, charting, a data grid and property grid, docking, ICU
-localization, Roslyn-style analyzers that enforce rules of hooks (this crate relies on runtime
-hook-order checks; a clippy lint could cover part of this), hot reload and live preview, and a
-scaffolding CLI. Each is a large investment, and most cut against this crate's minimal, WinUI-native
-design. They belong in a separate decision, not in the reconciler or hooks work above.
+`Color` values intentionally create `SolidColorBrush` instances because lightweight control
+resources such as `ButtonBackground` expect brushes. Use strings only for resources that actually
+expect strings. `ThemeRef` is not accepted here: looking up a theme key and storing its current
+value would lose WinUI's element-aware `{ThemeResource}` resolution. Theme-aware control
+properties continue to use the existing theme-binding APIs.

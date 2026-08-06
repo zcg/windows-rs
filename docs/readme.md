@@ -2,8 +2,6 @@
 lists the crates by task.
 
 - [Samples](https://github.com/microsoft/windows-rs/tree/master/crates/samples)
-- Direct C# samples: [Minesweeper](../crates/samples/csharp/minesweeper) and
-  [WinUI Tic-Tac-Toe](../crates/samples/csharp/tictactoe)
 - [Releases](https://github.com/microsoft/windows-rs/releases)
 
 ## A family of crates
@@ -31,12 +29,12 @@ usage and examples.
 | Graphics math (vectors, matrices) | [windows-numerics](crates/windows-numerics.md) |
 | WinRT async bridged to Rust futures | [windows-future](crates/windows-future.md) |
 | The Win32 thread pool | [windows-threading](crates/windows-threading.md) |
+| Manifest-free ETW events | [windows-tracing](crates/windows-tracing.md) |
 | The Windows registry | [windows-registry](crates/windows-registry.md) |
 | To author a Windows service | [windows-services](crates/windows-services.md) |
 | The OS version at runtime | [windows-version](crates/windows-version.md) |
 | To link C-style functions without import libs (`link!`, `raw-dylib`) | [windows-link](crates/windows-link.md) |
 | To generate your own focused bindings | [windows-bindgen](crates/windows-bindgen.md) |
-| Direct C# metadata projection (experimental) | [windows-csharp](crates/windows-csharp.md) |
 | Embedded Windows metadata for custom build tools | [windows-default](crates/windows-default.md) |
 | A declarative WinUI 3 UI, 2D graphics, a WebView, or a window | [windows-reactor](crates/windows-reactor.md), [windows-canvas](crates/windows-canvas.md), [windows-webview](crates/windows-webview.md), [windows-window](crates/windows-window.md) |
 
@@ -83,19 +81,22 @@ to live in a dedicated `proc-macro` crate.
 | --- | --- |
 | [windows-registry](crates/windows-registry.md) | Safe Windows registry access. |
 | [windows-services](crates/windows-services.md) | Author Windows services in Rust. |
+| [windows-tracing](crates/windows-tracing.md) | Compile-time TraceLogging events for ETW. |
 | [windows-version](crates/windows-version.md) | Query the Windows version at runtime. |
 
-### COM authoring macros & linking
+### Procedural macros & linking
 
 These crates package functionality that is part of other crates but must ship separately.
 `windows-interface` and `windows-implement` are part of [windows-core](crates/windows-core.md) (see
-above); Rust requires their proc macros to live in a dedicated `proc-macro` crate.
+above), while `windows-tracing-macros` is part of [windows-tracing](crates/windows-tracing.md).
+Rust requires their proc macros to live in a dedicated `proc-macro` crate.
 
 | Crate | Description |
 | --- | --- |
 | [windows-implement](crates/windows-implement.md) | `#[implement]` proc macro for COM/WinRT - part of `windows-core`. |
 | [windows-interface](crates/windows-interface.md) | `#[interface]` proc macro for COM interfaces - part of `windows-core`. |
 | [windows-link](crates/windows-link.md) | Raw-dylib import support (`link!`). |
+| [windows-tracing-macros](crates/windows-tracing-macros.md) | TraceLogging proc macros - part of `windows-tracing`. |
 
 ### UI & graphics
 
@@ -114,7 +115,6 @@ above); Rust requires their proc macros to live in a dedicated `proc-macro` crat
 | Crate | Description |
 | --- | --- |
 | [windows-bindgen](crates/windows-bindgen.md) | Code generator for Windows metadata. |
-| [windows-csharp](crates/windows-csharp.md) | Experimental direct C# projection generator. |
 | [windows-clang](crates/windows-clang.md) | Generates RDL from C/C++ headers using libclang. |
 | [windows-default](crates/windows-default.md) | Default Windows metadata for build tools. |
 | [windows-metadata](crates/windows-metadata.md) | Low-level ECMA-335 metadata library. |

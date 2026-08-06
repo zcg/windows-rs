@@ -48,6 +48,7 @@ samples for a published release, use its tag - for example
 | [windows-reactor](../../docs/crates/windows-reactor.md) | `reactor_samples` - one demo per WinUI control plus the reactor hooks (97 examples) | `cargo run -p reactor_samples --example <name>` |
 | | `reactor_apps` - complete apps: dotsweeper, minesweeper, notepad, solitaire, tictactoe | `cargo run -p reactor_apps --example <name>` |
 | | `reactor_gallery` / `reactor_direct2d` / `reactor_webview` / `reactor_swap_chain_panel` / `reactor_self_contained` / `reactor_framework_dependent` | `cargo run -p <crate>` |
+| | `reactor_startup_perf` - blank app demonstrating startup TraceLogging events | `cargo run -p reactor_startup_perf --release` |
 | [windows-canvas](../../docs/crates/windows-canvas.md) | `canvas_samples` - Direct2D drawing: bitmap, brush, color, curves, draw_text, gradient, hello, lines, path, shapes, stroke, transform | `cargo run -p canvas_samples --example <name>` |
 | | `canvas_circles` / `canvas_clock` / `canvas_editor` / `canvas_hit_test` / `canvas_standalone` | `cargo run -p <crate>` |
 | [windows-animation](../../docs/crates/windows-animation.md) | `animation_samples` - the Windows Animation Manager, headless: variable, storyboard | `cargo run -p animation_samples --example <name>` |
@@ -58,9 +59,6 @@ samples for a published release, use its tag - for example
 | Sample | Description |
 | --- | --- |
 | `robot` / `robot_client` / `robot_client_cpp` / `robot_client_cs` / `robot_cpp` | A component whose metadata is authored once (RDL) and consumed from Rust, C++, and C#. |
-| `test_bench_*` | WinRT language-projection benchmark comparing C++/WinRT, windows-rs, windows-csharp, and CsWinRT against one Rust-authored component. See its [readme](test_bench/readme.md). |
-| `test_winui_bench_*` | Direct WinUI projection benchmark comparing retained-tree creation, updates, allocation, and working set. See its [readme](test_winui_bench/readme.md). |
-| `csharp_minesweeper` / `csharp_tictactoe` | Direct windows-csharp applications covering Win32 + Composition and WinUI 3. |
 | `csharp_component` / `csharp_client` | Author a component in Rust and host it from C#. |
 
 ## Whole-API projection
