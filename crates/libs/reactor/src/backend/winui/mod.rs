@@ -26,7 +26,7 @@ macro_rules! define_handles {
             fn as_framework_element(&self) -> bindings::FrameworkElement {
                 self.cast_inner().unwrap()
             }
-            fn as_ui_element(&self) -> bindings::UIElement {
+            fn as_ui_element(&self) -> UIElement {
                 self.cast_inner().unwrap()
             }
             fn kind_name(&self) -> &'static str {
@@ -555,7 +555,7 @@ fn classify_container(h: &Handle) -> Option<ContainerChildren<'_>> {
     }
 }
 
-fn container_append(cc: &ContainerChildren<'_>, child: &bindings::UIElement) {
+fn container_append(cc: &ContainerChildren<'_>, child: &UIElement) {
     match cc {
         ContainerChildren::Panel(vec) => vec.Append(child).unwrap(),
         ContainerChildren::SingleChild(h) => put_single_child(h, Some(child)),
@@ -568,7 +568,7 @@ fn container_append(cc: &ContainerChildren<'_>, child: &bindings::UIElement) {
     }
 }
 
-fn container_insert(cc: &ContainerChildren<'_>, index: usize, child: &bindings::UIElement) {
+fn container_insert(cc: &ContainerChildren<'_>, index: usize, child: &UIElement) {
     match cc {
         ContainerChildren::Panel(vec) => vec.InsertAt(index as u32, child).unwrap(),
         ContainerChildren::SingleChild(h) => put_single_child(h, Some(child)),
@@ -581,7 +581,7 @@ fn container_insert(cc: &ContainerChildren<'_>, index: usize, child: &bindings::
     }
 }
 
-fn container_set(cc: &ContainerChildren<'_>, index: usize, child: &bindings::UIElement) {
+fn container_set(cc: &ContainerChildren<'_>, index: usize, child: &UIElement) {
     match cc {
         ContainerChildren::Panel(vec) => vec.SetAt(index as u32, child).unwrap(),
         ContainerChildren::SingleChild(h) => put_single_child(h, Some(child)),
@@ -631,7 +631,7 @@ fn container_move(cc: &ContainerChildren<'_>, from: usize, to: usize) {
     }
 }
 
-fn put_single_child(h: &Handle, child: Option<&bindings::UIElement>) {
+fn put_single_child(h: &Handle, child: Option<&UIElement>) {
     match h {
         Handle::Border(b) => b.SetChild(child).unwrap(),
         Handle::Viewbox(v) => v.SetChild(child).unwrap(),
@@ -639,7 +639,7 @@ fn put_single_child(h: &Handle, child: Option<&bindings::UIElement>) {
     }
 }
 
-fn put_direct_content(h: &Handle, child: Option<&bindings::UIElement>) {
+fn put_direct_content(h: &Handle, child: Option<&UIElement>) {
     match h {
         Handle::ScrollView(sv) => sv.SetContent(child).unwrap(),
         Handle::SplitView(sv) => sv.SetContent(child).unwrap(),
@@ -728,13 +728,13 @@ fn easing_for(
     compositor.create_cubic_bezier_easing_function(p1, p2)
 }
 
-fn element_visual(ui: &bindings::UIElement) -> Result<windows_composition::Visual> {
+fn element_visual(ui: &UIElement) -> Result<windows_composition::Visual> {
     let raw = bindings::ElementCompositionPreview::GetElementVisual(ui)?;
     windows_composition::Visual::from_host(raw.into())
 }
 
 fn apply_implicit_transitions(
-    ui: &bindings::UIElement,
+    ui: &UIElement,
     transitions: Option<ImplicitTransitions>,
 ) -> Result<()> {
     let visual = element_visual(ui)?;
@@ -780,7 +780,7 @@ fn apply_implicit_transitions(
     Ok(())
 }
 
-fn run_property_animation_inner(ui: &bindings::UIElement, cfg: AnimationConfig) -> Result<()> {
+fn run_property_animation_inner(ui: &UIElement, cfg: AnimationConfig) -> Result<()> {
     let visual = element_visual(ui)?;
     let compositor = visual.compositor();
 
@@ -828,7 +828,7 @@ fn run_property_animation_inner(ui: &bindings::UIElement, cfg: AnimationConfig) 
 }
 
 fn build_element_transition_animation(
-    ui: &bindings::UIElement,
+    ui: &UIElement,
     cfg: AnimationConfig,
     is_enter: bool,
 ) -> Result<Option<bindings::ICompositionAnimationBase>> {
@@ -881,7 +881,7 @@ fn build_element_transition_animation(
 }
 
 fn apply_element_transitions(
-    ui: &bindings::UIElement,
+    ui: &UIElement,
     enter: Option<AnimationConfig>,
     exit: Option<AnimationConfig>,
 ) -> Result<()> {
@@ -1350,7 +1350,7 @@ impl Backend for WinUIBackend {
                     {
                         let children = panel.Children()?;
                         if children.Size()? >= 2 {
-                            children.SetAt(0, &icon_elem.cast::<bindings::UIElement>()?)?;
+                            children.SetAt(0, &icon_elem.cast::<UIElement>()?)?;
                             return Ok(());
                         }
                     }
@@ -1371,9 +1371,9 @@ impl Backend for WinUIBackend {
                         panel.SetOrientation(Orientation::Horizontal)?;
                         panel.SetSpacing(8.0)?;
                         let children = panel.cast::<bindings::IPanel>()?.Children()?;
-                        children.Append(&icon_elem.cast::<bindings::UIElement>()?)?;
+                        children.Append(&icon_elem.cast::<UIElement>()?)?;
                         if let Ok(existing) = cc.Content()
-                            && let Ok(ui) = existing.cast::<bindings::UIElement>()
+                            && let Ok(ui) = existing.cast::<UIElement>()
                         {
                             children.Append(&ui)?;
                         }
@@ -3054,7 +3054,7 @@ impl Backend for WinUIBackend {
         let Some(handle) = map.get(&id) else {
             return;
         };
-        let ui: bindings::UIElement = handle.as_ui_element();
+        let ui: UIElement = handle.as_ui_element();
         if let Err(e) = apply_implicit_transitions(&ui, transitions) {
             diag::warn(format_args!("set_implicit_transitions failed: {e:?}"));
         }
@@ -3068,7 +3068,7 @@ impl Backend for WinUIBackend {
         let Some(handle) = map.get(&id) else {
             return;
         };
-        let ui: bindings::UIElement = handle.as_ui_element();
+        let ui: UIElement = handle.as_ui_element();
         if let Err(e) = run_property_animation_inner(&ui, cfg) {
             diag::warn(format_args!("run_property_animation failed: {e:?}"));
         }
@@ -3748,7 +3748,7 @@ fn accept_or_reject<C: CallAccept>(cb: &C, args: Option<&bindings::DragEventArgs
 /// there is no per-event `QueryInterface`: the arg/point/properties classes
 /// each `Deref` to their default interface.
 fn pointer_event_info(
-    element: &bindings::UIElement,
+    element: &UIElement,
     args: windows_core::InRef<'_, bindings::PointerRoutedEventArgs>,
 ) -> PointerEventInfo {
     let mut info = PointerEventInfo::default();
@@ -3769,7 +3769,7 @@ fn pointer_event_info(
         }
     }
 
-    if let Ok(point) = args.GetCurrentPoint(None::<&bindings::UIElement>)
+    if let Ok(point) = args.GetCurrentPoint(None::<&UIElement>)
         && let Ok(pos) = point.Position()
     {
         info.window_x = pos.x as f64;
@@ -3793,12 +3793,12 @@ fn map_placement(p: TooltipPlacement) -> bindings::PlacementMode {
 /// Best-effort static mount for tooltip content. Supports `TextBlock`,
 /// linear `StackPanel`, and `Image`; unsupported kinds fall back to a
 /// `TextBlock` showing `kind_name()`.
-fn mount_static_tooltip_element(el: &Element) -> Option<bindings::UIElement> {
+fn mount_static_tooltip_element(el: &Element) -> Option<UIElement> {
     match el {
         Element::TextBlock(t) => {
             let tb = bindings::TextBlock::new().ok()?;
             tb.SetText(t.text.as_str()).ok()?;
-            tb.cast::<bindings::UIElement>().ok()
+            tb.cast::<UIElement>().ok()
         }
         Element::StackPanel(s) => {
             let sp = bindings::StackPanel::new().ok()?;
@@ -3810,21 +3810,21 @@ fn mount_static_tooltip_element(el: &Element) -> Option<bindings::UIElement> {
                     diag::dropped(children.Append(&cui));
                 }
             }
-            sp.cast::<bindings::UIElement>().ok()
+            sp.cast::<UIElement>().ok()
         }
         Element::Image(img) => {
             let i = bindings::Image::new().ok()?;
             if let Ok(Some(source)) = build_image_source(&img.source, None) {
                 diag::dropped(i.SetSource(&source));
             }
-            i.cast::<bindings::UIElement>().ok()
+            i.cast::<UIElement>().ok()
         }
         _ => {
             // Fallback: surface the kind_name so the developer sees a
             // hint rather than an empty popup.
             let tb = bindings::TextBlock::new().ok()?;
             tb.SetText(el.kind_name()).ok()?;
-            tb.cast::<bindings::UIElement>().ok()
+            tb.cast::<UIElement>().ok()
         }
     }
 }

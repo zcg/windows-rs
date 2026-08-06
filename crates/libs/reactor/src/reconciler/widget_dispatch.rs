@@ -22,6 +22,9 @@ impl<B: Backend + 'static> Reconciler<B> {
         if let Some(cb) = w.on_mounted_callback() {
             cb.invoke(self.backend.get_native_element(id));
         }
+        if let Some(cb) = w.modifiers().mounted.as_ref() {
+            cb.invoke(self.backend.get_native_element(id));
+        }
         if let Some(cb) = w.on_unmounted_callback() {
             self.unmount_callbacks.insert(id, cb.clone());
         }

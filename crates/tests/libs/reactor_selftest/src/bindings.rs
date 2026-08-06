@@ -2664,6 +2664,57 @@ unsafe impl Send for ConnectedAnimation {}
 unsafe impl Sync for ConnectedAnimation {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ConnectedAnimationService(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    ConnectedAnimationService,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+impl ConnectedAnimationService {
+    pub(crate) fn GetForCurrentView() -> windows_core::Result<Self> {
+        Self::IConnectedAnimationServiceStatics(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).GetForCurrentView)(
+                windows_core::Interface::as_raw(this),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        })
+    }
+    fn IConnectedAnimationServiceStatics<
+        R,
+        F: FnOnce(&IConnectedAnimationServiceStatics) -> windows_core::Result<R>,
+    >(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<
+            ConnectedAnimationService,
+            IConnectedAnimationServiceStatics,
+        > = windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
+impl windows_core::RuntimeType for ConnectedAnimationService {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IConnectedAnimationService>();
+}
+unsafe impl windows_core::Interface for ConnectedAnimationService {
+    type Vtable = <IConnectedAnimationService as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IConnectedAnimationService as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for ConnectedAnimationService {
+    type Target = IConnectedAnimationService;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for ConnectedAnimationService {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Media.Animation.ConnectedAnimationService";
+}
+unsafe impl Send for ConnectedAnimationService {}
+unsafe impl Sync for ConnectedAnimationService {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ContainerContentChangingEventArgs(windows_core::IUnknown);
 windows_core::imp::interface_hierarchy!(
     ContainerContentChangingEventArgs,
@@ -8844,9 +8895,125 @@ impl windows_core::RuntimeType for IConnectedAnimation {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::for_interface::<Self>();
 }
+impl IConnectedAnimation {
+    pub(crate) fn TryStart<P0>(&self, destination: P0) -> windows_core::Result<bool>
+    where
+        P0: windows_core::Param<UIElement>,
+    {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).TryStart)(
+                windows_core::Interface::as_raw(self),
+                destination.param().abi(),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+}
 #[repr(C)]
 pub struct IConnectedAnimation_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
+    IsScaleAnimationEnabled: usize,
+    SetIsScaleAnimationEnabled: usize,
+    Configuration: usize,
+    SetConfiguration: usize,
+    Completed: usize,
+    RemoveCompleted: usize,
+    pub TryStart: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut bool,
+    ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    IConnectedAnimationService,
+    IConnectedAnimationService_Vtbl,
+    0x85f72163_c3c8_586a_91fe_3e0315a3a4fc
+);
+impl windows_core::RuntimeType for IConnectedAnimationService {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+impl IConnectedAnimationService {
+    pub(crate) fn DefaultDuration(&self) -> windows_core::Result<windows_time::TimeSpan> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).DefaultDuration)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn SetDefaultDuration(
+        &self,
+        value: windows_time::TimeSpan,
+    ) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetDefaultDuration)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn PrepareToAnimate<P1>(
+        &self,
+        key: &str,
+        source: P1,
+    ) -> windows_core::Result<ConnectedAnimation>
+    where
+        P1: windows_core::Param<UIElement>,
+    {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).PrepareToAnimate)(
+                windows_core::Interface::as_raw(self),
+                core::mem::transmute_copy(&windows_core::HSTRING::from(key)),
+                source.param().abi(),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        }
+    }
+}
+#[repr(C)]
+pub struct IConnectedAnimationService_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub DefaultDuration: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut windows_time::TimeSpan,
+    ) -> windows_core::HRESULT,
+    pub SetDefaultDuration: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        windows_time::TimeSpan,
+    ) -> windows_core::HRESULT,
+    DefaultEasingFunction: usize,
+    SetDefaultEasingFunction: usize,
+    pub PrepareToAnimate: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    IConnectedAnimationServiceStatics,
+    IConnectedAnimationServiceStatics_Vtbl,
+    0xf30ad68d_3426_5564_92c6_288b819e652a
+);
+impl windows_core::RuntimeType for IConnectedAnimationServiceStatics {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IConnectedAnimationServiceStatics_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub GetForCurrentView: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
     IContainerContentChangingEventArgs,

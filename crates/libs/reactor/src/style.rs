@@ -577,6 +577,8 @@ pub struct Modifiers {
     pub tooltip: Option<Box<Tooltip>>,
     pub pointer_handlers: Option<Box<PointerHandlers>>,
     pub allow_drop: Option<bool>,
+    /// Callback invoked with the native element once mounted.
+    pub mounted: Option<Callback<Option<windows_core::IInspectable>>>,
     /// 指针命中测试穿透：false 时元素不参与命中测试（上层悬浮层可穿透到下层）。
     pub hit_test_visible: Option<bool>,
     pub drag_handlers: Option<Box<DragHandlers>>,

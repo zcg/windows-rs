@@ -429,3 +429,5 @@ Windows::Media::Core::MediaSource::CreateFromUri
 Windows::Media::Playback::MediaPlayer::CreateInstance
 Windows::Media::Playback::IMediaPlayer
 Windows::Media::Playback::IMediaPlaybackSource
+Microsoft::UI::Xaml::Media::Animation::ConnectedAnimationService::{GetForCurrentView, PrepareToAnimate, DefaultDuration}
+Microsoft::UI::Xaml::Media::Animation::IConnectedAnimation::TryStart

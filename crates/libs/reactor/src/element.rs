@@ -848,6 +848,15 @@ pub trait ElementExt: Sized {
     /// Register a `PointerWheelChanged` handler; the callback receives the
     /// pointer position plus `mouse_wheel_delta` (120 per notch, positive =
     /// wheel away from the user / scroll up).
+
+    /// Register a callback invoked with the native element once mounted.
+    /// Useful for native interop (ConnectedAnimationService, composition, etc.).
+    fn on_mounted(mut self, cb: impl IntoCallback<Option<windows_core::IInspectable>>) -> Self {
+        if let Some(m) = self.modifiers_mut() {
+            m.mounted = Some(cb.into_callback());
+        }
+        self
+    }
     fn on_pointer_wheel(mut self, f: impl IntoCallback<PointerEventInfo>) -> Self {
         if let Some(m) = self.modifiers_mut() {
             ensure_pointer_handlers(m).on_pointer_wheel = Some(f.into_callback());

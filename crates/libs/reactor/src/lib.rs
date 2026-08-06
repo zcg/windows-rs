@@ -55,6 +55,7 @@ pub use bindings::TextTrimming;
 pub use bindings::TextWrapping;
 pub use bindings::Thickness;
 pub use bindings::TreeViewSelectionMode;
+pub use bindings::UIElement;
 pub use bindings::VerticalAlignment;
 pub use bindings::VirtualKey;
 pub use bindings::VirtualKeyModifiers;
@@ -75,6 +76,7 @@ pub use reconciler::*;
 pub use style::*;
 pub use widget::*;
 pub use widgets::*;
+pub use windows_core;
 pub use windows_core::{Error, Interface, Result};
 pub use windows_time::{DateTime, TimeSpan};
 
@@ -94,3 +96,11 @@ pub fn clipboard_get_text() -> Option<String> {
     operation.GetResults().ok().map(|h| h.to_string_lossy())
 }
 
+/// Run a connected animation between the given element and itself, using the
+/// ConnectedAnimationService for the current view. Returns whether the
+/// animation started. `key` identifies the animation pair.
+pub fn run_connected_animation(key: &str, element: &UIElement) -> Result<bool> {
+    let service = bindings::ConnectedAnimationService::GetForCurrentView()?;
+    let animation = service.PrepareToAnimate(key, element)?;
+    animation.TryStart(element)
+}
