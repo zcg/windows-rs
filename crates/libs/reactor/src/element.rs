@@ -297,6 +297,7 @@ define_element! {
     ListBox,
     DropDownButton,
     SplitButton,
+    AnnotatedScrollBar,
     AutoSuggestBox,
     SplitView,
     SwipeControl,
@@ -1201,6 +1202,7 @@ macro_rules! impl_element_ext {
     };
 }
 impl_element_ext!(
+    AnnotatedScrollBar,
     AutoSuggestBox,
     TextBlock,
     Button,

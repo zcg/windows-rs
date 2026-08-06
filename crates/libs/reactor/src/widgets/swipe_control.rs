@@ -69,11 +69,30 @@ impl SwipeControl {
     }
     pub fn left_items(mut self, items: Vec<SwipeItemDef>) -> Self {
         self.left_items = items;
+        self.rebuild_mounted();
         self
     }
     pub fn right_items(mut self, items: Vec<SwipeItemDef>) -> Self {
         self.right_items = items;
+        self.rebuild_mounted();
         self
+    }
+    fn rebuild_mounted(&mut self) {
+        let left = self.left_items.clone();
+        let right = self.right_items.clone();
+        self.mounted = Some(Callback::new(
+            move |native: Option<windows_core::IInspectable>| {
+                let Some(native) = native else { return };
+                if let Ok(sc) = native.cast::<bindings::SwipeControl>() {
+                    if let Some(items) = build_swipe_items(&left) {
+                        let _ = sc.SetLeftItems(&items);
+                    }
+                    if let Some(items) = build_swipe_items(&right) {
+                        let _ = sc.SetRightItems(&items);
+                    }
+                }
+            },
+        ));
     }
 }
 

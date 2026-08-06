@@ -94,6 +94,32 @@ windows_core::imp::required_hierarchy!(
     UIElement,
     DependencyObject
 );
+impl AnnotatedScrollBar {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::IAnnotatedScrollBarFactory(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).CreateInstance)(
+                windows_core::Interface::as_raw(this),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        })
+    }
+    fn IAnnotatedScrollBarFactory<
+        R,
+        F: FnOnce(&IAnnotatedScrollBarFactory) -> windows_core::Result<R>,
+    >(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<
+            AnnotatedScrollBar,
+            IAnnotatedScrollBarFactory,
+        > = windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
 impl windows_core::RuntimeType for AnnotatedScrollBar {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::for_class::<Self, IAnnotatedScrollBar>();
@@ -5729,6 +5755,25 @@ impl windows_core::RuntimeType for IAnnotatedScrollBarDetailLabelRequestedEventA
 #[repr(C)]
 pub struct IAnnotatedScrollBarDetailLabelRequestedEventArgs_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
+    IAnnotatedScrollBarFactory,
+    IAnnotatedScrollBarFactory_Vtbl,
+    0x3f64c40f_b879_5020_b67c_b789e173c798
+);
+impl windows_core::RuntimeType for IAnnotatedScrollBarFactory {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IAnnotatedScrollBarFactory_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub CreateInstance: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
     IAnnotatedScrollBarLabel,

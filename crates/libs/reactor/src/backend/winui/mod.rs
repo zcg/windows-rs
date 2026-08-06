@@ -57,6 +57,7 @@ macro_rules! define_handles {
 }
 
 define_handles! {
+    AnnotatedScrollBar,
     AutoSuggestBox,
     Border,
     BreadcrumbBar,

@@ -422,3 +422,4 @@ Windows::ApplicationModel::DataTransfer::IDataPackage::SetText
 Windows::ApplicationModel::DataTransfer::IDataPackageView::{GetTextAsync, Contains}
 Windows::ApplicationModel::DataTransfer::DataPackage
 Windows::ApplicationModel::DataTransfer::DataPackage::CreateInstance
+Microsoft::UI::Xaml::Controls::AnnotatedScrollBar::CreateInstance

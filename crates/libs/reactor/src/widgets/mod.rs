@@ -32,6 +32,7 @@ macro_rules! widget_modules {
 }
 
 widget_modules! {
+    annotated_scroll_bar,
     auto_suggest_box,
     border,
     breadcrumb_bar,
