@@ -93,3 +93,4 @@ pub fn clipboard_get_text() -> Option<String> {
     let operation = view.GetTextAsync().ok()?;
     operation.GetResults().ok().map(|h| h.to_string_lossy())
 }
+
