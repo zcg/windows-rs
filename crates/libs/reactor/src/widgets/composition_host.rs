@@ -12,14 +12,14 @@ pub struct CompositionHostHandle(windows_core::IInspectable);
 impl CompositionHostHandle {
     /// Returns the host element's lifted composition compositor.
     pub fn compositor(&self) -> Result<windows_composition::Compositor> {
-        let element: bindings::UIElement = self.0.cast()?;
+        let element: UIElement = self.0.cast()?;
         let visual = bindings::ElementCompositionPreview::GetElementVisual(&element)?;
         Ok(windows_composition::Visual::from_host(visual.into())?.compositor())
     }
 
     /// Attaches `visual` as the host element's child visual.
     pub fn set_child_visual(&self, visual: &windows_composition::Visual) -> Result<()> {
-        let element: bindings::UIElement = self.0.cast()?;
+        let element: UIElement = self.0.cast()?;
         let visual: bindings::Visual = visual.as_raw().cast()?;
         bindings::ElementCompositionPreview::SetElementChildVisual(&element, &visual)
     }
