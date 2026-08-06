@@ -79,6 +79,7 @@ define_handles! {
     GridView,
     HyperlinkButton,
     Image,
+    ItemsRepeater,
     InfoBadge,
     InfoBar,
     Line,
@@ -2024,6 +2025,37 @@ impl Backend for WinUIBackend {
     fn set_templated_item_count(&mut self, id: ControlId, count: usize) {
         let map = self.controls.borrow();
         let Some(handle) = map.get(&id) else { return };
+        // ItemsRepeater shares the DataTemplate + ItemsSource approach.
+        if let Handle::ItemsRepeater(ir) = handle {
+            let mut lists = self.templated.borrow_mut();
+            let entry = lists.entry(id).or_insert_with(TemplatedList::new);
+            let source_slot = &entry.shared.source;
+            let mut slot = source_slot.borrow_mut();
+            match slot.as_ref() {
+                None => {
+                    diag::dropped(ir.SetItemTemplate(&self.content_template()));
+                    let values: Vec<Option<windows_core::IInspectable>> =
+                        (0..count).map(|i| Some(box_index(i))).collect();
+                    let source: windows_collections::IObservableVector<windows_core::IInspectable> =
+                        values.into();
+                    diag::dropped(ir.SetItemsSource(&source));
+                    *slot = Some(source);
+                }
+                Some(source) => {
+                    let current = source.Size().unwrap_or(0) as usize;
+                    if count > current {
+                        for i in current..count {
+                            diag::dropped(source.Append(&box_index(i)));
+                        }
+                    } else {
+                        for _ in count..current {
+                            diag::dropped(source.RemoveAtEnd());
+                        }
+                    }
+                }
+            }
+            return;
+        }
         let items_control: bindings::IItemsControl = match handle {
             Handle::ListView(lv) => lv.cast().unwrap(),
             Handle::GridView(gv) => gv.cast().unwrap(),
@@ -2322,6 +2354,27 @@ impl Backend for WinUIBackend {
     ) {
         let map = self.controls.borrow();
         let Some(handle) = map.get(&id) else { return };
+        if let Handle::ItemsRepeater(ir) = handle {
+            let mut lists = self.templated.borrow_mut();
+            let entry = lists.entry(id).or_insert_with(TemplatedList::new);
+            let containers = Rc::clone(&entry.shared.containers);
+            let revoker = ir
+                .ElementPrepared(move |_sender, args| {
+                    let Some(args) = args.as_ref() else { return };
+                    let Ok(element) = args.Element() else { return };
+                    let Ok(cc) = element.cast::<bindings::IContentControl>() else { return };
+                    let Ok(idx) = args.Index() else { return };
+                    containers.borrow_mut().insert(idx as usize, cc.clone());
+                    realize(idx as usize);
+                })
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "WinUIBackend::attach_templated_realization: ItemsRepeater.ElementPrepared failed for {id}: {e}"
+                    )
+                });
+            entry.realize_revoker = Some(revoker);
+            return;
+        }
         let lvb: bindings::IListViewBase = match handle {
             Handle::ListView(lv) => lv.cast().unwrap(),
             Handle::GridView(gv) => gv.cast().unwrap(),

@@ -204,6 +204,7 @@ pub enum TemplatedKind {
     ListView,
     GridView,
     FlipView,
+    ItemsRepeater,
 }
 
 /// Selection behavior for templated lists (ListView, GridView).
@@ -572,4 +573,11 @@ pub fn flip_view<T: 'static, R: Into<Element>>(
     view: impl Fn(&T, usize) -> R + 'static,
 ) -> TemplatedListBuilder<T> {
     TemplatedListBuilder::new(TemplatedKind::FlipView, items, view)
+}
+
+pub fn items_repeater<T: 'static, R: Into<Element>>(
+    items: Vec<T>,
+    view: impl Fn(&T, usize) -> R + 'static,
+) -> TemplatedListBuilder<T> {
+    TemplatedListBuilder::new(TemplatedKind::ItemsRepeater, items, view)
 }

@@ -31,6 +31,7 @@ impl<B: Backend + 'static> Reconciler<B> {
             TemplatedKind::ListView => ControlKind::ListView,
             TemplatedKind::GridView => ControlKind::GridView,
             TemplatedKind::FlipView => ControlKind::FlipView,
+            TemplatedKind::ItemsRepeater => ControlKind::ItemsRepeater,
         };
         let id = self.acquire_control(kind);
         self.apply_modifiers(id, &tl.modifiers);

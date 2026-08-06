@@ -423,3 +423,5 @@ Windows::ApplicationModel::DataTransfer::IDataPackageView::{GetTextAsync, Contai
 Windows::ApplicationModel::DataTransfer::DataPackage
 Windows::ApplicationModel::DataTransfer::DataPackage::CreateInstance
 Microsoft::UI::Xaml::Controls::AnnotatedScrollBar::CreateInstance
+Microsoft::UI::Xaml::Controls::ItemsRepeater::CreateInstance
+Microsoft::UI::Xaml::Controls::IItemsRepeaterElementPreparedEventArgs

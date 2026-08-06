@@ -54,6 +54,7 @@ pub enum ControlKind {
     InfoBadge,
     PersonPicture,
     Image,
+    ItemsRepeater,
     TabView,
     TabViewItem,
     NavigationView,
