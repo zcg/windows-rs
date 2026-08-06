@@ -15562,16 +15562,6 @@ impl windows_core::RuntimeType for IPipsPager {
         windows_core::imp::ConstBuffer::for_interface::<Self>();
 }
 impl IPipsPager {
-    pub(crate) fn NumberOfPages(&self) -> windows_core::Result<i32> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).NumberOfPages)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .map(|| result__)
-        }
-    }
     pub(crate) fn SetNumberOfPages(&self, value: i32) -> windows_core::Result<()> {
         unsafe {
             (windows_core::Interface::vtable(self).SetNumberOfPages)(
@@ -15598,16 +15588,6 @@ impl IPipsPager {
                 value,
             )
             .ok()
-        }
-    }
-    pub(crate) fn MaxVisiblePips(&self) -> windows_core::Result<i32> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).MaxVisiblePips)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .map(|| result__)
         }
     }
     pub(crate) fn SetMaxVisiblePips(&self, value: i32) -> windows_core::Result<()> {
@@ -15684,94 +15664,6 @@ impl IPipsPager {
             .ok()
         }
     }
-    pub(crate) fn PreviousButtonStyle(&self) -> windows_core::Result<Style> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).PreviousButtonStyle)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .and_then(|| windows_core::Type::from_abi(result__))
-        }
-    }
-    pub(crate) fn SetPreviousButtonStyle<P0>(&self, value: P0) -> windows_core::Result<()>
-    where
-        P0: windows_core::Param<Style>,
-    {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetPreviousButtonStyle)(
-                windows_core::Interface::as_raw(self),
-                value.param().abi(),
-            )
-            .ok()
-        }
-    }
-    pub(crate) fn NextButtonStyle(&self) -> windows_core::Result<Style> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).NextButtonStyle)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .and_then(|| windows_core::Type::from_abi(result__))
-        }
-    }
-    pub(crate) fn SetNextButtonStyle<P0>(&self, value: P0) -> windows_core::Result<()>
-    where
-        P0: windows_core::Param<Style>,
-    {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetNextButtonStyle)(
-                windows_core::Interface::as_raw(self),
-                value.param().abi(),
-            )
-            .ok()
-        }
-    }
-    pub(crate) fn SelectedPipStyle(&self) -> windows_core::Result<Style> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).SelectedPipStyle)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .and_then(|| windows_core::Type::from_abi(result__))
-        }
-    }
-    pub(crate) fn SetSelectedPipStyle<P0>(&self, value: P0) -> windows_core::Result<()>
-    where
-        P0: windows_core::Param<Style>,
-    {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetSelectedPipStyle)(
-                windows_core::Interface::as_raw(self),
-                value.param().abi(),
-            )
-            .ok()
-        }
-    }
-    pub(crate) fn NormalPipStyle(&self) -> windows_core::Result<Style> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).NormalPipStyle)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .and_then(|| windows_core::Type::from_abi(result__))
-        }
-    }
-    pub(crate) fn SetNormalPipStyle<P0>(&self, value: P0) -> windows_core::Result<()>
-    where
-        P0: windows_core::Param<Style>,
-    {
-        unsafe {
-            (windows_core::Interface::vtable(self).SetNormalPipStyle)(
-                windows_core::Interface::as_raw(self),
-                value.param().abi(),
-            )
-            .ok()
-        }
-    }
     pub(crate) fn SelectedIndexChanged<F>(
         &self,
         handler: F,
@@ -15801,30 +15693,18 @@ impl IPipsPager {
             ))
         }
     }
-    pub(crate) fn TemplateSettings(&self) -> windows_core::Result<PipsPagerTemplateSettings> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).TemplateSettings)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .and_then(|| windows_core::Type::from_abi(result__))
-        }
-    }
 }
 #[repr(C)]
 pub struct IPipsPager_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
-    pub NumberOfPages:
-        unsafe extern "system" fn(*mut core::ffi::c_void, *mut i32) -> windows_core::HRESULT,
+    NumberOfPages: usize,
     pub SetNumberOfPages:
         unsafe extern "system" fn(*mut core::ffi::c_void, i32) -> windows_core::HRESULT,
     pub SelectedPageIndex:
         unsafe extern "system" fn(*mut core::ffi::c_void, *mut i32) -> windows_core::HRESULT,
     pub SetSelectedPageIndex:
         unsafe extern "system" fn(*mut core::ffi::c_void, i32) -> windows_core::HRESULT,
-    pub MaxVisiblePips:
-        unsafe extern "system" fn(*mut core::ffi::c_void, *mut i32) -> windows_core::HRESULT,
+    MaxVisiblePips: usize,
     pub SetMaxVisiblePips:
         unsafe extern "system" fn(*mut core::ffi::c_void, i32) -> windows_core::HRESULT,
     pub Orientation: unsafe extern "system" fn(
@@ -15849,38 +15729,14 @@ pub struct IPipsPager_Vtbl {
         *mut core::ffi::c_void,
         PipsPagerButtonVisibility,
     ) -> windows_core::HRESULT,
-    pub PreviousButtonStyle: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub SetPreviousButtonStyle: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub NextButtonStyle: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub SetNextButtonStyle: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub SelectedPipStyle: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub SetSelectedPipStyle: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub NormalPipStyle: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
-    pub SetNormalPipStyle: unsafe extern "system" fn(
-        *mut core::ffi::c_void,
-        *mut core::ffi::c_void,
-    ) -> windows_core::HRESULT,
+    PreviousButtonStyle: usize,
+    SetPreviousButtonStyle: usize,
+    NextButtonStyle: usize,
+    SetNextButtonStyle: usize,
+    SelectedPipStyle: usize,
+    SetSelectedPipStyle: usize,
+    NormalPipStyle: usize,
+    SetNormalPipStyle: usize,
     pub SelectedIndexChanged: unsafe extern "system" fn(
         *mut core::ffi::c_void,
         *mut core::ffi::c_void,
@@ -15888,8 +15744,23 @@ pub struct IPipsPager_Vtbl {
     ) -> windows_core::HRESULT,
     pub RemoveSelectedIndexChanged:
         unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
-    pub TemplateSettings: unsafe extern "system" fn(
+}
+windows_core::imp::define_interface!(
+    IPipsPagerFactory,
+    IPipsPagerFactory_Vtbl,
+    0x020722cd_813a_5165_a899_3df9adcd805e
+);
+impl windows_core::RuntimeType for IPipsPagerFactory {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IPipsPagerFactory_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub CreateInstance: unsafe extern "system" fn(
         *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
         *mut *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
 }
@@ -15904,19 +15775,6 @@ impl windows_core::RuntimeType for IPipsPagerSelectedIndexChangedEventArgs {
 }
 #[repr(C)]
 pub struct IPipsPagerSelectedIndexChangedEventArgs_Vtbl {
-    pub base__: windows_core::IInspectable_Vtbl,
-}
-windows_core::imp::define_interface!(
-    IPipsPagerTemplateSettings,
-    IPipsPagerTemplateSettings_Vtbl,
-    0x9d8c1252_56c5_57af_9a3a_08e9b947e5fa
-);
-impl windows_core::RuntimeType for IPipsPagerTemplateSettings {
-    const SIGNATURE: windows_core::imp::ConstBuffer =
-        windows_core::imp::ConstBuffer::for_interface::<Self>();
-}
-#[repr(C)]
-pub struct IPipsPagerTemplateSettings_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
 }
 windows_core::imp::define_interface!(IPivot, IPivot_Vtbl, 0x1c6438e5_ecac_5fb6_8e8e_00de7e922303);
@@ -28886,6 +28744,27 @@ windows_core::imp::required_hierarchy!(
     UIElement,
     DependencyObject
 );
+impl PipsPager {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::IPipsPagerFactory(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).CreateInstance)(
+                windows_core::Interface::as_raw(this),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        })
+    }
+    fn IPipsPagerFactory<R, F: FnOnce(&IPipsPagerFactory) -> windows_core::Result<R>>(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<PipsPager, IPipsPagerFactory> =
+            windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
 impl windows_core::RuntimeType for PipsPager {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::for_class::<Self, IPipsPager>();
@@ -28950,34 +28829,6 @@ impl windows_core::RuntimeName for PipsPagerSelectedIndexChangedEventArgs {
 }
 unsafe impl Send for PipsPagerSelectedIndexChangedEventArgs {}
 unsafe impl Sync for PipsPagerSelectedIndexChangedEventArgs {}
-#[repr(transparent)]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PipsPagerTemplateSettings(windows_core::IUnknown);
-windows_core::imp::interface_hierarchy!(
-    PipsPagerTemplateSettings,
-    windows_core::IUnknown,
-    windows_core::IInspectable
-);
-windows_core::imp::required_hierarchy!(PipsPagerTemplateSettings, DependencyObject);
-impl windows_core::RuntimeType for PipsPagerTemplateSettings {
-    const SIGNATURE: windows_core::imp::ConstBuffer =
-        windows_core::imp::ConstBuffer::for_class::<Self, IPipsPagerTemplateSettings>();
-}
-unsafe impl windows_core::Interface for PipsPagerTemplateSettings {
-    type Vtable = <IPipsPagerTemplateSettings as windows_core::Interface>::Vtable;
-    const IID: windows_core::GUID = <IPipsPagerTemplateSettings as windows_core::Interface>::IID;
-}
-impl core::ops::Deref for PipsPagerTemplateSettings {
-    type Target = IPipsPagerTemplateSettings;
-    fn deref(&self) -> &Self::Target {
-        unsafe { core::mem::transmute(self) }
-    }
-}
-impl windows_core::RuntimeName for PipsPagerTemplateSettings {
-    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.PipsPagerTemplateSettings";
-}
-unsafe impl Send for PipsPagerTemplateSettings {}
-unsafe impl Sync for PipsPagerTemplateSettings {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Pivot(windows_core::IUnknown);

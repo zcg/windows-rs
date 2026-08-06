@@ -334,6 +334,9 @@ pub fn dispatch(handle: &Handle, prop: Prop, value: &PropValue) -> Result<bool> 
         (Prop::MaxRating, PropValue::I32(v), Handle::RatingControl(h)) => {
             h.SetMaxRating(*v)?;
         }
+        (Prop::MaxVisiblePips, PropValue::I32(v), Handle::PipsPager(h)) => {
+            h.SetMaxVisiblePips(*v)?;
+        }
         (Prop::Maximum, PropValue::F64(v), Handle::NumberBox(h)) => {
             h.SetMaximum(*v)?;
         }
@@ -364,6 +367,9 @@ pub fn dispatch(handle: &Handle, prop: Prop, value: &PropValue) -> Result<bool> 
         }
         (Prop::MonthVisible, PropValue::Bool(v), Handle::DatePicker(h)) => {
             h.SetMonthVisible(*v)?;
+        }
+        (Prop::NumberOfPages, PropValue::I32(v), Handle::PipsPager(h)) => {
+            h.SetNumberOfPages(*v)?;
         }
         (Prop::OffContent, PropValue::Str(v), Handle::ToggleSwitch(h)) => {
             let tb = string_as_textblock(v.as_str())?;
@@ -451,6 +457,9 @@ pub fn dispatch(handle: &Handle, prop: Prop, value: &PropValue) -> Result<bool> 
         }
         (Prop::SelectedIndex, PropValue::I32(v), Handle::TabView(h)) => {
             h.SetSelectedIndex(*v)?;
+        }
+        (Prop::SelectedPageIndex, PropValue::I32(v), Handle::PipsPager(h)) => {
+            h.SetSelectedPageIndex(*v)?;
         }
         (Prop::SelectionMode, PropValue::I32(v), Handle::TreeView(h)) => {
             h.SetSelectionMode(TreeViewSelectionMode(*v))?;

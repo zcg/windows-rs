@@ -163,6 +163,13 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         image: "ListView.png",
     },
     ControlInfo {
+        title: "PipsPager",
+        description: "A horizontal row of pips representing pages of content.",
+        category: "Collections",
+        tag: "pips-pager",
+        image: "PipsPager.png",
+    },
+    ControlInfo {
         title: "TreeView",
         description: "A hierarchical list with expanding and collapsing nodes.",
         category: "Collections",

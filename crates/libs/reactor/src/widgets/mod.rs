@@ -61,6 +61,7 @@ widget_modules! {
     number_box,
     password_box,
     person_picture,
+    pips_pager,
     pivot,
     progress_bar,
     progress_ring,

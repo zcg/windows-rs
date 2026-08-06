@@ -145,6 +145,17 @@ pub fn dispatch(
                 .unwrap(),
             );
         }
+        (Event::SelectedIndexChanged, Handle::PipsPager(h)) => {
+            let handler = handler.clone();
+            let control = h.clone();
+            revokers.push(
+                h.SelectedIndexChanged(move |_sender, _args| {
+                    let v = control.SelectedPageIndex().unwrap_or(-1);
+                    handler.invoke_i32(v);
+                })
+                .unwrap(),
+            );
+        }
         (Event::Click, Handle::RepeatButton(h)) => {
             let handler = handler.clone();
             revokers.push(

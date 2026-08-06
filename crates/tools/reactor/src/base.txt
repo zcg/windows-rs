@@ -377,7 +377,7 @@ Microsoft::UI::Xaml::Controls::FontIcon
 Microsoft::UI::Xaml::Controls::SymbolIcon
 Microsoft::UI::Xaml::Controls::BitmapIcon
 Microsoft::UI::Xaml::Controls::IconSourceElement
-Microsoft::UI::Xaml::Controls::IPipsPager
+Microsoft::UI::Xaml::Controls::IPipsPager::{get_SelectedPageIndex, SelectedIndexChanged, put_PreviousButtonVisibility, get_PreviousButtonVisibility, put_NextButtonVisibility, get_NextButtonVisibility, put_Orientation, get_Orientation}
 Microsoft::UI::Xaml::Controls::IFlipView
 Microsoft::UI::Xaml::Controls::IGridView
 Microsoft::UI::Xaml::Controls::IListView

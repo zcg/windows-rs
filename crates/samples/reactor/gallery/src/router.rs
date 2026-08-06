@@ -28,6 +28,7 @@ pub fn route(tag: &str) -> Element {
         "grid-view" => component(collections::grid_view_page, ()),
         "list-box" => component(collections::list_box_page, ()),
         "list-view" => component(collections::list_view_page, ()),
+        "pips-pager" => component(collections::pips_pager_page, ()),
         "tree-view" => component(collections::tree_view_page, ()),
 
         "calendar-date-picker" => component(date_time::calendar_date_picker_page, ()),

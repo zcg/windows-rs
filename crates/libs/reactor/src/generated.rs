@@ -475,6 +475,22 @@ pub fn person_picture_bindings(w: &PersonPicture) -> PropBindings {
         Binding::Prop(Prop::Initials, PropValue::Str(w.initials.clone())),
     ]
 }
+pub fn pips_pager_bindings(w: &PipsPager) -> PropBindings {
+    vec![
+        Binding::Event(
+            Event::SelectedIndexChanged,
+            w.on_selected_index_changed
+                .as_ref()
+                .map(|cb| EventHandler::I32(cb.clone())),
+        ),
+        Binding::Prop(Prop::MaxVisiblePips, PropValue::I32(w.max_visible_pips)),
+        Binding::Prop(Prop::NumberOfPages, PropValue::I32(w.number_of_pages)),
+        Binding::Prop(
+            Prop::SelectedPageIndex,
+            PropValue::I32(w.selected_page_index),
+        ),
+    ]
+}
 pub fn pivot_bindings(w: &Pivot) -> PropBindings {
     let mut out = Vec::with_capacity(3usize);
     out.push(Binding::Event(

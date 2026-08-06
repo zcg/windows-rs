@@ -95,6 +95,7 @@ define_handles! {
     RadioButton,
     RadioButtons,
     RatingControl,
+    PipsPager,
     Rectangle,
     RefreshContainer,
     RelativePanel,

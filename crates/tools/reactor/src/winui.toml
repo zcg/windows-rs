@@ -207,6 +207,11 @@ SelectedIndex = {}
 MaxColumns = {}
 SelectionChanged = { property = "SelectedIndex" }
 
+["Microsoft.UI.Xaml.Controls.PipsPager"]
+NumberOfPages = {}
+SelectedPageIndex = {}
+MaxVisiblePips = {}
+SelectedIndexChanged = { property = "SelectedPageIndex" }
 ["Microsoft.UI.Xaml.Controls.RatingControl"]
 Value = {}
 MaxRating = {}
