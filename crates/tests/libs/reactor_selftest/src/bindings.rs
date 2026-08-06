@@ -12466,38 +12466,24 @@ impl IPointerPointProperties {
 #[repr(C)]
 pub struct IPointerPointProperties_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
-    // 权威槽位顺序（windows crate 完整版，IID d760ed77_4b10_57a5_b3cc_d9bf3413e996）。
-    // bindgen 对"部分 filter"接口输出的是字母序子集，槽位全错（IsLeftButtonPressed
-    // 落在真实 Twist 槽位），按下/滚轮判断不可靠——这里按真实 vtable 顺序逐个占位。
-    // ⚠️ 手动维护：重新运行 tool_reactor 生成后需恢复本块。
-    Pressure: usize,
-    IsInverted: usize,
-    IsEraser: usize,
-    Orientation: usize,
-    XTilt: usize,
-    YTilt: usize,
-    Twist: usize,
     ContactRect: usize,
-    ContactRectRaw: usize,
-    TouchConfidence: usize,
+    IsBarrelButtonPressed: usize,
+    IsCanceled: usize,
+    IsEraser: usize,
+    IsHorizontalMouseWheel: usize,
+    IsInRange: usize,
+    IsInverted: usize,
     pub IsLeftButtonPressed:
-        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
-    pub IsRightButtonPressed:
         unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
     pub IsMiddleButtonPressed:
         unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
-    pub MouseWheelDelta:
-        unsafe extern "system" fn(*mut core::ffi::c_void, *mut i32) -> windows_core::HRESULT,
-    IsHorizontalMouseWheel: usize,
     IsPrimary: usize,
-    IsInRange: usize,
-    IsCanceled: usize,
-    IsBarrelButtonPressed: usize,
+    pub IsRightButtonPressed:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
     IsXButton1Pressed: usize,
     IsXButton2Pressed: usize,
-    PointerUpdateKind: usize,
-    HasUsage: usize,
-    GetUsageValue: usize,
+    pub MouseWheelDelta:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut i32) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
     IPointerRoutedEventArgs,
