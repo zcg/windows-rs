@@ -70,6 +70,10 @@ impl Shape {
         self.stroke = Some(v);
         self
     }
+    pub fn stroke_rgb(mut self, r: u8, g: u8, b: u8) -> Self {
+        self.stroke = Some(Color::rgb(r, g, b));
+        self
+    }
     pub fn stroke_thickness(mut self, v: f64) -> Self {
         self.stroke_thickness = Some(v);
         self

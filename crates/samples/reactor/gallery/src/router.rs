@@ -54,6 +54,8 @@ pub fn route(tag: &str) -> Element {
         "image" => component(media::image_page, ()),
         "person-picture" => component(media::person_picture_page, ()),
         "webview" => component(media::webview_page, ()),
+        "shape" => component(media::shape_page, ()),
+        "line" => component(media::line_page, ()),
 
         "command-bar" => component(menus::command_bar_page, ()),
         "menu-bar" => component(menus::menu_bar_page, ()),
@@ -66,12 +68,14 @@ pub fn route(tag: &str) -> Element {
         "title-bar" => component(navigation::title_bar_page, ()),
 
         "info-badge" => component(status::info_badge_page, ()),
+        "pull-to-refresh" => component(status::pull_to_refresh_page, ()),
         "info-bar" => component(status::info_bar_page, ()),
         "progress-bar" => component(status::progress_bar_page, ()),
         "progress-ring" => component(status::progress_ring_page, ()),
         "tool-tip" => component(status::tool_tip_page, ()),
 
         "auto-suggest-box" => component(text::auto_suggest_box_page, ()),
+        "text-block" => component(text::text_block_page, ()),
         "rich-edit-box" => component(text::rich_edit_box_page, ()),
         "rich-text-block" => component(text::rich_text_block_page, ()),
         "type-ramp" => component(text::type_ramp_page, ()),

@@ -366,6 +366,20 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         image: "WebView.png",
     },
     ControlInfo {
+        title: "Shape",
+        description: "Draw 2D geometry: Rectangle, Ellipse, and Line.",
+        category: "Media",
+        tag: "shape",
+        image: "Shape.png",
+    },
+    ControlInfo {
+        title: "Line",
+        description: "A straight line between two points.",
+        category: "Media",
+        tag: "line",
+        image: "Line.png",
+    },
+    ControlInfo {
         title: "CommandBar",
         description: "A toolbar for app commands and actions.",
         category: "Menus and Toolbars",
@@ -436,6 +450,13 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         image: "InfoBar.png",
     },
     ControlInfo {
+        title: "PullToRefresh",
+        description: "Standard pull-to-refresh experience for scrollable content.",
+        category: "Status and Info",
+        tag: "pull-to-refresh",
+        image: "PullToRefresh.png",
+    },
+    ControlInfo {
         title: "ProgressBar",
         description: "A horizontal bar showing progress.",
         category: "Status and Info",
@@ -482,6 +503,13 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         description: "Named text factories for the WinUI 3 type ramp.",
         category: "Text",
         tag: "type-ramp",
+        image: "TextBlock.png",
+    },
+    ControlInfo {
+        title: "TextBlock",
+        description: "Displays a line or paragraph of text with styling and selection.",
+        category: "Text",
+        tag: "text-block",
         image: "TextBlock.png",
     },
 ];
