@@ -1570,6 +1570,11 @@ impl Backend for WinUIBackend {
                     None => img.SetSource(None),
                 },
                 (Prop::ImageSource, PropValue::Unset, Handle::Image(img)) => img.SetSource(None),
+                (Prop::MediaSource, PropValue::Str(s), Handle::MediaPlayerElement(m)) => {
+                    let uri = bindings::Uri::CreateUri(s.as_str())?;
+                    let source = bindings::MediaSource::CreateFromUri(&uri)?;
+                    m.SetSource(&source)
+                }
                 (Prop::Header, PropValue::Str(s), Handle::TabViewItem(ti)) => {
                     let tb = string_as_textblock(s)?;
                     ti.SetHeader(&tb)

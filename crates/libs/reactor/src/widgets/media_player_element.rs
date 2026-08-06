@@ -31,7 +31,14 @@ impl MediaPlayerElement {
 impl Widget for MediaPlayerElement {
     widget_header!(ControlKind::MediaPlayerElement);
     fn bindings(&self) -> PropBindings {
-        generated::media_player_element_bindings(self)
+        let mut out = generated::media_player_element_bindings(self);
+        if let Some(src) = &self.source {
+            out.push(Binding::Prop(
+                Prop::MediaSource,
+                PropValue::Str(src.clone()),
+            ));
+        }
+        out
     }
 }
 pub fn media_player_element(source: impl Into<String>) -> MediaPlayerElement {

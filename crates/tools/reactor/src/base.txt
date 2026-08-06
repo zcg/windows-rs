@@ -399,7 +399,7 @@ Microsoft::UI::Xaml::Controls::IParallaxView
 Microsoft::UI::Xaml::Controls::ISemanticZoom
 Microsoft::UI::Xaml::Controls::IVariableSizedWrapGrid
 Microsoft::UI::Xaml::Controls::IAnnotatedScrollBar
-Microsoft::UI::Xaml::Controls::IMediaPlayerElement
+Microsoft::UI::Xaml::Controls::IMediaPlayerElement::{Source}
 Microsoft::UI::Xaml::Controls::IRichTextBlock
 Microsoft::UI::Xaml::Shapes::ILine
 Microsoft::UI::Xaml::Media::IRadialGradientBrush
@@ -425,3 +425,7 @@ Windows::ApplicationModel::DataTransfer::DataPackage::CreateInstance
 Microsoft::UI::Xaml::Controls::AnnotatedScrollBar::CreateInstance
 Microsoft::UI::Xaml::Controls::ItemsRepeater::CreateInstance
 Microsoft::UI::Xaml::Controls::IItemsRepeaterElementPreparedEventArgs
+Windows::Media::Core::MediaSource::CreateFromUri
+Windows::Media::Playback::MediaPlayer::CreateInstance
+Windows::Media::Playback::IMediaPlayer
+Windows::Media::Playback::IMediaPlaybackSource

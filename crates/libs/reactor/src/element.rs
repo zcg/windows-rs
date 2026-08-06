@@ -1251,6 +1251,7 @@ impl_element_ext!(
     SwipeControl,
     SwapChainPanel,
     CompositionHost,
+    MediaPlayerElement,
     WebView2,
 );
 

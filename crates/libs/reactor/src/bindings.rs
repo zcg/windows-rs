@@ -13645,9 +13645,667 @@ impl windows_core::RuntimeType for IMediaPlayer {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::for_interface::<Self>();
 }
+impl IMediaPlayer {
+    pub(crate) fn AutoPlay(&self) -> windows_core::Result<bool> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).AutoPlay)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn SetAutoPlay(&self, value: bool) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetAutoPlay)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn NaturalDuration(&self) -> windows_core::Result<windows_time::TimeSpan> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).NaturalDuration)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn Position(&self) -> windows_core::Result<windows_time::TimeSpan> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).Position)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn SetPosition(&self, value: windows_time::TimeSpan) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetPosition)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn BufferingProgress(&self) -> windows_core::Result<f64> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).BufferingProgress)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn CurrentState(&self) -> windows_core::Result<MediaPlayerState> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).CurrentState)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn CanSeek(&self) -> windows_core::Result<bool> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).CanSeek)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn CanPause(&self) -> windows_core::Result<bool> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).CanPause)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn IsLoopingEnabled(&self) -> windows_core::Result<bool> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).IsLoopingEnabled)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn SetIsLoopingEnabled(&self, value: bool) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetIsLoopingEnabled)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn IsProtected(&self) -> windows_core::Result<bool> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).IsProtected)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn IsMuted(&self) -> windows_core::Result<bool> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).IsMuted)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn SetIsMuted(&self, value: bool) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetIsMuted)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn PlaybackRate(&self) -> windows_core::Result<f64> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).PlaybackRate)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn SetPlaybackRate(&self, value: f64) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetPlaybackRate)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn Volume(&self) -> windows_core::Result<f64> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).Volume)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
+    pub(crate) fn SetVolume(&self, value: f64) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetVolume)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn PlaybackMediaMarkers(&self) -> windows_core::Result<PlaybackMediaMarkerSequence> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).PlaybackMediaMarkers)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        }
+    }
+    pub(crate) fn MediaOpened<F>(
+        &self,
+        handler: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(windows_core::Ref<MediaPlayer>, windows_core::Ref<windows_core::IInspectable>)
+            + 'static,
+    {
+        let handler: TypedEventHandler<MediaPlayer, windows_core::IInspectable> = {
+            let com = windows_core::imp::DelegateBox::<
+                TypedEventHandler<MediaPlayer, windows_core::IInspectable>,
+                F,
+            >::new(
+                &TypedEventHandlerBox::<MediaPlayer, windows_core::IInspectable, F>::VTABLE,
+                handler,
+            );
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).MediaOpened)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&handler),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemoveMediaOpened,
+            ))
+        }
+    }
+    pub(crate) fn MediaEnded<F>(
+        &self,
+        handler: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(windows_core::Ref<MediaPlayer>, windows_core::Ref<windows_core::IInspectable>)
+            + 'static,
+    {
+        let handler: TypedEventHandler<MediaPlayer, windows_core::IInspectable> = {
+            let com = windows_core::imp::DelegateBox::<
+                TypedEventHandler<MediaPlayer, windows_core::IInspectable>,
+                F,
+            >::new(
+                &TypedEventHandlerBox::<MediaPlayer, windows_core::IInspectable, F>::VTABLE,
+                handler,
+            );
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).MediaEnded)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&handler),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemoveMediaEnded,
+            ))
+        }
+    }
+    pub(crate) fn MediaFailed<F>(
+        &self,
+        handler: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(windows_core::Ref<MediaPlayer>, windows_core::Ref<MediaPlayerFailedEventArgs>)
+            + 'static,
+    {
+        let handler: TypedEventHandler<MediaPlayer, MediaPlayerFailedEventArgs> = {
+            let com = windows_core::imp::DelegateBox::<
+                TypedEventHandler<MediaPlayer, MediaPlayerFailedEventArgs>,
+                F,
+            >::new(
+                &TypedEventHandlerBox::<MediaPlayer, MediaPlayerFailedEventArgs, F>::VTABLE,
+                handler,
+            );
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).MediaFailed)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&handler),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemoveMediaFailed,
+            ))
+        }
+    }
+    pub(crate) fn CurrentStateChanged<F>(
+        &self,
+        value: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(windows_core::Ref<MediaPlayer>, windows_core::Ref<windows_core::IInspectable>)
+            + 'static,
+    {
+        let value: TypedEventHandler<MediaPlayer, windows_core::IInspectable> = {
+            let com = windows_core::imp::DelegateBox::<
+                TypedEventHandler<MediaPlayer, windows_core::IInspectable>,
+                F,
+            >::new(
+                &TypedEventHandlerBox::<MediaPlayer, windows_core::IInspectable, F>::VTABLE,
+                value,
+            );
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).CurrentStateChanged)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&value),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemoveCurrentStateChanged,
+            ))
+        }
+    }
+    pub(crate) fn PlaybackMediaMarkerReached<F>(
+        &self,
+        value: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(
+                windows_core::Ref<MediaPlayer>,
+                windows_core::Ref<PlaybackMediaMarkerReachedEventArgs>,
+            ) + 'static,
+    {
+        let value: TypedEventHandler<MediaPlayer, PlaybackMediaMarkerReachedEventArgs> = {
+            let com = windows_core::imp::DelegateBox::< TypedEventHandler < MediaPlayer , PlaybackMediaMarkerReachedEventArgs > , F >::new (& TypedEventHandlerBox::< MediaPlayer , PlaybackMediaMarkerReachedEventArgs , F >::VTABLE , value) ;
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).PlaybackMediaMarkerReached)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&value),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemovePlaybackMediaMarkerReached,
+            ))
+        }
+    }
+    pub(crate) fn MediaPlayerRateChanged<F>(
+        &self,
+        value: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(windows_core::Ref<MediaPlayer>, windows_core::Ref<MediaPlayerRateChangedEventArgs>)
+            + 'static,
+    {
+        let value: TypedEventHandler<MediaPlayer, MediaPlayerRateChangedEventArgs> = {
+            let com = windows_core::imp::DelegateBox::<
+                TypedEventHandler<MediaPlayer, MediaPlayerRateChangedEventArgs>,
+                F,
+            >::new(
+                &TypedEventHandlerBox::<MediaPlayer, MediaPlayerRateChangedEventArgs, F>::VTABLE,
+                value,
+            );
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).MediaPlayerRateChanged)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&value),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemoveMediaPlayerRateChanged,
+            ))
+        }
+    }
+    pub(crate) fn VolumeChanged<F>(
+        &self,
+        handler: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(windows_core::Ref<MediaPlayer>, windows_core::Ref<windows_core::IInspectable>)
+            + 'static,
+    {
+        let handler: TypedEventHandler<MediaPlayer, windows_core::IInspectable> = {
+            let com = windows_core::imp::DelegateBox::<
+                TypedEventHandler<MediaPlayer, windows_core::IInspectable>,
+                F,
+            >::new(
+                &TypedEventHandlerBox::<MediaPlayer, windows_core::IInspectable, F>::VTABLE,
+                handler,
+            );
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).VolumeChanged)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&handler),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemoveVolumeChanged,
+            ))
+        }
+    }
+    pub(crate) fn SeekCompleted<F>(
+        &self,
+        value: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(windows_core::Ref<MediaPlayer>, windows_core::Ref<windows_core::IInspectable>)
+            + 'static,
+    {
+        let value: TypedEventHandler<MediaPlayer, windows_core::IInspectable> = {
+            let com = windows_core::imp::DelegateBox::<
+                TypedEventHandler<MediaPlayer, windows_core::IInspectable>,
+                F,
+            >::new(
+                &TypedEventHandlerBox::<MediaPlayer, windows_core::IInspectable, F>::VTABLE,
+                value,
+            );
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).SeekCompleted)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&value),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemoveSeekCompleted,
+            ))
+        }
+    }
+    pub(crate) fn BufferingStarted<F>(
+        &self,
+        value: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(windows_core::Ref<MediaPlayer>, windows_core::Ref<windows_core::IInspectable>)
+            + 'static,
+    {
+        let value: TypedEventHandler<MediaPlayer, windows_core::IInspectable> = {
+            let com = windows_core::imp::DelegateBox::<
+                TypedEventHandler<MediaPlayer, windows_core::IInspectable>,
+                F,
+            >::new(
+                &TypedEventHandlerBox::<MediaPlayer, windows_core::IInspectable, F>::VTABLE,
+                value,
+            );
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).BufferingStarted)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&value),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemoveBufferingStarted,
+            ))
+        }
+    }
+    pub(crate) fn BufferingEnded<F>(
+        &self,
+        value: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(windows_core::Ref<MediaPlayer>, windows_core::Ref<windows_core::IInspectable>)
+            + 'static,
+    {
+        let value: TypedEventHandler<MediaPlayer, windows_core::IInspectable> = {
+            let com = windows_core::imp::DelegateBox::<
+                TypedEventHandler<MediaPlayer, windows_core::IInspectable>,
+                F,
+            >::new(
+                &TypedEventHandlerBox::<MediaPlayer, windows_core::IInspectable, F>::VTABLE,
+                value,
+            );
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).BufferingEnded)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&value),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemoveBufferingEnded,
+            ))
+        }
+    }
+    pub(crate) fn Play(&self) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).Play)(windows_core::Interface::as_raw(self)).ok()
+        }
+    }
+    pub(crate) fn Pause(&self) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).Pause)(windows_core::Interface::as_raw(self))
+                .ok()
+        }
+    }
+    pub(crate) fn SetUriSource<P0>(&self, value: P0) -> windows_core::Result<()>
+    where
+        P0: windows_core::Param<Uri>,
+    {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetUriSource)(
+                windows_core::Interface::as_raw(self),
+                value.param().abi(),
+            )
+            .ok()
+        }
+    }
+}
 #[repr(C)]
 pub struct IMediaPlayer_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
+    pub AutoPlay:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
+    pub SetAutoPlay:
+        unsafe extern "system" fn(*mut core::ffi::c_void, bool) -> windows_core::HRESULT,
+    pub NaturalDuration: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut windows_time::TimeSpan,
+    ) -> windows_core::HRESULT,
+    pub Position: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut windows_time::TimeSpan,
+    ) -> windows_core::HRESULT,
+    pub SetPosition: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        windows_time::TimeSpan,
+    ) -> windows_core::HRESULT,
+    pub BufferingProgress:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut f64) -> windows_core::HRESULT,
+    pub CurrentState: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut MediaPlayerState,
+    ) -> windows_core::HRESULT,
+    pub CanSeek:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
+    pub CanPause:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
+    pub IsLoopingEnabled:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
+    pub SetIsLoopingEnabled:
+        unsafe extern "system" fn(*mut core::ffi::c_void, bool) -> windows_core::HRESULT,
+    pub IsProtected:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
+    pub IsMuted:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
+    pub SetIsMuted:
+        unsafe extern "system" fn(*mut core::ffi::c_void, bool) -> windows_core::HRESULT,
+    pub PlaybackRate:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut f64) -> windows_core::HRESULT,
+    pub SetPlaybackRate:
+        unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
+    pub Volume:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut f64) -> windows_core::HRESULT,
+    pub SetVolume: unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
+    pub PlaybackMediaMarkers: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub MediaOpened: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemoveMediaOpened:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+    pub MediaEnded: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemoveMediaEnded:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+    pub MediaFailed: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemoveMediaFailed:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+    pub CurrentStateChanged: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemoveCurrentStateChanged:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+    pub PlaybackMediaMarkerReached: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemovePlaybackMediaMarkerReached:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+    pub MediaPlayerRateChanged: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemoveMediaPlayerRateChanged:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+    pub VolumeChanged: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemoveVolumeChanged:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+    pub SeekCompleted: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemoveSeekCompleted:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+    pub BufferingStarted: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemoveBufferingStarted:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+    pub BufferingEnded: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemoveBufferingEnded:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+    pub Play: unsafe extern "system" fn(*mut core::ffi::c_void) -> windows_core::HRESULT,
+    pub Pause: unsafe extern "system" fn(*mut core::ffi::c_void) -> windows_core::HRESULT,
+    pub SetUriSource: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
     IMediaPlayerElement,
@@ -13659,6 +14317,28 @@ impl windows_core::RuntimeType for IMediaPlayerElement {
         windows_core::imp::ConstBuffer::for_interface::<Self>();
 }
 impl IMediaPlayerElement {
+    pub(crate) fn Source(&self) -> windows_core::Result<IMediaPlaybackSource> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).Source)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        }
+    }
+    pub(crate) fn SetSource<P0>(&self, value: P0) -> windows_core::Result<()>
+    where
+        P0: windows_core::Param<IMediaPlaybackSource>,
+    {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetSource)(
+                windows_core::Interface::as_raw(self),
+                value.param().abi(),
+            )
+            .ok()
+        }
+    }
     pub(crate) fn SetAreTransportControlsEnabled(&self, value: bool) -> windows_core::Result<()> {
         unsafe {
             (windows_core::Interface::vtable(self).SetAreTransportControlsEnabled)(
@@ -13681,8 +14361,14 @@ impl IMediaPlayerElement {
 #[repr(C)]
 pub struct IMediaPlayerElement_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
-    Source: usize,
-    SetSource: usize,
+    pub Source: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+    pub SetSource: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
     TransportControls: usize,
     SetTransportControls: usize,
     AreTransportControlsEnabled: usize,
@@ -13716,17 +14402,68 @@ pub struct IMediaPlayerElementFactory_Vtbl {
     ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
-    IMediaTransportControls,
-    IMediaTransportControls_Vtbl,
-    0xc99c110b_9dee_5a6b_bb9e_61bfcaaafa3e
+    IMediaPlayerFailedEventArgs,
+    IMediaPlayerFailedEventArgs_Vtbl,
+    0x2744e9b9_a7e3_4f16_bac4_7914ebc08301
 );
-impl windows_core::RuntimeType for IMediaTransportControls {
+impl windows_core::RuntimeType for IMediaPlayerFailedEventArgs {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::for_interface::<Self>();
 }
 #[repr(C)]
-pub struct IMediaTransportControls_Vtbl {
+pub struct IMediaPlayerFailedEventArgs_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
+    IMediaPlayerRateChangedEventArgs,
+    IMediaPlayerRateChangedEventArgs_Vtbl,
+    0x40600d58_3b61_4bb2_989f_fc65608b6cab
+);
+impl windows_core::RuntimeType for IMediaPlayerRateChangedEventArgs {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IMediaPlayerRateChangedEventArgs_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
+    IMediaSource2,
+    IMediaSource2_Vtbl,
+    0x2eb61048_655f_4c37_b813_b4e45dfa0abe
+);
+impl windows_core::RuntimeType for IMediaSource2 {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IMediaSource2_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
+    IMediaSourceStatics,
+    IMediaSourceStatics_Vtbl,
+    0xf77d6fa4_4652_410e_b1d8_e9a5e245a45c
+);
+impl windows_core::RuntimeType for IMediaSourceStatics {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IMediaSourceStatics_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    CreateFromAdaptiveMediaSource: usize,
+    CreateFromMediaStreamSource: usize,
+    CreateFromMseStreamSource: usize,
+    CreateFromIMediaSource: usize,
+    CreateFromStorageFile: usize,
+    CreateFromStream: usize,
+    CreateFromStreamReference: usize,
+    pub CreateFromUri: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
     IMenuBar,
@@ -16129,6 +16866,32 @@ pub struct IPivotItemFactory_Vtbl {
         *mut *mut core::ffi::c_void,
         *mut *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    IPlaybackMediaMarkerReachedEventArgs,
+    IPlaybackMediaMarkerReachedEventArgs_Vtbl,
+    0x578cd1b9_90e2_4e60_abc4_8740b01f6196
+);
+impl windows_core::RuntimeType for IPlaybackMediaMarkerReachedEventArgs {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IPlaybackMediaMarkerReachedEventArgs_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
+    IPlaybackMediaMarkerSequence,
+    IPlaybackMediaMarkerSequence_Vtbl,
+    0xf2810cee_638b_46cf_8817_1d111fe9d8c4
+);
+impl windows_core::RuntimeType for IPlaybackMediaMarkerSequence {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IPlaybackMediaMarkerSequence_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
 }
 windows_core::imp::define_interface!(
     IPointer,
@@ -27307,6 +28070,23 @@ windows_core::imp::interface_hierarchy!(
     windows_core::IInspectable
 );
 windows_core::imp::required_hierarchy!(MediaPlayer, IClosable);
+impl MediaPlayer {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::IActivationFactory(|f| f.ActivateInstance::<Self>())
+    }
+    fn IActivationFactory<
+        R,
+        F: FnOnce(&windows_core::imp::IGenericFactory) -> windows_core::Result<R>,
+    >(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<
+            MediaPlayer,
+            windows_core::imp::IGenericFactory,
+        > = windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
 impl windows_core::RuntimeType for MediaPlayer {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::for_class::<Self, IMediaPlayer>();
@@ -27388,38 +28168,129 @@ unsafe impl Send for MediaPlayerElement {}
 unsafe impl Sync for MediaPlayerElement {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MediaTransportControls(windows_core::IUnknown);
+pub struct MediaPlayerFailedEventArgs(windows_core::IUnknown);
 windows_core::imp::interface_hierarchy!(
-    MediaTransportControls,
+    MediaPlayerFailedEventArgs,
     windows_core::IUnknown,
     windows_core::IInspectable
 );
-windows_core::imp::required_hierarchy!(
-    MediaTransportControls,
-    Control,
-    FrameworkElement,
-    UIElement,
-    DependencyObject
-);
-impl windows_core::RuntimeType for MediaTransportControls {
+impl windows_core::RuntimeType for MediaPlayerFailedEventArgs {
     const SIGNATURE: windows_core::imp::ConstBuffer =
-        windows_core::imp::ConstBuffer::for_class::<Self, IMediaTransportControls>();
+        windows_core::imp::ConstBuffer::for_class::<Self, IMediaPlayerFailedEventArgs>();
 }
-unsafe impl windows_core::Interface for MediaTransportControls {
-    type Vtable = <IMediaTransportControls as windows_core::Interface>::Vtable;
-    const IID: windows_core::GUID = <IMediaTransportControls as windows_core::Interface>::IID;
+unsafe impl windows_core::Interface for MediaPlayerFailedEventArgs {
+    type Vtable = <IMediaPlayerFailedEventArgs as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IMediaPlayerFailedEventArgs as windows_core::Interface>::IID;
 }
-impl core::ops::Deref for MediaTransportControls {
-    type Target = IMediaTransportControls;
+impl core::ops::Deref for MediaPlayerFailedEventArgs {
+    type Target = IMediaPlayerFailedEventArgs;
     fn deref(&self) -> &Self::Target {
         unsafe { core::mem::transmute(self) }
     }
 }
-impl windows_core::RuntimeName for MediaTransportControls {
-    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.MediaTransportControls";
+impl windows_core::RuntimeName for MediaPlayerFailedEventArgs {
+    const NAME: &'static str = "Windows.Media.Playback.MediaPlayerFailedEventArgs";
 }
-unsafe impl Send for MediaTransportControls {}
-unsafe impl Sync for MediaTransportControls {}
+unsafe impl Send for MediaPlayerFailedEventArgs {}
+unsafe impl Sync for MediaPlayerFailedEventArgs {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MediaPlayerRateChangedEventArgs(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    MediaPlayerRateChangedEventArgs,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+impl windows_core::RuntimeType for MediaPlayerRateChangedEventArgs {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IMediaPlayerRateChangedEventArgs>();
+}
+unsafe impl windows_core::Interface for MediaPlayerRateChangedEventArgs {
+    type Vtable = <IMediaPlayerRateChangedEventArgs as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID =
+        <IMediaPlayerRateChangedEventArgs as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for MediaPlayerRateChangedEventArgs {
+    type Target = IMediaPlayerRateChangedEventArgs;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for MediaPlayerRateChangedEventArgs {
+    const NAME: &'static str = "Windows.Media.Playback.MediaPlayerRateChangedEventArgs";
+}
+unsafe impl Send for MediaPlayerRateChangedEventArgs {}
+unsafe impl Sync for MediaPlayerRateChangedEventArgs {}
+#[repr(transparent)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct MediaPlayerState(pub i32);
+impl MediaPlayerState {
+    pub const Closed: Self = Self(0);
+    pub const Opening: Self = Self(1);
+    pub const Buffering: Self = Self(2);
+    pub const Playing: Self = Self(3);
+    pub const Paused: Self = Self(4);
+    pub const Stopped: Self = Self(5);
+}
+impl windows_core::TypeKind for MediaPlayerState {
+    type TypeKind = windows_core::CopyType;
+}
+impl windows_core::RuntimeType for MediaPlayerState {
+    const SIGNATURE: windows_core::imp::ConstBuffer = windows_core::imp::ConstBuffer::from_slice(
+        b"enum(Windows.Media.Playback.MediaPlayerState;i4)",
+    );
+}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MediaSource(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    MediaSource,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(MediaSource, IClosable, IMediaPlaybackSource);
+impl MediaSource {
+    pub(crate) fn CreateFromUri<P0>(uri: P0) -> windows_core::Result<Self>
+    where
+        P0: windows_core::Param<Uri>,
+    {
+        Self::IMediaSourceStatics(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).CreateFromUri)(
+                windows_core::Interface::as_raw(this),
+                uri.param().abi(),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        })
+    }
+    fn IMediaSourceStatics<R, F: FnOnce(&IMediaSourceStatics) -> windows_core::Result<R>>(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<MediaSource, IMediaSourceStatics> =
+            windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
+impl windows_core::RuntimeType for MediaSource {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IMediaSource2>();
+}
+unsafe impl windows_core::Interface for MediaSource {
+    type Vtable = <IMediaSource2 as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IMediaSource2 as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for MediaSource {
+    type Target = IMediaSource2;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for MediaSource {
+    const NAME: &'static str = "Windows.Media.Core.MediaSource";
+}
+unsafe impl Send for MediaSource {}
+unsafe impl Sync for MediaSource {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MenuBar(windows_core::IUnknown);
@@ -28803,6 +29674,61 @@ impl windows_core::RuntimeType for PlacementMode {
         b"enum(Microsoft.UI.Xaml.Controls.Primitives.PlacementMode;i4)",
     );
 }
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PlaybackMediaMarkerReachedEventArgs(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    PlaybackMediaMarkerReachedEventArgs,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+impl windows_core::RuntimeType for PlaybackMediaMarkerReachedEventArgs {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IPlaybackMediaMarkerReachedEventArgs>();
+}
+unsafe impl windows_core::Interface for PlaybackMediaMarkerReachedEventArgs {
+    type Vtable = <IPlaybackMediaMarkerReachedEventArgs as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID =
+        <IPlaybackMediaMarkerReachedEventArgs as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for PlaybackMediaMarkerReachedEventArgs {
+    type Target = IPlaybackMediaMarkerReachedEventArgs;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for PlaybackMediaMarkerReachedEventArgs {
+    const NAME: &'static str = "Windows.Media.Playback.PlaybackMediaMarkerReachedEventArgs";
+}
+unsafe impl Send for PlaybackMediaMarkerReachedEventArgs {}
+unsafe impl Sync for PlaybackMediaMarkerReachedEventArgs {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PlaybackMediaMarkerSequence(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    PlaybackMediaMarkerSequence,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+impl windows_core::RuntimeType for PlaybackMediaMarkerSequence {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IPlaybackMediaMarkerSequence>();
+}
+unsafe impl windows_core::Interface for PlaybackMediaMarkerSequence {
+    type Vtable = <IPlaybackMediaMarkerSequence as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IPlaybackMediaMarkerSequence as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for PlaybackMediaMarkerSequence {
+    type Target = IPlaybackMediaMarkerSequence;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for PlaybackMediaMarkerSequence {
+    const NAME: &'static str = "Windows.Media.Playback.PlaybackMediaMarkerSequence";
+}
+unsafe impl Send for PlaybackMediaMarkerSequence {}
+unsafe impl Sync for PlaybackMediaMarkerSequence {}
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Point {

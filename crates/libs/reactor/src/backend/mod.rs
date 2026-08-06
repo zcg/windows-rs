@@ -214,6 +214,7 @@ pub enum Prop {
     MaxLines,
     Maximum,
     MaxRating,
+    MediaSource,
     NumberOfPages,
     SelectedPageIndex,
     MaxVisiblePips,
