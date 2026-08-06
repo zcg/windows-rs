@@ -204,6 +204,9 @@ pub fn dispatch(handle: &Handle, prop: Prop, value: &PropValue) -> Result<bool> 
         (Prop::IsCalendarOpen, PropValue::Bool(v), Handle::CalendarDatePicker(h)) => {
             h.SetIsCalendarOpen(*v)?;
         }
+        (Prop::IsChecked, PropValue::Bool(v), Handle::ToggleSplitButton(h)) => {
+            h.SetIsChecked(*v)?;
+        }
         (
             Prop::IsChecked,
             PropValue::Bool(v),

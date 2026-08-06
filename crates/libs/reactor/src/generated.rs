@@ -896,6 +896,21 @@ pub fn title_bar_bindings(w: &TitleBar) -> PropBindings {
         Binding::Prop(Prop::Title, PropValue::Str(w.title.clone())),
     ]
 }
+pub fn toggle_split_button_bindings(w: &ToggleSplitButton) -> PropBindings {
+    vec![
+        Binding::Event(
+            Event::Click,
+            w.on_click.as_ref().map(|cb| EventHandler::Unit(cb.clone())),
+        ),
+        Binding::Event(
+            Event::IsCheckedChanged,
+            w.on_is_checked_changed
+                .as_ref()
+                .map(|cb| EventHandler::Bool(cb.clone())),
+        ),
+        Binding::Prop(Prop::IsChecked, PropValue::Bool(w.is_checked)),
+    ]
+}
 pub fn toggle_switch_bindings(w: &ToggleSwitch) -> PropBindings {
     let mut out = Vec::with_capacity(6usize);
     out.push(Binding::Event(

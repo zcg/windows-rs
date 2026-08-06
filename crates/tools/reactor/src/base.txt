@@ -383,7 +383,7 @@ Microsoft::UI::Xaml::Controls::IGridView
 Microsoft::UI::Xaml::Controls::IListView
 Microsoft::UI::Xaml::Controls::IItemsRepeater
 Microsoft::UI::Xaml::Controls::IItemsView
-Microsoft::UI::Xaml::Controls::IToggleSplitButton
+Microsoft::UI::Xaml::Controls::IToggleSplitButton::{get_IsChecked, IsCheckedChanged}
 Microsoft::UI::Xaml::Controls::ISwipeControl
 Microsoft::UI::Xaml::Controls::IToolTip
 Microsoft::UI::Xaml::Controls::Primitives::IPopup

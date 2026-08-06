@@ -23,6 +23,7 @@ pub fn route(tag: &str) -> Element {
         "text-box" => component(basic_input::text_box_page, ()),
         "toggle-button" => component(basic_input::toggle_button_page, ()),
         "toggle-switch" => component(basic_input::toggle_switch_page, ()),
+        "toggle-split-button" => component(basic_input::toggle_split_button_page, ()),
 
         "flip-view" => component(collections::flip_view_page, ()),
         "grid-view" => component(collections::grid_view_page, ()),

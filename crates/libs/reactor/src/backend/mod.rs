@@ -58,6 +58,7 @@ pub enum ControlKind {
     TabViewItem,
     NavigationView,
     TitleBar,
+    ToggleSplitButton,
     Pivot,
     PivotItem,
     BreadcrumbBar,
@@ -324,6 +325,7 @@ pub enum Event {
     SuggestionChosen,
     TextChanged,
     Toggled,
+    IsCheckedChanged,
     SliderSizeChanged,
     ValueChanged,
 }

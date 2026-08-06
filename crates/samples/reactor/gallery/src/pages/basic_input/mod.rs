@@ -13,6 +13,7 @@ mod slider;
 mod split_button;
 mod text_box;
 mod toggle_button;
+mod toggle_split_button;
 mod toggle_switch;
 
 pub use button::button_page;
@@ -30,4 +31,5 @@ pub use slider::slider_page;
 pub use split_button::split_button_page;
 pub use text_box::text_box_page;
 pub use toggle_button::toggle_button_page;
+pub use toggle_split_button::toggle_split_button_page;
 pub use toggle_switch::toggle_switch_page;

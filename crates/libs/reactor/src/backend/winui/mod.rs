@@ -107,6 +107,7 @@ define_handles! {
     SelectorBar,
     Slider,
     SplitButton,
+    ToggleSplitButton,
     SplitView,
     StackPanel,
     SwapChainPanel,

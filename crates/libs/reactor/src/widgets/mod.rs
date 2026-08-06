@@ -88,6 +88,7 @@ widget_modules! {
     text_box,
     time_picker,
     title_bar,
+    toggle_split_button,
     toggle_button,
     toggle_switch,
     tree_view,

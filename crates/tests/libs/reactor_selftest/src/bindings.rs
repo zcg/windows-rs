@@ -22980,6 +22980,25 @@ pub struct IToggleSplitButton_Vtbl {
         unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
+    IToggleSplitButtonFactory,
+    IToggleSplitButtonFactory_Vtbl,
+    0x25459d02_0ffc_5c7c_af56_f55aad6db5e7
+);
+impl windows_core::RuntimeType for IToggleSplitButtonFactory {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IToggleSplitButtonFactory_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub CreateInstance: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
     IToggleSplitButtonIsCheckedChangedEventArgs,
     IToggleSplitButtonIsCheckedChangedEventArgs_Vtbl,
     0x6cab1e15_c017_5760_828b_dafc21d54eb2
@@ -33315,6 +33334,32 @@ windows_core::imp::required_hierarchy!(
     UIElement,
     DependencyObject
 );
+impl ToggleSplitButton {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::IToggleSplitButtonFactory(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).CreateInstance)(
+                windows_core::Interface::as_raw(this),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        })
+    }
+    fn IToggleSplitButtonFactory<
+        R,
+        F: FnOnce(&IToggleSplitButtonFactory) -> windows_core::Result<R>,
+    >(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<
+            ToggleSplitButton,
+            IToggleSplitButtonFactory,
+        > = windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
 impl windows_core::RuntimeType for ToggleSplitButton {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::for_class::<Self, IToggleSplitButton>();

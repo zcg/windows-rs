@@ -135,6 +135,15 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         image: "ToggleSwitch.png",
     },
     ControlInfo {
+        title: "ToggleSplitButton",
+        description: "A split button with a checked state.",
+        category: "Basic Input",
+        tag: "toggle-split-button",
+        image: "ToggleSplitButton.png",
+    },
+        image: "ToggleSwitch.png",
+    },
+    ControlInfo {
         title: "FlipView",
         description: "Presents one item at a time with flipping navigation.",
         category: "Collections",

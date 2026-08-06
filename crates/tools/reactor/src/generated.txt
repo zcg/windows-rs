@@ -34,6 +34,7 @@ Microsoft::UI::Xaml::Controls::INavigationView2::{put_IsBackEnabled, put_PaneDis
 Microsoft::UI::Xaml::Controls::INumberBox::{put_Header, put_Maximum, put_Minimum, put_Value}
 Microsoft::UI::Xaml::Controls::IPasswordBox::{put_Header, put_IsPasswordRevealButtonEnabled, put_PasswordRevealMode, put_PlaceholderText}
 Microsoft::UI::Xaml::Controls::IPersonPicture::{put_DisplayName, put_Initials}
+Microsoft::UI::Xaml::Controls::IPipsPager::{put_MaxVisiblePips, put_NumberOfPages, put_SelectedPageIndex}
 Microsoft::UI::Xaml::Controls::IPivot::{put_SelectedIndex, put_Title}
 Microsoft::UI::Xaml::Controls::IProgressBar::put_IsIndeterminate
 Microsoft::UI::Xaml::Controls::IProgressRing::{put_IsActive, put_IsIndeterminate, put_Maximum, put_Minimum, put_Value}
@@ -53,6 +54,7 @@ Microsoft::UI::Xaml::Controls::ITextBlock::{put_IsTextSelectionEnabled, put_Text
 Microsoft::UI::Xaml::Controls::ITextBox::{put_AcceptsReturn, put_Header, put_PlaceholderText, put_TextWrapping}
 Microsoft::UI::Xaml::Controls::ITimePicker::{put_ClockIdentifier, put_Header, put_MinuteIncrement}
 Microsoft::UI::Xaml::Controls::ITitleBar::{put_IsBackButtonEnabled, put_IsBackButtonVisible, put_IsPaneToggleButtonVisible, put_Subtitle, put_Title}
+Microsoft::UI::Xaml::Controls::IToggleSplitButton::put_IsChecked
 Microsoft::UI::Xaml::Controls::IToggleSwitch::{put_Header, put_IsOn, put_OffContent, put_OnContent}
 Microsoft::UI::Xaml::Controls::ITreeView::put_SelectionMode
 Microsoft::UI::Xaml::Controls::IViewbox::put_Stretch
@@ -65,6 +67,7 @@ Microsoft::UI::Xaml::Controls::NavigationView::CreateInstance
 Microsoft::UI::Xaml::Controls::NumberBox::CreateInstance
 Microsoft::UI::Xaml::Controls::PasswordBox::CreateInstance
 Microsoft::UI::Xaml::Controls::PersonPicture::CreateInstance
+Microsoft::UI::Xaml::Controls::PipsPager::CreateInstance
 Microsoft::UI::Xaml::Controls::Pivot::CreateInstance
 Microsoft::UI::Xaml::Controls::Primitives::IRangeBase::{put_Maximum, put_Minimum, put_Value}
 Microsoft::UI::Xaml::Controls::Primitives::IRepeatButton::{put_Delay, put_Interval}
@@ -93,6 +96,7 @@ Microsoft::UI::Xaml::Controls::TextBlock::CreateInstance
 Microsoft::UI::Xaml::Controls::TextBox::CreateInstance
 Microsoft::UI::Xaml::Controls::TimePicker::CreateInstance
 Microsoft::UI::Xaml::Controls::TitleBar::CreateInstance
+Microsoft::UI::Xaml::Controls::ToggleSplitButton::CreateInstance
 Microsoft::UI::Xaml::Controls::ToggleSwitch::CreateInstance
 Microsoft::UI::Xaml::Controls::TreeView::CreateInstance
 Microsoft::UI::Xaml::Controls::Viewbox::CreateInstance

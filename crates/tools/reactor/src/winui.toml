@@ -255,6 +255,10 @@ Orientation = {}
 IsEnabled = {}
 ValueChanged = { property = "NewValue" }
 
+["Microsoft.UI.Xaml.Controls.ToggleSplitButton"]
+IsChecked = {}
+IsCheckedChanged = { property = "IsChecked" }
+Click = {}
 ["Microsoft.UI.Xaml.Controls.SplitButton"]
 Content = { type = "Str" }
 IsEnabled = {}

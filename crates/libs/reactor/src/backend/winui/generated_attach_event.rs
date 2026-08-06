@@ -305,6 +305,28 @@ pub fn dispatch(
                 .unwrap(),
             );
         }
+        (Event::Click, Handle::ToggleSplitButton(h)) => {
+            let handler = handler.clone();
+            revokers.push(
+                h.cast::<bindings::ISplitButton>()
+                    .unwrap()
+                    .Click(move |_sender, _args| {
+                        handler.invoke();
+                    })
+                    .unwrap(),
+            );
+        }
+        (Event::IsCheckedChanged, Handle::ToggleSplitButton(h)) => {
+            let handler = handler.clone();
+            let control = h.clone();
+            revokers.push(
+                h.IsCheckedChanged(move |_sender, _args| {
+                    let v = control.IsChecked().unwrap_or(false);
+                    handler.invoke_bool(v);
+                })
+                .unwrap(),
+            );
+        }
         (Event::Toggled, Handle::ToggleSwitch(h)) => {
             let handler = handler.clone();
             let control = h.clone();
