@@ -61,6 +61,7 @@ widget_modules! {
     menu_bar,
     navigation_view,
     number_box,
+    parallax_view,
     password_box,
     person_picture,
     pips_pager,

@@ -60,6 +60,7 @@ pub enum ControlKind {
     NavigationView,
     TitleBar,
     ToggleSplitButton,
+    ParallaxView,
     Pivot,
     PivotItem,
     BreadcrumbBar,

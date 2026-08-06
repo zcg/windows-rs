@@ -16406,6 +16406,25 @@ pub struct IParallaxView_Vtbl {
         unsafe extern "system" fn(*mut core::ffi::c_void) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
+    IParallaxViewFactory,
+    IParallaxViewFactory_Vtbl,
+    0x61dc973d_c595_5261_a9b7_35f41042eb00
+);
+impl windows_core::RuntimeType for IParallaxViewFactory {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IParallaxViewFactory_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub CreateInstance: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
     IPasswordBox,
     IPasswordBox_Vtbl,
     0x6d3ccff7_aaee_5adc_8298_33300fa119da
@@ -29474,6 +29493,27 @@ windows_core::imp::interface_hierarchy!(
     windows_core::IInspectable
 );
 windows_core::imp::required_hierarchy!(ParallaxView, FrameworkElement, UIElement, DependencyObject);
+impl ParallaxView {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::IParallaxViewFactory(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).CreateInstance)(
+                windows_core::Interface::as_raw(this),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &mut result__,
+            )
+            .and_then(|| windows_core::Type::from_abi(result__))
+        })
+    }
+    fn IParallaxViewFactory<R, F: FnOnce(&IParallaxViewFactory) -> windows_core::Result<R>>(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<ParallaxView, IParallaxViewFactory> =
+            windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
 impl windows_core::RuntimeType for ParallaxView {
     const SIGNATURE: windows_core::imp::ConstBuffer =
         windows_core::imp::ConstBuffer::for_class::<Self, IParallaxView>();

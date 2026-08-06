@@ -104,3 +104,10 @@ pub fn run_connected_animation(key: &str, element: &UIElement) -> Result<bool> {
     let animation = service.PrepareToAnimate(key, element)?;
     animation.TryStart(element)
 }
+
+/// Attach a scrolling source (e.g. a ScrollViewer) to a ParallaxView so its
+/// background shifts while the source scrolls.
+pub fn parallax_attach_source(parallax: &UIElement, source: &UIElement) -> Result<()> {
+    let pv: bindings::ParallaxView = parallax.cast()?;
+    pv.SetSource(source)
+}
