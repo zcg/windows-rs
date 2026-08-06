@@ -1457,13 +1457,7 @@ impl Backend for WinUIBackend {
                     tb.SetMaxLines((*v).max(0))
                 }
                 (Prop::TextTrimming, PropValue::I32(v), Handle::TextBlock(tb)) => {
-                    let kind = match *v {
-                        1 => bindings::TextTrimming::CharacterEllipsis,
-                        2 => bindings::TextTrimming::WordEllipsis,
-                        3 => bindings::TextTrimming::Clip,
-                        _ => bindings::TextTrimming::None,
-                    };
-                    tb.SetTextTrimming(kind)
+                    tb.SetTextTrimming(TextTrimming(*v))
                 }
                 (Prop::NavigateUri, PropValue::Str(s), Handle::HyperlinkButton(h)) => {
                     let uri = bindings::Uri::CreateUri(s.as_str())?;

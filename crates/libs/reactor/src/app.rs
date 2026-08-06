@@ -136,7 +136,6 @@ fn on_window_closed(key: u64) {
     // shutdown 会运行用户 cleanup / unmount 回调，这些回调可能重新注册窗口
     // 或触达窗口注册表；本函数持有注册表的 RefCell 借用，re-enter 会 panic。
     // 用 fault::catch 包住，避免 panic 从 WinUI Closed 事件边界逃逸（abort 进程）。
-    eprintln!("[reactor] window closed: running shutdown");
     fault::catch("window closed", || {
         WINDOW_REGISTRY.with(|reg| {
             if let Some(host) = reg.borrow().get(key) {
@@ -144,7 +143,6 @@ fn on_window_closed(key: u64) {
             }
         });
     });
-    eprintln!("[reactor] shutdown done");
     // Drop outside the registry borrow so teardown can re-enter safely.
     let (removed, empty) = WINDOW_REGISTRY.with(|reg| reg.borrow_mut().remove(key));
     drop(removed);

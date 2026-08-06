@@ -88,15 +88,17 @@ fn reconcile_positional_live<B: Backend + 'static>(
             // 逐位修复会因位置错位而错乱——整体重建 parent 的 children，
             // 恢复 mirror 与 UI 树一致。不能 break 半途而废：break 会让
             // mirror 永久错位、后续帧持续损坏（用户曾见"关闭窗口仍在播"）。
-            eprintln!(
-                "[reactor] positional reconcile desync at parent={parent:?} i={i} \
-                 (mirror_len={mirror_len}, old_live.len={old_len}, \
-                  new_live.len={new_len}); rebuilding children",
-                mirror_len = reconciler
-                    .children_mirror
-                    .get(&parent)
-                    .map_or(0, |v| v.len()),
-            );
+            if cfg!(debug_assertions) {
+                eprintln!(
+                    "[reactor] positional reconcile desync at parent={parent:?} i={i} \
+                     (mirror_len={mirror_len}, old_live.len={old_len}, \
+                      new_live.len={new_len}); rebuilding children",
+                    mirror_len = reconciler
+                        .children_mirror
+                        .get(&parent)
+                        .map_or(0, |v| v.len()),
+                );
+            }
             rebuild_children(reconciler, parent, new_live);
             return;
         }
