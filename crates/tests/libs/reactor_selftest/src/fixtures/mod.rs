@@ -1,4 +1,3 @@
-pub mod items_repeater_repro;
 pub mod all_layouts;
 pub mod backdrop;
 pub mod controls;
@@ -10,6 +9,7 @@ pub mod grid_attached;
 pub mod hooks;
 pub mod image_scale;
 pub mod interactions;
+pub mod items_repeater_repro;
 pub mod layout;
 pub mod pointer_input;
 pub mod prop_updates;

@@ -1,8 +1,9 @@
 use crate::fixtures::reconciler::FixtureFuture;
 use crate::fixtures::{
     all_layouts, backdrop, controls, controls_extended, dynamic, element_ref, event_detachment,
-    grid_attached, hooks, items_repeater_repro, image_scale, interactions, layout, pointer_input, prop_updates,
-    reconciler, reconciler_stress, secondary_window, timers, tooltip, universal_props,
+    grid_attached, hooks, image_scale, interactions, items_repeater_repro, layout, pointer_input,
+    prop_updates, reconciler, reconciler_stress, secondary_window, timers, tooltip,
+    universal_props,
 };
 use crate::harness::Harness;
 
@@ -39,7 +40,10 @@ pub static FIXTURES: &[(&str, FixtureFn)] = &[
         element_ref::text_box_focus_and_clear,
     ),
     ("Grid_RowColumnLayout", layout::grid_row_column_layout),
-    ("ItemsRepeaterRepro", items_repeater_repro::items_repeater_repro),
+    (
+        "ItemsRepeaterRepro",
+        items_repeater_repro::items_repeater_repro,
+    ),
     (
         "Grid_AttachedProps_AllWidgetKinds",
         grid_attached::grid_attached_props_all_widget_kinds,
