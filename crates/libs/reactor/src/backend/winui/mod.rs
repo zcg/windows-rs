@@ -2100,9 +2100,11 @@ impl Backend for WinUIBackend {
             .unwrap_or_else(|| panic!("set_templated_row_content: unknown list {list_id}"));
         let content_ui = content.and_then(|c| map.get(&c).map(Handle::as_ui_element));
 
-        // ListView/GridView rows are filled through realized template containers.
+        // ListView/GridView/ItemsRepeater rows are filled through realized
+        // template containers (ItemsRepeater.ElementPrepared hands out a
+        // ContentControl per realized index).
         match list_h {
-            Handle::ListView(_) | Handle::GridView(_) => {
+            Handle::ListView(_) | Handle::GridView(_) | Handle::ItemsRepeater(_) => {
                 let container = self
                     .templated
                     .borrow()
