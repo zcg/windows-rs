@@ -32,7 +32,7 @@ pub fn sound_page(_: &(), cx: &mut RenderCx) -> Element {
                     ToggleSwitch::new(enabled)
                         .header("Element sound player")
                         .on_toggled({
-                            let set_enabled = set_enabled.clone();
+                            let set_enabled = set_enabled;
                             move |v| {
                                 let _ = set_element_sound_state(v);
                                 set_enabled.call(v);
@@ -42,7 +42,7 @@ pub fn sound_page(_: &(), cx: &mut RenderCx) -> Element {
                         .content("Spatial audio")
                         .enabled(enabled)
                         .on_checked({
-                            let set_spatial = set_spatial.clone();
+                            let set_spatial = set_spatial;
                             move |v| {
                                 let _ = set_element_spatial_audio(v);
                                 set_spatial.call(v);

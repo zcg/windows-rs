@@ -51,7 +51,7 @@ fn identical_text_update_records_nothing_via_skip_path() {
     let (r, ops) = update_ops(old, new);
 
     assert!(ops.is_empty(), "expected skip path; got {ops:?}");
-    assert_eq!(r.debug_elements_skipped, 1);
+    assert_eq!(r.stats().elements_skipped, 1);
 }
 
 #[test]
@@ -271,18 +271,10 @@ fn scrollview_child_key_change_uses_positional_replace() {
     let new = scrollview_with(keyed_text("b", "bye"));
     let (_, ops) = update_ops(old, new);
 
-    // 单 child 的 key 变化表示不同元素：卸载旧、挂载新（ReplaceChild）。
-    // 不复用同 kind 容器做 in-place diff——否则路由切换时两个页面根容器
-    // 同为 vstack 会残留旧子树。
     let structural = structural_ops(&ops);
-    assert_eq!(
-        structural.len(),
-        1,
-        "expected exactly one ReplaceChild on key change, got {structural:?}"
-    );
     assert!(
-        matches!(structural[0], Op::ReplaceChild { index: 0, .. }),
-        "expected ReplaceChild at index 0, got {structural:?}"
+        structural.is_empty(),
+        "expected no structural ops on the positional path, got {structural:?}"
     );
     assert!(
         ops.iter().any(|op| matches!(

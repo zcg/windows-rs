@@ -15,7 +15,7 @@ pub fn pull_to_refresh_page(_: &(), cx: &mut RenderCx) -> Element {
         .map(|i| format!("Item {i} - pull down to refresh"))
         .collect();
 
-    let list: Element = list_view(items.clone(), move |item, _| {
+    let list: Element = list_view(items, move |item, _| {
         text_block(item.clone()).padding(Thickness::uniform(8.0))
     })
     .height(320.0)

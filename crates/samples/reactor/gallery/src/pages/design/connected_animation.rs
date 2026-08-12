@@ -24,8 +24,8 @@ pub fn connected_animation_page(_: &(), cx: &mut RenderCx) -> Element {
         .into();
 
     let run_animation = {
-        let element_ref = element_ref.clone();
-        let set_status = set_status.clone();
+        let element_ref = element_ref;
+        let set_status = set_status;
         move || {
             let borrowed = element_ref.borrow();
             let Some(element) = borrowed.as_ref() else {

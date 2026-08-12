@@ -7,6 +7,12 @@ use std::rc::Rc;
 #[derive(Clone)]
 pub struct ImageHandle(windows_core::IInspectable);
 
+impl sealed::ElementHandle for ImageHandle {
+    fn from_native(native: windows_core::IInspectable) -> Self {
+        Self(native)
+    }
+}
+
 impl ImageHandle {
     /// Deliver the host's rasterization (DPI) scale to `f`: once the control is
     /// loaded into the tree, and again whenever the scale changes (for example the
@@ -65,6 +71,10 @@ pub struct Image {
     /// 仅对 URI 位图源生效；SVG / Surface 源忽略。
     pub decode_width: Option<u32>,
     pub mounted: Option<Callback<Option<windows_core::IInspectable>>>,
+}
+
+impl ElementRefExt for Image {
+    type Handle = ImageHandle;
 }
 impl Default for Image {
     fn default() -> Self {

@@ -21,7 +21,6 @@ pub fn clipboard_page(_: &(), cx: &mut RenderCx) -> Element {
                     hstack((
                         button("Copy to Clipboard")
                             .on_click({
-                                let text = text.clone();
                                 let set_status = set_status.clone();
                                 move || {
                                     let ok = clipboard_set_text(&text).is_ok();
@@ -30,8 +29,8 @@ pub fn clipboard_page(_: &(), cx: &mut RenderCx) -> Element {
                             }),
                         button("Paste from Clipboard")
                             .on_click({
-                                let set_text = set_text.clone();
-                                let set_status = set_status.clone();
+                                let set_text = set_text;
+                                let set_status = set_status;
                                 move || {
                                     match clipboard_get_text() {
                                         Some(v) => { set_text.call(v); set_status.call("Pasted!".into()); }

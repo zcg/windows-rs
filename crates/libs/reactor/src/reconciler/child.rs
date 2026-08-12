@@ -1,50 +1,54 @@
-use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
+
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::*;
 
-/// Update the child at `index` and return the control now occupying that slot.
-fn update_child_tracked<B: Backend + 'static>(
-    reconciler: &mut Reconciler<B>,
+fn mounted_output<B: Backend + 'static>(
+    reconciler: &Reconciler<B>,
     parent: ControlId,
     index: usize,
-    old: &Element,
-    new: &Element,
-) -> Option<ControlId> {
-    let old_id = reconciler.child_at(parent, index)?;
-    match reconciler.update(old, new, old_id) {
-        Some(nid) if nid != old_id => {
-            reconciler.replace_child_tracked(parent, index, nid);
-            Some(nid)
-        }
-        Some(nid) => Some(nid),
-        None => {
-            reconciler.remove_child_tracked(parent, index);
-            None
-        }
-    }
+) -> MountedOutput {
+    reconciler
+        .tree
+        .logical_child(parent, index)
+        .expect("logical child slot missing")
 }
 
-/// Current live index of `ctrl` in the authoritative children mirror.
+fn output_for_token<B: Backend + 'static>(
+    reconciler: &Reconciler<B>,
+    parent: ControlId,
+    token: LogicalSlotId,
+) -> Option<usize> {
+    reconciler
+        .tree
+        .logical_children(parent)
+        .iter()
+        .position(|output| output.slot == token)
+}
+
+fn forced<B: Backend + 'static>(reconciler: &Reconciler<B>, output: MountedOutput) -> bool {
+    output
+        .native
+        .is_some_and(|id| reconciler.is_control_forced(id))
+        || output
+            .logical
+            .is_some_and(|id| reconciler.pass.forced_nodes.contains(&id))
+}
+
 fn live_index<B: Backend + 'static>(
     reconciler: &Reconciler<B>,
     parent: ControlId,
-    ctrl: ControlId,
+    control: ControlId,
 ) -> Option<usize> {
-    reconciler
-        .children_mirror
-        .get(&parent)
-        .and_then(|v| v.iter().position(|&c| c == ctrl))
+    reconciler.tree.child_position(parent, control)
 }
 
 fn live_len<B: Backend + 'static>(reconciler: &Reconciler<B>, parent: ControlId) -> usize {
-    reconciler
-        .children_mirror
-        .get(&parent)
-        .map_or(0, |v| v.len())
+    reconciler.tree.children(parent).len()
 }
 
-pub fn reconcile<B: Backend + 'static>(
+pub(super) fn reconcile<B: Backend + 'static>(
     reconciler: &mut Reconciler<B>,
     parent: ControlId,
     old_live: LiveChildrenRef<'_>,
@@ -59,7 +63,7 @@ pub fn reconcile<B: Backend + 'static>(
     }
 }
 
-pub fn reconcile_positional<B: Backend + 'static>(
+pub(super) fn reconcile_positional<B: Backend + 'static>(
     reconciler: &mut Reconciler<B>,
     parent: ControlId,
     old_live: LiveChildrenRef<'_>,
@@ -78,96 +82,40 @@ fn reconcile_positional_live<B: Backend + 'static>(
     let new_len = new_live.len();
     let common = old_len.min(new_len);
 
-    for i in 0..common {
-        if reconciler.child_at(parent, i).is_none() {
-            // mirror 与 live 脱节：位置 i 无旧控件可复用。已知触发：
-            // - 组件 mount 时 render 出 Empty（`mount_component` 返回 None、
-            //   未写入 mirror），而 live 数组仍把它当占位项；
-            // - 根已被卸载（窗口关闭 `shutdown` 清空 mirror）而渲染循环
-            //   仍以旧 root_id 跑了一帧。
-            // 逐位修复会因位置错位而错乱——整体重建 parent 的 children，
-            // 恢复 mirror 与 UI 树一致。不能 break 半途而废：break 会让
-            // mirror 永久错位、后续帧持续损坏（用户曾见"关闭窗口仍在播"）。
-            if cfg!(debug_assertions) {
-                eprintln!(
-                    "[reactor] positional reconcile desync at parent={parent:?} i={i} \
-                     (mirror_len={mirror_len}, old_live.len={old_len}, \
-                      new_live.len={new_len}); rebuilding children",
-                    mirror_len = reconciler
-                        .children_mirror
-                        .get(&parent)
-                        .map_or(0, |v| v.len()),
-                );
-            }
-            rebuild_children(reconciler, parent, new_live);
-            return;
-        }
+    debug_assert_eq!(
+        reconciler.tree.logical_children(parent).len(),
+        old_len,
+        "logical child mirror disagrees with old child list"
+    );
 
+    for i in 0..common {
         let old_el = old_live.get(i).unwrap();
         let new_el = new_live.get(i).unwrap();
+        let old_output = mounted_output(reconciler, parent, i);
 
-        if !reconciler.force_component_rerender && can_skip_update(old_el, new_el) {
-            // Dirty child state must pierce structural equality.
-            let child_id = reconciler.child_at(parent, i);
-            let state_dirty = child_id.is_some_and(|cid| reconciler.is_component_state_dirty(cid));
-            if !state_dirty {
-                reconciler.debug_elements_skipped += 1;
-                continue;
-            }
+        if can_skip_update(old_el, new_el) && !forced(reconciler, old_output) {
+            reconciler.stats.elements_skipped += 1;
+            continue;
         }
 
-        if old_el.kind_matches(new_el) {
-            update_child_tracked(reconciler, parent, i, old_el, new_el);
+        let new_output = reconciler.update_output(old_el, new_el, old_output);
+        if new_output != old_output {
+            reconciler.replace_output_tracked(parent, i, new_output);
+        }
+    }
+
+    for idx in (common..old_len).rev() {
+        let output = mounted_output(reconciler, parent, idx);
+        reconciler.unmount_output(output);
+        reconciler.remove_output_tracked(parent, idx);
+    }
+
+    for i in common..new_len {
+        let output = reconciler.mount_output(new_live.get(i).unwrap());
+        if i == reconciler.tree.logical_children(parent).len() {
+            reconciler.append_output_tracked(parent, output);
         } else {
-            if let Some(old_id) = reconciler.child_at(parent, i) {
-                reconciler.unmount(old_id);
-            }
-            match reconciler.mount(new_el) {
-                Some(new_id) => reconciler.replace_child_tracked(parent, i, new_id),
-                None => reconciler.remove_child_tracked(parent, i),
-            }
-        }
-    }
-
-    if old_len > new_len {
-        for idx in (common..old_len).rev() {
-            if let Some(id) = reconciler.child_at(parent, idx) {
-                reconciler.unmount(id);
-            }
-            reconciler.remove_child_tracked(parent, idx);
-        }
-    }
-
-    if new_len > old_len {
-        for i in common..new_len {
-            let el = new_live.get(i).unwrap();
-            if let Some(child_id) = reconciler.mount(el) {
-                reconciler.append_child_tracked(parent, child_id);
-            }
-        }
-    }
-}
-
-/// 重建 `parent` 的全部 children：卸载 mirror 中的现有控件，按 `new_live`
-/// 重新挂载。用于 mirror 与 live 脱节时的安全恢复（见
-/// `reconcile_positional_live`）。`mount` 对 render-Empty 的组件返回 None，
-/// 该位置自然跳过——恢复后 mirror 与 UI 树对齐，不再越界。
-fn rebuild_children<B: Backend + 'static>(
-    reconciler: &mut Reconciler<B>,
-    parent: ControlId,
-    new_live: &LiveChildrenRef<'_>,
-) {
-    let len = live_len(reconciler, parent);
-    for k in (0..len).rev() {
-        if let Some(id) = reconciler.child_at(parent, k) {
-            reconciler.unmount(id);
-        }
-        reconciler.remove_child_tracked(parent, k);
-    }
-    for idx in 0..new_live.len() {
-        let el = new_live.get(idx).unwrap();
-        if let Some(child_id) = reconciler.mount(el) {
-            reconciler.append_child_tracked(parent, child_id);
+            reconciler.insert_output_tracked(parent, i, output);
         }
     }
 }
@@ -180,11 +128,7 @@ fn effective_key(el: &Element, positional_index: usize) -> Cow<'_, str> {
 }
 
 fn key_match(a: &Element, b: &Element) -> bool {
-    if !a.can_update(b) {
-        return false;
-    }
-
-    a.key() == b.key()
+    a.can_update(b) && a.key() == b.key()
 }
 
 fn reconcile_keyed_live<B: Backend + 'static>(
@@ -195,35 +139,29 @@ fn reconcile_keyed_live<B: Backend + 'static>(
 ) {
     let old_len = old.len();
     let new_len = new.len();
+    debug_assert_eq!(
+        reconciler.tree.logical_children(parent).len(),
+        old_len,
+        "logical child mirror disagrees with old keyed child list"
+    );
 
     let mut prefix = 0;
     while prefix < old_len
         && prefix < new_len
         && key_match(old.get(prefix).unwrap(), new.get(prefix).unwrap())
     {
-        let old_el = old.get(prefix).unwrap();
-        let new_el = new.get(prefix).unwrap();
-        if reconciler.child_at(parent, prefix).is_some() {
-            if !reconciler.force_component_rerender && can_skip_update(old_el, new_el) {
-                let child_id = reconciler.child_at(parent, prefix);
-                let state_dirty =
-                    child_id.is_some_and(|cid| reconciler.is_component_state_dirty(cid));
-                if state_dirty {
-                    update_child_tracked(reconciler, parent, prefix, old_el, new_el);
-                } else {
-                    reconciler.debug_elements_skipped += 1;
-                }
-            } else {
-                update_child_tracked(reconciler, parent, prefix, old_el, new_el);
-            }
-        }
+        update_keyed_output(
+            reconciler,
+            parent,
+            prefix,
+            old.get(prefix).unwrap(),
+            new.get(prefix).unwrap(),
+        );
         prefix += 1;
     }
 
-    debug_assert!(prefix <= old_len.min(new_len));
-    let old_remaining = old_len.saturating_sub(prefix);
-    let new_remaining = new_len.saturating_sub(prefix);
-
+    let old_remaining = old_len - prefix;
+    let new_remaining = new_len - prefix;
     let mut suffix = 0;
     while suffix < old_remaining
         && suffix < new_remaining
@@ -232,59 +170,45 @@ fn reconcile_keyed_live<B: Backend + 'static>(
             new.get(new_len - 1 - suffix).unwrap(),
         )
     {
-        let old_idx = old_len - 1 - suffix;
-        let panel_idx = reconciler
-            .children_mirror
-            .get(&parent)
-            .map_or(0, |v| v.len().saturating_sub(1).saturating_sub(suffix));
-        let old_el = old.get(old_idx).unwrap();
-        let new_el = new.get(new_len - 1 - suffix).unwrap();
-        if reconciler.child_at(parent, panel_idx).is_some() {
-            if !reconciler.force_component_rerender && can_skip_update(old_el, new_el) {
-                let child_id = reconciler.child_at(parent, panel_idx);
-                let state_dirty =
-                    child_id.is_some_and(|cid| reconciler.is_component_state_dirty(cid));
-                if state_dirty {
-                    update_child_tracked(reconciler, parent, panel_idx, old_el, new_el);
-                } else {
-                    reconciler.debug_elements_skipped += 1;
-                }
-            } else {
-                update_child_tracked(reconciler, parent, panel_idx, old_el, new_el);
-            }
-        }
+        let logical_index = old_len - 1 - suffix;
+        update_keyed_output(
+            reconciler,
+            parent,
+            logical_index,
+            old.get(logical_index).unwrap(),
+            new.get(new_len - 1 - suffix).unwrap(),
+        );
         suffix += 1;
     }
 
     let old_start = prefix;
-    let old_end = old_len - suffix;
+    let old_mid_len = old_len - prefix - suffix;
     let new_start = prefix;
-    let new_end = new_len - suffix;
-    let old_mid_len = old_end - old_start;
-    let new_mid_len = new_end - new_start;
-
+    let new_mid_len = new_len - prefix - suffix;
     if old_mid_len == 0 && new_mid_len == 0 {
         return;
     }
 
-    if old_mid_len == 0 {
-        for i in 0..new_mid_len {
-            let new_el = new.get(new_start + i).unwrap();
-            if let Some(ctrl) = reconciler.mount(new_el) {
-                reconciler.insert_child_tracked(parent, prefix + i, ctrl);
-            }
-        }
-        return;
-    }
-
-    if new_mid_len == 0 {
-        for i in (0..old_mid_len).rev() {
-            let panel_idx = prefix + i;
-            if let Some(id) = reconciler.child_at(parent, panel_idx) {
-                reconciler.unmount(id);
-            }
-            reconciler.remove_child_tracked(parent, panel_idx);
-        }
+    let direct_native = (0..old_mid_len).all(|i| {
+        old.get(old_start + i).unwrap().as_widget().is_some()
+            && mounted_output(reconciler, parent, prefix + i)
+                .logical
+                .is_none()
+    }) && (0..new_mid_len)
+        .all(|i| new.get(new_start + i).unwrap().as_widget().is_some());
+    if direct_native
+        && reconcile_keyed_native_middle(
+            reconciler,
+            parent,
+            old,
+            new,
+            old_start,
+            old_mid_len,
+            new_start,
+            new_mid_len,
+            prefix,
+        )
+    {
         return;
     }
 
@@ -302,6 +226,117 @@ fn reconcile_keyed_live<B: Backend + 'static>(
 }
 
 #[expect(clippy::too_many_arguments, clippy::needless_range_loop)]
+fn reconcile_keyed_native_middle<B: Backend + 'static>(
+    reconciler: &mut Reconciler<B>,
+    parent: ControlId,
+    old: &LiveChildrenRef<'_>,
+    new: &LiveChildrenRef<'_>,
+    old_start: usize,
+    old_mid_len: usize,
+    new_start: usize,
+    new_mid_len: usize,
+    prefix: usize,
+) -> bool {
+    if old_mid_len != new_mid_len {
+        return false;
+    }
+    let mut old_key_map: FxHashMap<Cow<'_, str>, usize> = FxHashMap::default();
+    old_key_map.reserve(old_mid_len);
+    for i in 0..old_mid_len {
+        old_key_map.insert(
+            effective_key(old.get(old_start + i).unwrap(), old_start + i),
+            i,
+        );
+    }
+
+    let mut new_to_old = vec![-1; new_mid_len];
+    let mut matched = vec![false; old_mid_len];
+    for i in 0..new_mid_len {
+        let new_el = new.get(new_start + i).unwrap();
+        let key = effective_key(new_el, new_start + i);
+        if let Some(&old_rel) = old_key_map.get(key.as_ref())
+            && !matched[old_rel]
+            && old.get(old_start + old_rel).unwrap().can_update(new_el)
+        {
+            new_to_old[i] = old_rel as i32;
+            matched[old_rel] = true;
+        }
+    }
+    if new_to_old.iter().any(|old| *old < 0) {
+        return false;
+    }
+
+    let lis = compute_lis(&new_to_old);
+    let mut old_controls = FxHashMap::default();
+    old_controls.reserve(old_mid_len);
+    for i in 0..old_mid_len {
+        old_controls.insert(
+            i,
+            mounted_output(reconciler, parent, prefix + i)
+                .native
+                .unwrap(),
+        );
+    }
+    let suffix_anchor = reconciler.tree.logical_children(parent)[prefix + old_mid_len..]
+        .iter()
+        .find_map(|output| output.native);
+    let mut placed = vec![None; new_mid_len];
+
+    for i in (0..new_mid_len).rev() {
+        let new_el = new.get(new_start + i).unwrap();
+        let anchor = placed
+            .get(i + 1)
+            .and_then(|control| *control)
+            .or(suffix_anchor);
+        let anchor_index = anchor
+            .and_then(|control| live_index(reconciler, parent, control))
+            .unwrap_or_else(|| live_len(reconciler, parent));
+
+        let old_rel = new_to_old[i] as usize;
+        let control = old_controls[&old_rel];
+        if !lis.contains(&i) {
+            let current = live_index(reconciler, parent, control).unwrap();
+            let target = if current < anchor_index {
+                anchor_index - 1
+            } else {
+                anchor_index
+            };
+            reconciler.move_child_tracked(parent, current, target);
+        }
+        let output = reconciler.update_output(
+            old.get(old_start + old_rel).unwrap(),
+            new_el,
+            mounted_output(reconciler, parent, prefix + old_rel),
+        );
+        debug_assert_eq!(output.native, Some(control));
+        placed[i] = Some(control);
+    }
+
+    reconciler
+        .tree
+        .permute_logical_children(parent, prefix, &new_to_old, &mut matched);
+    true
+}
+
+fn update_keyed_output<B: Backend + 'static>(
+    reconciler: &mut Reconciler<B>,
+    parent: ControlId,
+    index: usize,
+    old: &Element,
+    new: &Element,
+) {
+    let old_output = mounted_output(reconciler, parent, index);
+    if can_skip_update(old, new) && !forced(reconciler, old_output) {
+        reconciler.stats.elements_skipped += 1;
+        return;
+    }
+    let new_output = reconciler.update_output(old, new, old_output);
+    if new_output != old_output {
+        reconciler.replace_output_tracked(parent, index, new_output);
+    }
+}
+
+#[expect(clippy::too_many_arguments)]
 fn reconcile_keyed_middle<B: Backend + 'static>(
     reconciler: &mut Reconciler<B>,
     parent: ControlId,
@@ -313,116 +348,96 @@ fn reconcile_keyed_middle<B: Backend + 'static>(
     new_mid_len: usize,
     prefix: usize,
 ) {
-    let mut old_key_map: FxHashMap<Cow<'_, str>, usize> = FxHashMap::default();
-    old_key_map.reserve(old_mid_len);
+    let mut old_by_key: FxHashMap<Cow<'_, str>, (usize, LogicalSlotId)> = FxHashMap::default();
     for i in 0..old_mid_len {
-        let el = old.get(old_start + i).unwrap();
-        let key = effective_key(el, old_start + i);
-        old_key_map.insert(key, i);
+        let old_index = old_start + i;
+        old_by_key.insert(
+            effective_key(old.get(old_index).unwrap(), old_index),
+            (i, mounted_output(reconciler, parent, prefix + i).slot),
+        );
     }
 
-    let mut new_to_old: Vec<i32> = vec![-1; new_mid_len];
-    let mut matched: Vec<bool> = vec![false; old_mid_len];
-    for i in 0..new_mid_len {
-        let el = new.get(new_start + i).unwrap();
-        let key = effective_key(el, new_start + i);
-        if let Some(&old_rel) = old_key_map.get(key.as_ref()) {
-            let old_el = old.get(old_start + old_rel).unwrap();
-
-            if old_el.can_update(el) {
-                new_to_old[i] = old_rel as i32;
-                matched[old_rel] = true;
-            }
+    let mut new_to_old = vec![-1; new_mid_len];
+    let mut matched = vec![false; old_mid_len];
+    for (i, old_index_slot) in new_to_old.iter_mut().enumerate() {
+        let new_index = new_start + i;
+        let key = effective_key(new.get(new_index).unwrap(), new_index);
+        if let Some(&(old_index, _)) = old_by_key.get(key.as_ref())
+            && !matched[old_index]
+            && key_match(
+                old.get(old_start + old_index).unwrap(),
+                new.get(new_index).unwrap(),
+            )
+        {
+            *old_index_slot = old_index as i32;
+            matched[old_index] = true;
         }
     }
 
-    let lis: FxHashSet<usize> = compute_lis(&new_to_old);
+    let lis = compute_lis(&new_to_old);
 
     for i in (0..old_mid_len).rev() {
         if !matched[i] {
-            let panel_idx = prefix + i;
-            if let Some(id) = reconciler.child_at(parent, panel_idx) {
-                reconciler.unmount(id);
-            }
-            reconciler.remove_child_tracked(parent, panel_idx);
+            let output = mounted_output(reconciler, parent, prefix + i);
+            reconciler.unmount_output(output);
+            reconciler.remove_output_tracked(parent, prefix + i);
         }
     }
 
-    // Matched controls survive compaction in old relative order before the suffix.
-    let mut old_ctrl: FxHashMap<usize, ControlId> = FxHashMap::default();
-    old_ctrl.reserve(old_mid_len);
-    let mut matched_count = 0usize;
-    {
-        let mut panel_idx = prefix;
-        for oi in 0..old_mid_len {
-            if matched[oi] {
-                if let Some(id) = reconciler.child_at(parent, panel_idx) {
-                    old_ctrl.insert(oi, id);
-                }
-                panel_idx += 1;
-                matched_count += 1;
-            }
-        }
-    }
-    // Stable right-edge anchor; the suffix never moves during middle reconciliation.
-    let suffix_anchor = reconciler.child_at(parent, prefix + matched_count);
-
-    // Walk right-to-left so each item is placed before an already-final successor.
-    let mut placed: Vec<Option<ControlId>> = vec![None; new_mid_len];
+    let matched_count = matched.iter().filter(|matched| **matched).count();
+    let suffix_anchor = reconciler
+        .tree
+        .logical_child(parent, prefix + matched_count)
+        .map(|output| output.slot);
+    let mut placed = vec![None; new_mid_len];
     for i in (0..new_mid_len).rev() {
-        let new_el = new.get(new_start + i).unwrap();
+        let new_index = new_start + i;
+        let anchor = placed
+            .get(i + 1)
+            .and_then(|output| *output)
+            .or(suffix_anchor);
 
-        let anchor = if i + 1 < new_mid_len {
-            placed[i + 1]
-        } else {
-            suffix_anchor
-        };
-        let anchor_idx = match anchor {
-            Some(a) => {
-                live_index(reconciler, parent, a).unwrap_or_else(|| live_len(reconciler, parent))
-            }
-            None => live_len(reconciler, parent),
-        };
+        let anchor_index = anchor
+            .and_then(|slot| output_for_token(reconciler, parent, slot))
+            .unwrap_or_else(|| reconciler.tree.logical_children(parent).len());
 
         if new_to_old[i] == -1 {
-            match reconciler.mount(new_el) {
-                Some(ctrl) => {
-                    reconciler.insert_child_tracked(parent, anchor_idx, ctrl);
-                    placed[i] = Some(ctrl);
-                }
-                None => placed[i] = anchor,
-            }
+            let output = reconciler.mount_output(new.get(new_index).unwrap());
+            reconciler.insert_output_tracked(parent, anchor_index, output);
+            placed[i] = Some(output.slot);
             continue;
         }
 
-        let old_rel = new_to_old[i] as usize;
-        let Some(&ctrl) = old_ctrl.get(&old_rel) else {
+        let old_slot = old_by_key
+            .get(&effective_key(new.get(new_index).unwrap(), new_index))
+            .map(|(_, slot)| *slot)
+            .expect("matched keyed child has no mounted output");
+        let Some(current) = output_for_token(reconciler, parent, old_slot) else {
             continue;
         };
-        let old_el = old.get(old_start + old_rel).unwrap();
-
-        // Left-moving items shift the anchor during remove-then-insert.
-        if !lis.contains(&i)
-            && let Some(from) = live_index(reconciler, parent, ctrl)
-        {
-            let to = if from < anchor_idx {
-                anchor_idx - 1
+        if !lis.contains(&i) && current != anchor_index {
+            let target = if current < anchor_index {
+                anchor_index - 1
             } else {
-                anchor_idx
+                anchor_index
             };
-            reconciler.move_child_tracked(parent, from, to);
+            reconciler.move_output_tracked(parent, current, target);
         }
-
-        // Route through `update` so skip accounting, dirty-state forcing, and theme
-        // re-resolution stay centralized.
-        placed[i] = match live_index(reconciler, parent, ctrl) {
-            Some(cur) => update_child_tracked(reconciler, parent, cur, old_el, new_el).or(anchor),
-            None => anchor,
-        };
+        let current = output_for_token(reconciler, parent, old_slot).unwrap();
+        let old_output = mounted_output(reconciler, parent, current);
+        let updated = reconciler.update_output(
+            old.get(old_start + new_to_old[i] as usize).unwrap(),
+            new.get(new_index).unwrap(),
+            old_output,
+        );
+        if updated != old_output {
+            reconciler.replace_output_tracked(parent, current, updated);
+        }
+        placed[i] = Some(updated.slot);
     }
 }
 
-pub fn compute_lis(arr: &[i32]) -> FxHashSet<usize> {
+pub(super) fn compute_lis(arr: &[i32]) -> FxHashSet<usize> {
     let n = arr.len();
     if n == 0 {
         return FxHashSet::default();

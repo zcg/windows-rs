@@ -125,15 +125,15 @@ pub unsafe fn FreeResource(hresdata: super::HGLOBAL) -> windows_core::BOOL {
 }
 #[cfg(feature = "minwindef")]
 #[inline]
-pub unsafe fn GetModuleFileNameA(hmodule: Option<super::HMODULE>, lpfilename: &mut [u8]) -> u32 {
+pub unsafe fn GetModuleFileNameA(hmodule: Option<super::HMODULE>, lpfilename: windows_core::PSTR, nsize: u32) -> u32 {
     windows_core::link!("kernel32.dll" "system" fn GetModuleFileNameA(hmodule : super::HMODULE, lpfilename : windows_core::PSTR, nsize : u32) -> u32);
-    unsafe { GetModuleFileNameA(hmodule.unwrap_or(core::mem::zeroed()) as _, core::mem::transmute(lpfilename.as_mut_ptr()), lpfilename.len().try_into().unwrap()) }
+    unsafe { GetModuleFileNameA(hmodule.unwrap_or(core::mem::zeroed()) as _, lpfilename, nsize) }
 }
 #[cfg(feature = "minwindef")]
 #[inline]
-pub unsafe fn GetModuleFileNameW(hmodule: Option<super::HMODULE>, lpfilename: &mut [u16]) -> u32 {
+pub unsafe fn GetModuleFileNameW(hmodule: Option<super::HMODULE>, lpfilename: windows_core::PWSTR, nsize: u32) -> u32 {
     windows_core::link!("kernel32.dll" "system" fn GetModuleFileNameW(hmodule : super::HMODULE, lpfilename : windows_core::PWSTR, nsize : u32) -> u32);
-    unsafe { GetModuleFileNameW(hmodule.unwrap_or(core::mem::zeroed()) as _, core::mem::transmute(lpfilename.as_mut_ptr()), lpfilename.len().try_into().unwrap()) }
+    unsafe { GetModuleFileNameW(hmodule.unwrap_or(core::mem::zeroed()) as _, lpfilename, nsize) }
 }
 #[cfg(feature = "minwindef")]
 #[inline]
@@ -224,15 +224,15 @@ pub unsafe fn LoadResource(hmodule: Option<super::HMODULE>, hresinfo: super::HRS
 }
 #[cfg(feature = "minwindef")]
 #[inline]
-pub unsafe fn LoadStringA(hinstance: Option<super::HINSTANCE>, uid: u32, lpbuffer: &mut [u8]) -> i32 {
+pub unsafe fn LoadStringA(hinstance: Option<super::HINSTANCE>, uid: u32, lpbuffer: windows_core::PSTR, cchbuffermax: i32) -> i32 {
     windows_core::link!("user32.dll" "system" fn LoadStringA(hinstance : super::HINSTANCE, uid : u32, lpbuffer : windows_core::PSTR, cchbuffermax : i32) -> i32);
-    unsafe { LoadStringA(hinstance.unwrap_or(core::mem::zeroed()) as _, uid, core::mem::transmute(lpbuffer.as_mut_ptr()), lpbuffer.len().try_into().unwrap()) }
+    unsafe { LoadStringA(hinstance.unwrap_or(core::mem::zeroed()) as _, uid, lpbuffer, cchbuffermax) }
 }
 #[cfg(feature = "minwindef")]
 #[inline]
-pub unsafe fn LoadStringW(hinstance: Option<super::HINSTANCE>, uid: u32, lpbuffer: &mut [u16]) -> i32 {
+pub unsafe fn LoadStringW(hinstance: Option<super::HINSTANCE>, uid: u32, lpbuffer: windows_core::PWSTR, cchbuffermax: i32) -> i32 {
     windows_core::link!("user32.dll" "system" fn LoadStringW(hinstance : super::HINSTANCE, uid : u32, lpbuffer : windows_core::PWSTR, cchbuffermax : i32) -> i32);
-    unsafe { LoadStringW(hinstance.unwrap_or(core::mem::zeroed()) as _, uid, core::mem::transmute(lpbuffer.as_mut_ptr()), lpbuffer.len().try_into().unwrap()) }
+    unsafe { LoadStringW(hinstance.unwrap_or(core::mem::zeroed()) as _, uid, lpbuffer, cchbuffermax) }
 }
 #[cfg(all(feature = "minwindef", feature = "winnt"))]
 #[inline]
@@ -258,13 +258,8 @@ pub unsafe fn SizeofResource(hmodule: Option<super::HMODULE>, hresinfo: super::H
 }
 pub const CURRENT_IMPORT_REDIRECTION_VERSION: i32 = 1;
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct DLL_DIRECTORY_COOKIE(pub *mut core::ffi::c_void);
-impl Default for DLL_DIRECTORY_COOKIE {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 pub const DONT_RESOLVE_DLL_REFERENCES: i32 = 1;
 #[cfg(feature = "minwindef")]
 pub type ENUMRESLANGPROCA = Option<unsafe extern "system" fn(hmodule: super::HMODULE, lptype: windows_core::PCSTR, lpname: windows_core::PCSTR, wlanguage: u16, lparam: isize) -> windows_core::BOOL>;
@@ -280,17 +275,11 @@ pub type ENUMRESTYPEPROCA = Option<unsafe extern "system" fn(hmodule: super::HMO
 pub type ENUMRESTYPEPROCW = Option<unsafe extern "system" fn(hmodule: super::HMODULE, lptype: windows_core::PCWSTR, lparam: isize) -> windows_core::BOOL>;
 #[repr(C)]
 #[cfg(feature = "winnt")]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct ENUMUILANG {
     pub NumOfEnumUILang: u32,
     pub SizeOfEnumUIBuffer: u32,
     pub pEnumUIBuffer: *mut super::LANGID,
-}
-#[cfg(feature = "winnt")]
-impl Default for ENUMUILANG {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 pub const FIND_RESOURCE_DIRECTORY_LANGUAGES: i32 = 1024;
 pub const FIND_RESOURCE_DIRECTORY_NAMES: i32 = 512;
@@ -315,13 +304,8 @@ pub const LOAD_WITH_ALTERED_SEARCH_PATH: i32 = 8;
 pub type PCREDIRECTION_DESCRIPTOR = *const REDIRECTION_DESCRIPTOR;
 pub type PCREDIRECTION_FUNCTION_DESCRIPTOR = *const REDIRECTION_FUNCTION_DESCRIPTOR;
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct PDLL_DIRECTORY_COOKIE(pub *mut *mut core::ffi::c_void);
-impl Default for PDLL_DIRECTORY_COOKIE {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[cfg(feature = "winnt")]
 pub type PENUMUILANG = *mut ENUMUILANG;
 #[cfg(feature = "minwindef")]
@@ -338,16 +322,11 @@ pub struct REDIRECTION_DESCRIPTOR {
     pub Redirections: PCREDIRECTION_FUNCTION_DESCRIPTOR,
 }
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct REDIRECTION_FUNCTION_DESCRIPTOR {
     pub DllName: windows_core::PCSTR,
     pub FunctionName: windows_core::PCSTR,
     pub RedirectionTarget: *mut core::ffi::c_void,
-}
-impl Default for REDIRECTION_FUNCTION_DESCRIPTOR {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 pub const RESOURCE_ENUM_LN: i32 = 1;
 pub const RESOURCE_ENUM_MODULE_EXACT: i32 = 16;

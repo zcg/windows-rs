@@ -148,8 +148,6 @@ pub struct WinUIBackend {
     content_template: RefCell<Option<bindings::DataTemplate>>,
     pointer_revokers: RefCell<FxHashMap<ControlId, PointerRevokerSet>>,
     drag_revokers: RefCell<FxHashMap<ControlId, DragRevokerSet>>,
-    /// Logical children mirror used to skip phantom children in visual indices.
-    parent_children: RefCell<FxHashMap<ControlId, Vec<ControlId>>>,
     menu_click_handlers: RefCell<FxHashMap<ControlId, EventHandler>>,
     command_bar_flyout_handlers: RefCell<FxHashMap<ControlId, EventHandler>>,
     theme_brush_registry: RefCell<FxHashMap<ControlId, Vec<(Prop, ThemeRef)>>>,
@@ -239,7 +237,6 @@ impl WinUIBackend {
             content_template: RefCell::new(None),
             pointer_revokers: RefCell::new(FxHashMap::default()),
             drag_revokers: RefCell::new(FxHashMap::default()),
-            parent_children: RefCell::new(FxHashMap::default()),
             menu_click_handlers: RefCell::new(FxHashMap::default()),
             command_bar_flyout_handlers: RefCell::new(FxHashMap::default()),
             theme_brush_registry: RefCell::new(FxHashMap::default()),
@@ -385,25 +382,6 @@ impl WinUIBackend {
         }
         Ok(())
     }
-    /// `ContentDialog` is tracked logically but not attached as a visual child.
-    fn is_phantom_child(&self, id: ControlId) -> bool {
-        matches!(
-            self.controls.borrow().get(&id),
-            Some(Handle::ContentDialog(_))
-        )
-    }
-    fn visual_index(&self, parent: ControlId, logical: usize) -> usize {
-        let kids = self.parent_children.borrow();
-        let Some(list) = kids.get(&parent) else {
-            return logical;
-        };
-        let map = self.controls.borrow();
-        list.iter()
-            .take(logical)
-            .filter(|cid| !matches!(map.get(cid), Some(Handle::ContentDialog(_))))
-            .count()
-    }
-
     fn wire_menu_bar_clicks(
         mb: &bindings::MenuBar,
         handler: &EventHandler,
@@ -472,43 +450,6 @@ impl WinUIBackend {
             }
         }
         revokers
-    }
-    fn visual_insert_at(&self, parent: ControlId, v_index: usize, child: ControlId) {
-        let map = self.controls.borrow();
-        let parent_h = map
-            .get(&parent)
-            .unwrap_or_else(|| panic!("WinUIBackend::visual_insert_at: unknown parent {parent}"));
-        let child_h = map
-            .get(&child)
-            .unwrap_or_else(|| panic!("WinUIBackend::visual_insert_at: unknown child {child}"));
-        let child_ui = child_h.as_ui_element();
-        let cc = classify_container(parent_h).unwrap_or_else(|| {
-            panic!("WinUIBackend::visual_insert_at: {parent} is not a container")
-        });
-        container_insert(&cc, v_index, &child_ui);
-    }
-    fn visual_remove_at(&self, parent: ControlId, v_index: usize) {
-        let map = self.controls.borrow();
-        let parent_h = map
-            .get(&parent)
-            .unwrap_or_else(|| panic!("WinUIBackend::visual_remove_at: unknown parent {parent}"));
-        let cc = classify_container(parent_h).unwrap_or_else(|| {
-            panic!("WinUIBackend::visual_remove_at: {parent} is not a container")
-        });
-        container_remove(&cc, v_index);
-    }
-    fn visual_set_at(&self, parent: ControlId, v_index: usize, new: ControlId) {
-        let map = self.controls.borrow();
-        let parent_h = map
-            .get(&parent)
-            .unwrap_or_else(|| panic!("WinUIBackend::visual_set_at: unknown parent {parent}"));
-        let new_h = map
-            .get(&new)
-            .unwrap_or_else(|| panic!("WinUIBackend::visual_set_at: unknown new {new}"));
-        let new_ui = new_h.as_ui_element();
-        let cc = classify_container(parent_h)
-            .unwrap_or_else(|| panic!("WinUIBackend::visual_set_at: {parent} is not a container"));
-        container_set(&cc, v_index, &new_ui);
     }
 }
 
@@ -811,6 +752,11 @@ fn run_property_animation_inner(ui: &UIElement, cfg: AnimationConfig) -> Result<
         visual.start_animation("Opacity", &a);
     }
     if let Some(scale) = cfg.scale {
+        let current = visual.scale();
+        let s = scale as f32;
+        if current.x == s && current.y == s {
+            return Ok(());
+        }
         // Before first layout, ActualWidth/Height are 0 and CenterPoint is reused.
         if let Ok(fe) = ui.cast::<bindings::IFrameworkElement>() {
             let w = fe.ActualWidth().unwrap_or(0.0) as f32;
@@ -827,17 +773,15 @@ fn run_property_animation_inner(ui: &UIElement, cfg: AnimationConfig) -> Result<
                 ));
             }
         }
-        let current_z = visual.scale().z;
         let a = compositor.create_vector3_key_frame_animation();
         a.set_duration(cfg.duration);
         let easing = easing_for(&compositor, cfg.easing);
-        let s = scale as f32;
         a.insert_key_frame_with_easing(
             1.0,
             windows_numerics::Vector3 {
                 x: s,
                 y: s,
-                z: current_z,
+                z: current.z,
             },
             &easing,
         );
@@ -1162,6 +1106,7 @@ fn set_padding(handle: &Handle, thickness: Thickness) -> Result<bool> {
         // `Grid` is a `Panel`, not a `Control`, so it has no `IControl::SetPadding`;
         // its padding lives on the `IGrid` interface instead.
         Handle::Grid(h) => h.cast::<bindings::IGrid>()?.SetPadding(thickness)?,
+        Handle::SwapChainPanel(h) => h.cast::<bindings::IGrid>()?.SetPadding(thickness)?,
         _ => {
             if let Ok(ctl) = handle.cast_inner::<bindings::IControl>() {
                 ctl.SetPadding(thickness)?;
@@ -1343,6 +1288,16 @@ impl Backend for WinUIBackend {
                 return Ok(());
             }
             match (prop, value, handle) {
+                (Prop::MaxLines, PropValue::I32(v), Handle::TextBlock(text)) => {
+                    text.SetMaxLines(*v)
+                }
+                (Prop::MaxLines, PropValue::Unset, Handle::TextBlock(text)) => text.SetMaxLines(0),
+                (Prop::TextTrimming, PropValue::I32(v), Handle::TextBlock(text)) => {
+                    text.SetTextTrimming(TextTrimming(*v))
+                }
+                (Prop::TextTrimming, PropValue::Unset, Handle::TextBlock(text)) => {
+                    text.SetTextTrimming(TextTrimming::None)
+                }
                 (Prop::IsTextSelectionEnabled, PropValue::Bool(v), Handle::RichTextBlock(tb)) => {
                     tb.SetIsTextSelectionEnabled(*v)
                 }
@@ -1490,12 +1445,6 @@ impl Backend for WinUIBackend {
                 }
                 (Prop::IsThumbToolTipEnabled, PropValue::Bool(v), Handle::Slider(s)) => {
                     s.SetIsThumbToolTipEnabled(*v)
-                }
-                (Prop::MaxLines, PropValue::I32(v), Handle::TextBlock(tb)) => {
-                    tb.SetMaxLines((*v).max(0))
-                }
-                (Prop::TextTrimming, PropValue::I32(v), Handle::TextBlock(tb)) => {
-                    tb.SetTextTrimming(TextTrimming(*v))
                 }
                 (Prop::NavigateUri, PropValue::Str(s), Handle::HyperlinkButton(h)) => {
                     let uri = bindings::Uri::CreateUri(s.as_str())?;
@@ -1653,21 +1602,18 @@ impl Backend for WinUIBackend {
                     Ok(())
                 }
                 (Prop::ItemsViewLayout, PropValue::I32(kind), Handle::ItemsView(iv)) => {
-                    match *kind {
-                        0 => {
-                            let layout = bindings::StackLayout::new()?;
-                            layout.SetSpacing(8.0)?;
-                            layout.SetOrientation(Orientation::Vertical)?;
-                            iv.SetLayout(&layout)?;
-                        }
-                        _ => {
-                            let layout = bindings::UniformGridLayout::new()?;
-                            layout.SetMinItemWidth(120.0)?;
-                            layout.SetMinItemHeight(48.0)?;
-                            layout.SetMinRowSpacing(8.0)?;
-                            layout.SetMinColumnSpacing(8.0)?;
-                            iv.SetLayout(&layout)?;
-                        }
+                    if *kind == 0 {
+                        let layout = bindings::StackLayout::new()?;
+                        layout.SetSpacing(8.0)?;
+                        layout.SetOrientation(Orientation::Vertical)?;
+                        iv.SetLayout(&layout)?;
+                    } else {
+                        let layout = bindings::UniformGridLayout::new()?;
+                        layout.SetMinItemWidth(120.0)?;
+                        layout.SetMinItemHeight(48.0)?;
+                        layout.SetMinRowSpacing(8.0)?;
+                        layout.SetMinColumnSpacing(8.0)?;
+                        iv.SetLayout(&layout)?;
                     }
                     Ok(())
                 }
@@ -1963,7 +1909,18 @@ impl Backend for WinUIBackend {
                     if current == s.as_str() {
                         return Ok(());
                     }
-                    doc.SetText(bindings::TextSetOptions::None, s.as_str())
+                    let read_only = reb.IsReadOnly()?;
+                    if read_only {
+                        reb.SetIsReadOnly(false)?;
+                    }
+                    let set_result = doc.SetText(bindings::TextSetOptions::None, s.as_str());
+                    let restore_result = if read_only {
+                        reb.SetIsReadOnly(true)
+                    } else {
+                        Ok(())
+                    };
+                    set_result?;
+                    restore_result
                 }
                 (Prop::Header, PropValue::Str(s), Handle::RichEditBox(reb)) => {
                     let tb = string_as_textblock(s)?;
@@ -1998,14 +1955,6 @@ impl Backend for WinUIBackend {
         }
     }
     fn append_child(&mut self, parent: ControlId, child: ControlId) {
-        self.parent_children
-            .borrow_mut()
-            .entry(parent)
-            .or_default()
-            .push(child);
-        if self.is_phantom_child(child) {
-            return;
-        }
         let map = self.controls.borrow();
         let parent_h = map
             .get(&parent)
@@ -2023,73 +1972,29 @@ impl Backend for WinUIBackend {
         container_append(&cc, &child_ui);
     }
     fn remove_child(&mut self, parent: ControlId, index: usize) {
-        // Phantom children (e.g. ContentDialog) are never in the parent's
-        // visual `Children`; skip the collection mutation for them.
-        let phantom = self
-            .parent_children
-            .borrow()
-            .get(&parent)
-            .and_then(|v| v.get(index).copied())
-            .is_some_and(|cid| self.is_phantom_child(cid));
-        let v_index = self.visual_index(parent, index);
-        if let Some(list) = self.parent_children.borrow_mut().get_mut(&parent)
-            && index < list.len()
-        {
-            list.remove(index);
-        }
-        if phantom {
-            return;
-        }
         let map = self.controls.borrow();
         let parent_h = map
             .get(&parent)
             .unwrap_or_else(|| panic!("WinUIBackend::remove_child: unknown parent {parent}"));
         let cc = classify_container(parent_h)
             .unwrap_or_else(|| panic!("WinUIBackend::remove_child: {parent} is not a container"));
-        container_remove(&cc, v_index);
+        container_remove(&cc, index);
     }
     fn replace_child(&mut self, parent: ControlId, index: usize, new: ControlId) {
-        let old = self
-            .parent_children
-            .borrow()
+        let map = self.controls.borrow();
+        let parent_h = map
             .get(&parent)
-            .and_then(|v| v.get(index).copied());
-        let old_phantom = old.is_some_and(|c| self.is_phantom_child(c));
-        let new_phantom = self.is_phantom_child(new);
-        let v_index = self.visual_index(parent, index);
-        if let Some(list) = self.parent_children.borrow_mut().get_mut(&parent)
-            && index < list.len()
-        {
-            list[index] = new;
-        }
-        match (old_phantom, new_phantom) {
-            (true, true) => {}
-            (false, true) => self.visual_remove_at(parent, v_index),
-            (true, false) => self.visual_insert_at(parent, v_index, new),
-            (false, false) => self.visual_set_at(parent, v_index, new),
-        }
+            .unwrap_or_else(|| panic!("WinUIBackend::replace_child: unknown parent {parent}"));
+        let new_h = map
+            .get(&new)
+            .unwrap_or_else(|| panic!("WinUIBackend::replace_child: unknown child {new}"));
+        let new_ui = new_h.as_ui_element();
+        let cc = classify_container(parent_h)
+            .unwrap_or_else(|| panic!("WinUIBackend::replace_child: {parent} is not a container"));
+        container_set(&cc, index, &new_ui);
     }
     fn move_child(&mut self, parent: ControlId, from: usize, to: usize) {
         if from == to {
-            return;
-        }
-        // Compute before mutating the mirror so phantoms use the pre-move state.
-        let v_from = self.visual_index(parent, from);
-        let v_to = self.visual_index(parent, to);
-        let moved_phantom = self
-            .parent_children
-            .borrow()
-            .get(&parent)
-            .and_then(|v| v.get(from).copied())
-            .is_some_and(|cid| self.is_phantom_child(cid));
-        if let Some(list) = self.parent_children.borrow_mut().get_mut(&parent)
-            && from < list.len()
-            && to < list.len()
-        {
-            let item = list.remove(from);
-            list.insert(to, item);
-        }
-        if moved_phantom || v_from == v_to {
             return;
         }
         let map = self.controls.borrow();
@@ -2098,19 +2003,9 @@ impl Backend for WinUIBackend {
             .unwrap_or_else(|| panic!("WinUIBackend::move_child: unknown parent {parent}"));
         let cc = classify_container(parent_h)
             .unwrap_or_else(|| panic!("WinUIBackend::move_child: {parent} is not a container"));
-        container_move(&cc, v_from, v_to);
+        container_move(&cc, from, to);
     }
     fn insert_child(&mut self, parent: ControlId, index: usize, child: ControlId) {
-        let v_index = self.visual_index(parent, index);
-        {
-            let mut kids = self.parent_children.borrow_mut();
-            let list = kids.entry(parent).or_default();
-            let clamped = index.min(list.len());
-            list.insert(clamped, child);
-        }
-        if self.is_phantom_child(child) {
-            return;
-        }
         let map = self.controls.borrow();
         let parent_h = map
             .get(&parent)
@@ -2121,7 +2016,7 @@ impl Backend for WinUIBackend {
         let child_ui = child_h.as_ui_element();
         let cc = classify_container(parent_h)
             .unwrap_or_else(|| panic!("WinUIBackend::insert_child: {parent} is not a container"));
-        container_insert(&cc, v_index, &child_ui);
+        container_insert(&cc, index, &child_ui);
     }
     fn set_templated_item_count(&mut self, id: ControlId, count: usize) {
         let map = self.controls.borrow();
@@ -2479,7 +2374,7 @@ impl Backend for WinUIBackend {
                     let Ok(element) = args.Element() else { return };
                     let Ok(cc) = element.cast::<bindings::IContentControl>() else { return };
                     let Ok(idx) = args.Index() else { return };
-                    containers.borrow_mut().insert(idx as usize, cc.clone());
+                    containers.borrow_mut().insert(idx as usize, cc);
                     realize(idx as usize);
                 })
                 .unwrap_or_else(|e| {
@@ -2610,11 +2505,6 @@ impl Backend for WinUIBackend {
         self.property_observers
             .borrow_mut()
             .retain(|(hid, _), _| *hid != id);
-        let mut kids = self.parent_children.borrow_mut();
-        kids.remove(&id);
-        for list in kids.values_mut() {
-            list.retain(|c| *c != id);
-        }
         self.menu_click_handlers.borrow_mut().remove(&id);
         self.command_bar_flyout_handlers.borrow_mut().remove(&id);
         self.theme_brush_registry.borrow_mut().remove(&id);
@@ -2651,7 +2541,6 @@ impl Backend for WinUIBackend {
         let mut revokers: Vec<windows_core::EventRevoker> = Vec::new();
         match (event, handle) {
             (Event::SliderSizeChanged, Handle::Slider(h)) => {
-                let handler = handler.clone();
                 revokers.push(
                     h.cast::<bindings::IFrameworkElement>()
                         .unwrap()
@@ -2666,7 +2555,6 @@ impl Backend for WinUIBackend {
                 );
             }
             (Event::RefreshRequested, Handle::RefreshContainer(rc)) => {
-                let handler = handler.clone();
                 revokers.push(
                     rc.RefreshRequested(move |_sender, args| {
                         if let Some(a) = args.as_ref() {
@@ -2802,10 +2690,10 @@ impl Backend for WinUIBackend {
                 }
             }
             (Event::SelectionChanged, Handle::Pivot(p)) => {
-                let selector: bindings::ISelector = p.cast().unwrap();
+                let control = p.clone();
                 revokers.push(
                     p.SelectionChanged(move |_sender, _args| {
-                        let idx = selector.SelectedIndex().unwrap_or(-1);
+                        let idx = control.SelectedIndex().unwrap_or(-1);
                         if idx >= 0 {
                             handler.invoke_i32(idx);
                         }

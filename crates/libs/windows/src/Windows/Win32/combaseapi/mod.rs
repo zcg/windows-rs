@@ -664,9 +664,9 @@ pub unsafe fn StringFromCLSID(rclsid: *const windows_core::GUID) -> windows_core
     }
 }
 #[inline]
-pub unsafe fn StringFromGUID2(rguid: *const windows_core::GUID, lpsz: &mut [u16]) -> i32 {
+pub unsafe fn StringFromGUID2(rguid: *const windows_core::GUID, lpsz: windows_core::PWSTR, cchmax: i32) -> i32 {
     windows_core::link!("ole32.dll" "system" fn StringFromGUID2(rguid : *const windows_core::GUID, lpsz : windows_core::PWSTR, cchmax : i32) -> i32);
-    unsafe { StringFromGUID2(rguid, core::mem::transmute(lpsz.as_mut_ptr()), lpsz.len().try_into().unwrap()) }
+    unsafe { StringFromGUID2(rguid, lpsz, cchmax) }
 }
 #[inline]
 pub unsafe fn StringFromIID(rclsid: *const windows_core::GUID) -> windows_core::Result<windows_core::PWSTR> {
@@ -699,21 +699,11 @@ pub type COWAIT_FLAGS = u32;
 pub const COWAIT_INPUTAVAILABLE: COWAIT_FLAGS = 4;
 pub const COWAIT_WAITALL: COWAIT_FLAGS = 1;
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct CO_DEVICE_CATALOG_COOKIE(pub *mut core::ffi::c_void);
-impl Default for CO_DEVICE_CATALOG_COOKIE {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct CO_MTA_USAGE_COOKIE(pub *mut core::ffi::c_void);
-impl Default for CO_MTA_USAGE_COOKIE {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 pub const CWMO_DEFAULT: CWMO_FLAGS = 0;
 pub const CWMO_DISPATCH_CALLS: CWMO_FLAGS = 1;
 pub const CWMO_DISPATCH_WINDOW_MESSAGES: CWMO_FLAGS = 2;

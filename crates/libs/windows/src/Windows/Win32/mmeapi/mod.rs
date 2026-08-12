@@ -71,15 +71,15 @@ pub unsafe fn midiInGetDevCapsW(udeviceid: usize, pmic: *mut MIDIINCAPSW, cbmic:
 }
 #[cfg(feature = "mmsyscom")]
 #[inline]
-pub unsafe fn midiInGetErrorTextA(mmrerror: super::MMRESULT, psztext: &mut [u8]) -> super::MMRESULT {
+pub unsafe fn midiInGetErrorTextA(mmrerror: super::MMRESULT, psztext: windows_core::PSTR, cchtext: u32) -> super::MMRESULT {
     windows_core::link!("winmm.dll" "system" fn midiInGetErrorTextA(mmrerror : super::MMRESULT, psztext : windows_core::PSTR, cchtext : u32) -> super::MMRESULT);
-    unsafe { midiInGetErrorTextA(mmrerror, core::mem::transmute(psztext.as_mut_ptr()), psztext.len().try_into().unwrap()) }
+    unsafe { midiInGetErrorTextA(mmrerror, psztext, cchtext) }
 }
 #[cfg(feature = "mmsyscom")]
 #[inline]
-pub unsafe fn midiInGetErrorTextW(mmrerror: super::MMRESULT, psztext: &mut [u16]) -> super::MMRESULT {
+pub unsafe fn midiInGetErrorTextW(mmrerror: super::MMRESULT, psztext: windows_core::PWSTR, cchtext: u32) -> super::MMRESULT {
     windows_core::link!("winmm.dll" "system" fn midiInGetErrorTextW(mmrerror : super::MMRESULT, psztext : windows_core::PWSTR, cchtext : u32) -> super::MMRESULT);
-    unsafe { midiInGetErrorTextW(mmrerror, core::mem::transmute(psztext.as_mut_ptr()), psztext.len().try_into().unwrap()) }
+    unsafe { midiInGetErrorTextW(mmrerror, psztext, cchtext) }
 }
 #[cfg(feature = "mmsyscom")]
 #[inline]
@@ -166,15 +166,15 @@ pub unsafe fn midiOutGetDevCapsW(udeviceid: usize, pmoc: *mut MIDIOUTCAPSW, cbmo
 }
 #[cfg(feature = "mmsyscom")]
 #[inline]
-pub unsafe fn midiOutGetErrorTextA(mmrerror: super::MMRESULT, psztext: &mut [u8]) -> super::MMRESULT {
+pub unsafe fn midiOutGetErrorTextA(mmrerror: super::MMRESULT, psztext: windows_core::PSTR, cchtext: u32) -> super::MMRESULT {
     windows_core::link!("winmm.dll" "system" fn midiOutGetErrorTextA(mmrerror : super::MMRESULT, psztext : windows_core::PSTR, cchtext : u32) -> super::MMRESULT);
-    unsafe { midiOutGetErrorTextA(mmrerror, core::mem::transmute(psztext.as_mut_ptr()), psztext.len().try_into().unwrap()) }
+    unsafe { midiOutGetErrorTextA(mmrerror, psztext, cchtext) }
 }
 #[cfg(feature = "mmsyscom")]
 #[inline]
-pub unsafe fn midiOutGetErrorTextW(mmrerror: super::MMRESULT, psztext: &mut [u16]) -> super::MMRESULT {
+pub unsafe fn midiOutGetErrorTextW(mmrerror: super::MMRESULT, psztext: windows_core::PWSTR, cchtext: u32) -> super::MMRESULT {
     windows_core::link!("winmm.dll" "system" fn midiOutGetErrorTextW(mmrerror : super::MMRESULT, psztext : windows_core::PWSTR, cchtext : u32) -> super::MMRESULT);
-    unsafe { midiOutGetErrorTextW(mmrerror, core::mem::transmute(psztext.as_mut_ptr()), psztext.len().try_into().unwrap()) }
+    unsafe { midiOutGetErrorTextW(mmrerror, psztext, cchtext) }
 }
 #[cfg(feature = "mmsyscom")]
 #[inline]
@@ -397,15 +397,15 @@ pub unsafe fn waveInGetDevCapsW(udeviceid: usize, pwic: *mut WAVEINCAPSW, cbwic:
 }
 #[cfg(feature = "mmsyscom")]
 #[inline]
-pub unsafe fn waveInGetErrorTextA(mmrerror: super::MMRESULT, psztext: &mut [u8]) -> super::MMRESULT {
+pub unsafe fn waveInGetErrorTextA(mmrerror: super::MMRESULT, psztext: windows_core::PSTR, cchtext: u32) -> super::MMRESULT {
     windows_core::link!("winmm.dll" "system" fn waveInGetErrorTextA(mmrerror : super::MMRESULT, psztext : windows_core::PSTR, cchtext : u32) -> super::MMRESULT);
-    unsafe { waveInGetErrorTextA(mmrerror, core::mem::transmute(psztext.as_mut_ptr()), psztext.len().try_into().unwrap()) }
+    unsafe { waveInGetErrorTextA(mmrerror, psztext, cchtext) }
 }
 #[cfg(feature = "mmsyscom")]
 #[inline]
-pub unsafe fn waveInGetErrorTextW(mmrerror: super::MMRESULT, psztext: &mut [u16]) -> super::MMRESULT {
+pub unsafe fn waveInGetErrorTextW(mmrerror: super::MMRESULT, psztext: windows_core::PWSTR, cchtext: u32) -> super::MMRESULT {
     windows_core::link!("winmm.dll" "system" fn waveInGetErrorTextW(mmrerror : super::MMRESULT, psztext : windows_core::PWSTR, cchtext : u32) -> super::MMRESULT);
-    unsafe { waveInGetErrorTextW(mmrerror, core::mem::transmute(psztext.as_mut_ptr()), psztext.len().try_into().unwrap()) }
+    unsafe { waveInGetErrorTextW(mmrerror, psztext, cchtext) }
 }
 #[cfg(feature = "mmsyscom")]
 #[inline]
@@ -492,15 +492,15 @@ pub unsafe fn waveOutGetDevCapsW(udeviceid: usize, pwoc: *mut WAVEOUTCAPSW, cbwo
 }
 #[cfg(feature = "mmsyscom")]
 #[inline]
-pub unsafe fn waveOutGetErrorTextA(mmrerror: super::MMRESULT, psztext: &mut [u8]) -> super::MMRESULT {
+pub unsafe fn waveOutGetErrorTextA(mmrerror: super::MMRESULT, psztext: windows_core::PSTR, cchtext: u32) -> super::MMRESULT {
     windows_core::link!("winmm.dll" "system" fn waveOutGetErrorTextA(mmrerror : super::MMRESULT, psztext : windows_core::PSTR, cchtext : u32) -> super::MMRESULT);
-    unsafe { waveOutGetErrorTextA(mmrerror, core::mem::transmute(psztext.as_mut_ptr()), psztext.len().try_into().unwrap()) }
+    unsafe { waveOutGetErrorTextA(mmrerror, psztext, cchtext) }
 }
 #[cfg(feature = "mmsyscom")]
 #[inline]
-pub unsafe fn waveOutGetErrorTextW(mmrerror: super::MMRESULT, psztext: &mut [u16]) -> super::MMRESULT {
+pub unsafe fn waveOutGetErrorTextW(mmrerror: super::MMRESULT, psztext: windows_core::PWSTR, cchtext: u32) -> super::MMRESULT {
     windows_core::link!("winmm.dll" "system" fn waveOutGetErrorTextW(mmrerror : super::MMRESULT, psztext : windows_core::PWSTR, cchtext : u32) -> super::MMRESULT);
-    unsafe { waveOutGetErrorTextW(mmrerror, core::mem::transmute(psztext.as_mut_ptr()), psztext.len().try_into().unwrap()) }
+    unsafe { waveOutGetErrorTextW(mmrerror, psztext, cchtext) }
 }
 #[cfg(feature = "mmsyscom")]
 #[inline]
@@ -691,77 +691,32 @@ pub const AUXCAPS_LRVOLUME: i32 = 2;
 pub const AUXCAPS_VOLUME: i32 = 1;
 pub const AUX_MAPPER: u32 = 4294967295;
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HMIDI(pub *mut core::ffi::c_void);
-impl Default for HMIDI {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HMIDIIN(pub *mut core::ffi::c_void);
-impl Default for HMIDIIN {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HMIDIOUT(pub *mut core::ffi::c_void);
-impl Default for HMIDIOUT {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HMIDISTRM(pub *mut core::ffi::c_void);
-impl Default for HMIDISTRM {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HMIXER(pub *mut core::ffi::c_void);
-impl Default for HMIXER {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HMIXEROBJ(pub *mut core::ffi::c_void);
-impl Default for HMIXEROBJ {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HWAVE(pub *mut core::ffi::c_void);
-impl Default for HWAVE {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HWAVEIN(pub *mut core::ffi::c_void);
-impl Default for HWAVEIN {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HWAVEOUT(pub *mut core::ffi::c_void);
-impl Default for HWAVEOUT {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 pub type KEYARRAY = [u16; 128];
 #[cfg(feature = "mmsyscom")]
 pub type LPAUXCAPS = LPAUXCAPSA;
@@ -1865,7 +1820,7 @@ pub struct WAVEFORMATEX {
     pub cbSize: u16,
 }
 #[repr(C, packed(1))]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct WAVEHDR {
     pub lpData: windows_core::PSTR,
     pub dwBufferLength: u32,
@@ -1875,11 +1830,6 @@ pub struct WAVEHDR {
     pub dwLoops: u32,
     pub lpNext: *mut Self,
     pub reserved: usize,
-}
-impl Default for WAVEHDR {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 #[cfg(feature = "mmsyscom")]
 pub type WAVEINCAPS = WAVEINCAPSA;

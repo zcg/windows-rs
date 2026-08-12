@@ -1,6 +1,38 @@
+use std::collections::VecDeque;
 use std::rc::Rc;
 
 use windows_reactor::*;
+
+/// Backend call that can be selected for deterministic fail-before-operation testing.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BackendOperation {
+    Create,
+    SetProp,
+    AppendChild,
+    RemoveChild,
+    ReplaceChild,
+    MoveChild,
+    InsertChild,
+    Destroy,
+    AttachEvent,
+    DetachEvent,
+    SetTemplatedItemCount,
+    SetTemplatedSelectedIndex,
+    SetTemplatedSelectionMode,
+    SetTemplatedCanDragItems,
+    SetTemplatedCanReorderItems,
+    SetTemplatedAllowDrop,
+    AttachTemplatedSelectionChanged,
+    AttachTemplatedRealization,
+    AttachTemplatedReorder,
+    SetHeaderElement,
+    SetPaneElement,
+}
+
+struct BackendFailure {
+    operation: BackendOperation,
+    remaining: usize,
+}
 
 /// Recorded backend operation, used by [`RecordingBackend`] for tests.
 #[derive(Clone, Debug)]
@@ -156,7 +188,10 @@ pub enum Op {
 pub struct RecordingBackend {
     pub ops: Vec<Op>,
     next_id: u32,
+    live_controls: rustc_hash::FxHashSet<ControlId>,
     children: rustc_hash::FxHashMap<ControlId, Vec<ControlId>>,
+    headers: rustc_hash::FxHashMap<ControlId, ControlId>,
+    panes: rustc_hash::FxHashMap<ControlId, ControlId>,
     handlers: rustc_hash::FxHashMap<(ControlId, Event), EventHandler>,
     row_contents: rustc_hash::FxHashMap<ControlId, rustc_hash::FxHashMap<usize, ControlId>>,
     item_counts: rustc_hash::FxHashMap<ControlId, usize>,
@@ -165,6 +200,7 @@ pub struct RecordingBackend {
     reorder_handlers: rustc_hash::FxHashMap<ControlId, Callback<Vec<usize>>>,
     theme_style_cache: rustc_hash::FxHashSet<(ControlKind, Vec<(Prop, ThemeRef)>)>,
     theme_bindings_live: rustc_hash::FxHashMap<ControlId, Vec<(Prop, ThemeRef)>>,
+    failures: VecDeque<BackendFailure>,
     /// A stand-in [`IInspectable`] fabricated for every control so that
     /// [`get_native_element`](Backend::get_native_element) returns `Some`,
     /// mirroring the real WinUI backend (which returns the live XAML element).
@@ -193,6 +229,47 @@ impl RecordingBackend {
 
     pub fn clear_ops(&mut self) {
         self.ops.clear();
+    }
+
+    /// Panics immediately before the next matching backend operation mutates state.
+    pub fn fail_next(&mut self, operation: BackendOperation) {
+        self.fail_on(operation, 1);
+    }
+
+    /// Panics immediately before the `occurrence`th matching backend operation mutates state.
+    pub fn fail_on(&mut self, operation: BackendOperation, occurrence: usize) {
+        self.fail_sequence([(operation, occurrence)]);
+    }
+
+    /// Panics before each requested operation in order.
+    pub fn fail_sequence(&mut self, failures: impl IntoIterator<Item = (BackendOperation, usize)>) {
+        self.failures = failures
+            .into_iter()
+            .map(|(operation, remaining)| {
+                assert!(
+                    remaining != 0,
+                    "backend failure occurrence must be non-zero"
+                );
+                BackendFailure {
+                    operation,
+                    remaining,
+                }
+            })
+            .collect();
+    }
+
+    fn maybe_fail(&mut self, operation: BackendOperation) {
+        let Some(failure) = self.failures.front_mut() else {
+            return;
+        };
+        if failure.operation != operation {
+            return;
+        }
+        failure.remaining -= 1;
+        if failure.remaining == 0 {
+            self.failures.pop_front();
+            panic!("injected backend failure before {operation:?}");
+        }
     }
 
     pub fn children_of(&self, parent: ControlId) -> &[ControlId] {
@@ -322,32 +399,101 @@ impl RecordingBackend {
     }
 
     pub fn live_control_count(&self) -> usize {
-        let mut alive: rustc_hash::FxHashSet<ControlId> = rustc_hash::FxHashSet::default();
-        for op in &self.ops {
-            match op {
-                Op::Create { id, .. } => {
-                    alive.insert(*id);
-                }
-                Op::Destroy { id } => {
-                    alive.remove(id);
-                }
-                _ => {}
+        self.live_controls.len()
+    }
+
+    /// Verifies the backend model after a reconciliation boundary.
+    pub fn assert_consistent(&self) {
+        let native: rustc_hash::FxHashSet<_> = self.native_elements.keys().copied().collect();
+        assert_eq!(
+            native, self.live_controls,
+            "native element registry disagrees with live controls"
+        );
+
+        let mut owners = rustc_hash::FxHashMap::<ControlId, String>::default();
+        let mut claim = |child: ControlId, owner: String| {
+            assert!(
+                self.live_controls.contains(&child),
+                "{owner} owns destroyed or unknown control {child}"
+            );
+            if let Some(previous) = owners.insert(child, owner.clone()) {
+                panic!("{child} has multiple owners: {previous} and {owner}");
+            }
+        };
+
+        for (parent, children) in &self.children {
+            assert!(
+                self.live_controls.contains(parent),
+                "destroyed or unknown parent {parent} retains children"
+            );
+            for (index, child) in children.iter().copied().enumerate() {
+                claim(child, format!("child {index} of {parent}"));
             }
         }
-        alive.len()
+        for (parent, child) in &self.headers {
+            assert!(
+                self.live_controls.contains(parent),
+                "destroyed or unknown parent {parent} retains a header"
+            );
+            claim(*child, format!("header of {parent}"));
+        }
+        for (parent, child) in &self.panes {
+            assert!(
+                self.live_controls.contains(parent),
+                "destroyed or unknown parent {parent} retains a pane"
+            );
+            claim(*child, format!("pane of {parent}"));
+        }
+        for (list, rows) in &self.row_contents {
+            assert!(
+                self.live_controls.contains(list),
+                "destroyed or unknown list {list} retains row content"
+            );
+            for (index, child) in rows {
+                claim(*child, format!("row {index} of {list}"));
+            }
+        }
+
+        let assert_live_owner = |id: &ControlId, state: &str| {
+            assert!(
+                self.live_controls.contains(id),
+                "destroyed or unknown control {id} retains {state}"
+            );
+        };
+        for id in self.handlers.keys().map(|(id, _)| id) {
+            assert_live_owner(id, "an event handler");
+        }
+        for id in self.item_counts.keys() {
+            assert_live_owner(id, "a templated item count");
+        }
+        for id in self.realization_handlers.keys() {
+            assert_live_owner(id, "templated realization handlers");
+        }
+        for id in self.selection_handlers.keys() {
+            assert_live_owner(id, "a templated selection handler");
+        }
+        for id in self.reorder_handlers.keys() {
+            assert_live_owner(id, "a templated reorder handler");
+        }
+        for id in self.theme_bindings_live.keys() {
+            assert_live_owner(id, "theme bindings");
+        }
     }
 }
 
 impl Backend for RecordingBackend {
     fn create(&mut self, kind: ControlKind) -> ControlId {
+        self.maybe_fail(BackendOperation::Create);
         self.next_id += 1;
         let id = ControlId::new(self.next_id);
         self.ops.push(Op::Create { id, kind });
+        self.live_controls.insert(id);
         self.native_elements.insert(id, stub_native_element());
         id
     }
 
     fn set_prop(&mut self, id: ControlId, prop: Prop, value: &PropValue) {
+        self.maybe_fail(BackendOperation::SetProp);
         self.ops.push(Op::SetProp {
             id,
             prop,
@@ -356,11 +502,13 @@ impl Backend for RecordingBackend {
     }
 
     fn append_child(&mut self, parent: ControlId, child: ControlId) {
+        self.maybe_fail(BackendOperation::AppendChild);
         self.children.entry(parent).or_default().push(child);
         self.ops.push(Op::AppendChild { parent, child });
     }
 
     fn remove_child(&mut self, parent: ControlId, index: usize) {
+        self.maybe_fail(BackendOperation::RemoveChild);
         let list = self.children.entry(parent).or_default();
         assert!(
             index < list.len(),
@@ -372,6 +520,7 @@ impl Backend for RecordingBackend {
     }
 
     fn replace_child(&mut self, parent: ControlId, index: usize, new: ControlId) {
+        self.maybe_fail(BackendOperation::ReplaceChild);
         let list = self.children.entry(parent).or_default();
         assert!(
             index < list.len(),
@@ -383,6 +532,7 @@ impl Backend for RecordingBackend {
     }
 
     fn move_child(&mut self, parent: ControlId, from: usize, to: usize) {
+        self.maybe_fail(BackendOperation::MoveChild);
         let list = self.children.entry(parent).or_default();
         assert!(
             from < list.len(),
@@ -402,6 +552,7 @@ impl Backend for RecordingBackend {
     }
 
     fn insert_child(&mut self, parent: ControlId, index: usize, child: ControlId) {
+        self.maybe_fail(BackendOperation::InsertChild);
         let list = self.children.entry(parent).or_default();
         assert!(
             index <= list.len(),
@@ -417,24 +568,39 @@ impl Backend for RecordingBackend {
     }
 
     fn destroy(&mut self, id: ControlId) {
+        self.maybe_fail(BackendOperation::Destroy);
+        assert!(
+            self.live_controls.remove(&id),
+            "destroy: unknown or already destroyed control {id}"
+        );
         self.children.remove(&id);
+        self.headers.remove(&id);
+        self.panes.remove(&id);
         self.native_elements.remove(&id);
-
+        self.row_contents.remove(&id);
+        self.item_counts.remove(&id);
+        self.realization_handlers.remove(&id);
+        self.selection_handlers.remove(&id);
+        self.reorder_handlers.remove(&id);
+        self.theme_bindings_live.remove(&id);
         self.handlers.retain(|(hid, _), _| *hid != id);
         self.ops.push(Op::Destroy { id });
     }
 
     fn attach_event(&mut self, id: ControlId, event: Event, handler: EventHandler) {
+        self.maybe_fail(BackendOperation::AttachEvent);
         self.handlers.insert((id, event), handler.clone());
         self.ops.push(Op::AttachEvent { id, event, handler });
     }
 
     fn detach_event(&mut self, id: ControlId, event: Event) {
+        self.maybe_fail(BackendOperation::DetachEvent);
         self.handlers.remove(&(id, event));
         self.ops.push(Op::DetachEvent { id, event });
     }
 
     fn set_templated_item_count(&mut self, id: ControlId, count: usize) {
+        self.maybe_fail(BackendOperation::SetTemplatedItemCount);
         self.item_counts.insert(id, count);
         self.ops
             .push(Op::SetTemplatedItemCount { list_id: id, count });
@@ -461,30 +627,47 @@ impl Backend for RecordingBackend {
     }
 
     fn set_templated_selected_index(&mut self, id: ControlId, index: i32) {
+        self.maybe_fail(BackendOperation::SetTemplatedSelectedIndex);
         self.ops.push(Op::SetTemplatedSelectedIndex { id, index });
     }
 
     fn set_templated_selection_mode(&mut self, id: ControlId, mode: SelectionMode) {
+        self.maybe_fail(BackendOperation::SetTemplatedSelectionMode);
         self.ops.push(Op::SetTemplatedSelectionMode { id, mode });
     }
 
     fn set_templated_can_drag_items(&mut self, id: ControlId, value: bool) {
+        self.maybe_fail(BackendOperation::SetTemplatedCanDragItems);
         self.ops.push(Op::SetTemplatedCanDragItems { id, value });
     }
 
     fn set_templated_can_reorder_items(&mut self, id: ControlId, value: bool) {
+        self.maybe_fail(BackendOperation::SetTemplatedCanReorderItems);
         self.ops.push(Op::SetTemplatedCanReorderItems { id, value });
     }
 
     fn set_templated_allow_drop(&mut self, id: ControlId, value: bool) {
+        self.maybe_fail(BackendOperation::SetTemplatedAllowDrop);
         self.ops.push(Op::SetTemplatedAllowDrop { id, value });
     }
 
     fn set_header_element(&mut self, id: ControlId, header_id: Option<ControlId>) {
+        self.maybe_fail(BackendOperation::SetHeaderElement);
+        if let Some(header_id) = header_id {
+            self.headers.insert(id, header_id);
+        } else {
+            self.headers.remove(&id);
+        }
         self.ops.push(Op::SetHeaderElement { id, header_id });
     }
 
     fn set_pane_element(&mut self, id: ControlId, pane_id: Option<ControlId>) {
+        self.maybe_fail(BackendOperation::SetPaneElement);
+        if let Some(pane_id) = pane_id {
+            self.panes.insert(id, pane_id);
+        } else {
+            self.panes.remove(&id);
+        }
         self.ops.push(Op::SetPaneElement { id, pane_id });
     }
 
@@ -493,6 +676,7 @@ impl Backend for RecordingBackend {
     }
 
     fn attach_templated_selection_changed(&mut self, id: ControlId, handler: Callback<i32>) {
+        self.maybe_fail(BackendOperation::AttachTemplatedSelectionChanged);
         self.selection_handlers.insert(id, handler);
         self.ops.push(Op::AttachTemplatedSelectionChanged { id });
     }
@@ -503,11 +687,13 @@ impl Backend for RecordingBackend {
         realize: Rc<dyn Fn(usize)>,
         recycle: Rc<dyn Fn(usize)>,
     ) {
+        self.maybe_fail(BackendOperation::AttachTemplatedRealization);
         self.realization_handlers.insert(id, (realize, recycle));
         self.ops.push(Op::AttachTemplatedRealization { id });
     }
 
     fn attach_templated_reorder(&mut self, id: ControlId, handler: Callback<Vec<usize>>) {
+        self.maybe_fail(BackendOperation::AttachTemplatedReorder);
         self.reorder_handlers.insert(id, handler);
         self.ops.push(Op::AttachTemplatedReorder { id });
     }

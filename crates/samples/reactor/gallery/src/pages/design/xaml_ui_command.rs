@@ -21,7 +21,7 @@ pub fn xaml_ui_command_page(_: &(), cx: &mut RenderCx) -> Element {
                             move || set_status.call("Paste command invoked".into())
                         }),
                         button("Save").icon(Icon::symbol(Symbol::Save)).on_click({
-                            let set_status = set_status.clone();
+                            let set_status = set_status;
                             move || set_status.call("Save command invoked".into())
                         }),
                     ))

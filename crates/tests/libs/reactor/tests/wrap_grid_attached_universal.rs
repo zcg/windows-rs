@@ -7,7 +7,7 @@
 use std::rc::Rc;
 
 use test_reactor::{Op, RecordingBackend};
-use windows_reactor::{ControlId, Element, ElementExt, Prop, PropValue, Reconciler, TextBlock};
+use windows_reactor::{ControlId, Element, Prop, PropValue, Reconciler, TextBlock, WrapGridExt};
 
 fn collect_spans(r: &Reconciler<RecordingBackend>, id: ControlId) -> (Option<i32>, Option<i32>) {
     let mut row = None;

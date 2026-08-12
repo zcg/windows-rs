@@ -38,14 +38,14 @@ pub unsafe fn DragFinish(hdrop: HDROP) {
     unsafe { DragFinish(hdrop) }
 }
 #[inline]
-pub unsafe fn DragQueryFileA(hdrop: HDROP, ifile: u32, lpszfile: Option<&mut [u8]>) -> u32 {
+pub unsafe fn DragQueryFileA(hdrop: HDROP, ifile: u32, lpszfile: Option<windows_core::PSTR>, cch: u32) -> u32 {
     windows_core::link!("shell32.dll" "system" fn DragQueryFileA(hdrop : HDROP, ifile : u32, lpszfile : windows_core::PSTR, cch : u32) -> u32);
-    unsafe { DragQueryFileA(hdrop, ifile, core::mem::transmute(lpszfile.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut())), lpszfile.as_deref().map_or(0, |slice| slice.len().try_into().unwrap())) }
+    unsafe { DragQueryFileA(hdrop, ifile, lpszfile.unwrap_or(core::mem::zeroed()) as _, cch) }
 }
 #[inline]
-pub unsafe fn DragQueryFileW(hdrop: HDROP, ifile: u32, lpszfile: Option<&mut [u16]>) -> u32 {
+pub unsafe fn DragQueryFileW(hdrop: HDROP, ifile: u32, lpszfile: Option<windows_core::PWSTR>, cch: u32) -> u32 {
     windows_core::link!("shell32.dll" "system" fn DragQueryFileW(hdrop : HDROP, ifile : u32, lpszfile : windows_core::PWSTR, cch : u32) -> u32);
-    unsafe { DragQueryFileW(hdrop, ifile, core::mem::transmute(lpszfile.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut())), lpszfile.as_deref().map_or(0, |slice| slice.len().try_into().unwrap())) }
+    unsafe { DragQueryFileW(hdrop, ifile, lpszfile.unwrap_or(core::mem::zeroed()) as _, cch) }
 }
 #[cfg(feature = "windef")]
 #[inline]
@@ -192,9 +192,9 @@ where
 }
 #[cfg(feature = "minwindef")]
 #[inline]
-pub unsafe fn SHEnumerateUnreadMailAccountsW(hkeyuser: Option<super::HKEY>, dwindex: u32, pszmailaddress: &mut [u16]) -> windows_core::HRESULT {
+pub unsafe fn SHEnumerateUnreadMailAccountsW(hkeyuser: Option<super::HKEY>, dwindex: u32, pszmailaddress: windows_core::PWSTR, cchmailaddress: i32) -> windows_core::HRESULT {
     windows_core::link!("shell32.dll" "system" fn SHEnumerateUnreadMailAccountsW(hkeyuser : super::HKEY, dwindex : u32, pszmailaddress : windows_core::PWSTR, cchmailaddress : i32) -> windows_core::HRESULT);
-    unsafe { SHEnumerateUnreadMailAccountsW(hkeyuser.unwrap_or(core::mem::zeroed()) as _, dwindex, core::mem::transmute(pszmailaddress.as_mut_ptr()), pszmailaddress.len().try_into().unwrap()) }
+    unsafe { SHEnumerateUnreadMailAccountsW(hkeyuser.unwrap_or(core::mem::zeroed()) as _, dwindex, pszmailaddress, cchmailaddress) }
 }
 #[inline]
 pub unsafe fn SHEvaluateSystemCommandTemplate<P0>(pszcmdtemplate: P0, ppszapplication: *mut windows_core::PWSTR, ppszcommandline: *mut windows_core::PWSTR, ppszparameters: *mut windows_core::PWSTR) -> windows_core::HRESULT
@@ -277,12 +277,12 @@ where
     unsafe { SHGetImageList(iimagelist, &T::IID, &mut result__).and_then(|| windows_core::Type::from_abi(result__)) }
 }
 #[inline]
-pub unsafe fn SHGetLocalizedName<P0>(pszpath: P0, pszresmodule: &mut [u16], pidsres: *mut i32) -> windows_core::HRESULT
+pub unsafe fn SHGetLocalizedName<P0>(pszpath: P0, pszresmodule: windows_core::PWSTR, cch: u32, pidsres: *mut i32) -> windows_core::HRESULT
 where
     P0: windows_core::Param<windows_core::PCWSTR>,
 {
     windows_core::link!("shell32.dll" "system" fn SHGetLocalizedName(pszpath : windows_core::PCWSTR, pszresmodule : windows_core::PWSTR, cch : u32, pidsres : *mut i32) -> windows_core::HRESULT);
-    unsafe { SHGetLocalizedName(pszpath.param().abi(), core::mem::transmute(pszresmodule.as_mut_ptr()), pszresmodule.len().try_into().unwrap(), pidsres as _) }
+    unsafe { SHGetLocalizedName(pszpath.param().abi(), pszresmodule, cch, pidsres as _) }
 }
 #[inline]
 pub unsafe fn SHGetNewLinkInfoA<P0, P1>(pszlinkto: P0, pszdir: P1, pszname: windows_core::PSTR, pfmustcopy: *mut windows_core::BOOL, uflags: u32) -> windows_core::BOOL
@@ -320,12 +320,12 @@ pub unsafe fn SHGetStockIconInfo(siid: SHSTOCKICONID, uflags: u32, psii: *mut SH
 }
 #[cfg(feature = "minwindef")]
 #[inline]
-pub unsafe fn SHGetUnreadMailCountW<P1>(hkeyuser: Option<super::HKEY>, pszmailaddress: P1, pdwcount: Option<*mut u32>, pfiletime: Option<*mut super::FILETIME>, pszshellexecutecommand: Option<&mut [u16]>) -> windows_core::HRESULT
+pub unsafe fn SHGetUnreadMailCountW<P1>(hkeyuser: Option<super::HKEY>, pszmailaddress: P1, pdwcount: Option<*mut u32>, pfiletime: Option<*mut super::FILETIME>, pszshellexecutecommand: Option<windows_core::PWSTR>, cchshellexecutecommand: i32) -> windows_core::HRESULT
 where
     P1: windows_core::Param<windows_core::PCWSTR>,
 {
     windows_core::link!("shell32.dll" "system" fn SHGetUnreadMailCountW(hkeyuser : super::HKEY, pszmailaddress : windows_core::PCWSTR, pdwcount : *mut u32, pfiletime : *mut super::FILETIME, pszshellexecutecommand : windows_core::PWSTR, cchshellexecutecommand : i32) -> windows_core::HRESULT);
-    unsafe { SHGetUnreadMailCountW(hkeyuser.unwrap_or(core::mem::zeroed()) as _, pszmailaddress.param().abi(), pdwcount.unwrap_or(core::mem::zeroed()) as _, pfiletime.unwrap_or(core::mem::zeroed()) as _, core::mem::transmute(pszshellexecutecommand.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut())), pszshellexecutecommand.as_deref().map_or(0, |slice| slice.len().try_into().unwrap())) }
+    unsafe { SHGetUnreadMailCountW(hkeyuser.unwrap_or(core::mem::zeroed()) as _, pszmailaddress.param().abi(), pdwcount.unwrap_or(core::mem::zeroed()) as _, pfiletime.unwrap_or(core::mem::zeroed()) as _, pszshellexecutecommand.unwrap_or(core::mem::zeroed()) as _, cchshellexecutecommand) }
 }
 #[cfg(feature = "windef")]
 #[inline]
@@ -643,13 +643,8 @@ pub const FO_DELETE: i32 = 3;
 pub const FO_MOVE: i32 = 1;
 pub const FO_RENAME: i32 = 4;
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HDROP(pub *mut core::ffi::c_void);
-impl Default for HDROP {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[cfg(all(feature = "windef", feature = "winnt"))]
 pub type LPDRAGINFO = LPDRAGINFOA;
 #[cfg(all(feature = "windef", feature = "winnt"))]
@@ -677,16 +672,11 @@ pub const NCM_GETADDRESS: i32 = 1025;
 pub const NCM_GETALLOWTYPE: i32 = 1027;
 pub const NCM_SETALLOWTYPE: i32 = 1026;
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct NC_ADDRESS {
     pub pAddrInfo: *mut NET_ADDRESS_INFO_,
     pub PortNumber: u16,
     pub PrefixLength: u8,
-}
-impl Default for NC_ADDRESS {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -1369,7 +1359,7 @@ pub type SHFILEOPSTRUCT = SHFILEOPSTRUCTA;
 #[repr(C, packed(1))]
 #[cfg(target_arch = "x86")]
 #[cfg(all(feature = "windef", feature = "winnt"))]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct SHFILEOPSTRUCTA {
     pub hwnd: super::HWND,
     pub wFunc: u32,
@@ -1379,18 +1369,11 @@ pub struct SHFILEOPSTRUCTA {
     pub fAnyOperationsAborted: windows_core::BOOL,
     pub hNameMappings: *mut core::ffi::c_void,
     pub lpszProgressTitle: windows_core::PCSTR,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "windef", feature = "winnt"))]
-impl Default for SHFILEOPSTRUCTA {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 #[repr(C)]
 #[cfg(any(target_arch = "aarch64", target_arch = "arm64ec", target_arch = "x86_64"))]
 #[cfg(all(feature = "windef", feature = "winnt"))]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct SHFILEOPSTRUCTA {
     pub hwnd: super::HWND,
     pub wFunc: u32,
@@ -1400,18 +1383,11 @@ pub struct SHFILEOPSTRUCTA {
     pub fAnyOperationsAborted: windows_core::BOOL,
     pub hNameMappings: *mut core::ffi::c_void,
     pub lpszProgressTitle: windows_core::PCSTR,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "arm64ec", target_arch = "x86_64"))]
-#[cfg(all(feature = "windef", feature = "winnt"))]
-impl Default for SHFILEOPSTRUCTA {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 #[repr(C, packed(1))]
 #[cfg(target_arch = "x86")]
 #[cfg(all(feature = "windef", feature = "winnt"))]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct SHFILEOPSTRUCTW {
     pub hwnd: super::HWND,
     pub wFunc: u32,
@@ -1421,18 +1397,11 @@ pub struct SHFILEOPSTRUCTW {
     pub fAnyOperationsAborted: windows_core::BOOL,
     pub hNameMappings: *mut core::ffi::c_void,
     pub lpszProgressTitle: windows_core::PCWSTR,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "windef", feature = "winnt"))]
-impl Default for SHFILEOPSTRUCTW {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 #[repr(C)]
 #[cfg(any(target_arch = "aarch64", target_arch = "arm64ec", target_arch = "x86_64"))]
 #[cfg(all(feature = "windef", feature = "winnt"))]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct SHFILEOPSTRUCTW {
     pub hwnd: super::HWND,
     pub wFunc: u32,
@@ -1442,13 +1411,6 @@ pub struct SHFILEOPSTRUCTW {
     pub fAnyOperationsAborted: windows_core::BOOL,
     pub hNameMappings: *mut core::ffi::c_void,
     pub lpszProgressTitle: windows_core::PCWSTR,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "arm64ec", target_arch = "x86_64"))]
-#[cfg(all(feature = "windef", feature = "winnt"))]
-impl Default for SHFILEOPSTRUCTW {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 pub const SHGFI_ADDOVERLAYS: i32 = 32;
 pub const SHGFI_ATTRIBUTES: i32 = 2048;

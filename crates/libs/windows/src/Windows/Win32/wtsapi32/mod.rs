@@ -457,9 +457,9 @@ pub unsafe fn WTSVirtualChannelQuery(hchannelhandle: super::HANDLE, param1: WTS_
 }
 #[cfg(feature = "winnt")]
 #[inline]
-pub unsafe fn WTSVirtualChannelRead(hchannelhandle: super::HANDLE, timeout: u32, buffer: &mut [u8], pbytesread: *mut u32) -> windows_core::BOOL {
+pub unsafe fn WTSVirtualChannelRead(hchannelhandle: super::HANDLE, timeout: u32, buffer: *mut i8, buffersize: u32, pbytesread: *mut u32) -> windows_core::BOOL {
     windows_core::link!("wtsapi32.dll" "system" fn WTSVirtualChannelRead(hchannelhandle : super::HANDLE, timeout : u32, buffer : *mut i8, buffersize : u32, pbytesread : *mut u32) -> windows_core::BOOL);
-    unsafe { WTSVirtualChannelRead(hchannelhandle, timeout, core::mem::transmute(buffer.as_mut_ptr()), buffer.len().try_into().unwrap(), pbytesread as _) }
+    unsafe { WTSVirtualChannelRead(hchannelhandle, timeout, buffer as _, buffersize, pbytesread as _) }
 }
 #[cfg(feature = "winnt")]
 #[inline]
@@ -1024,13 +1024,8 @@ pub struct WTS_CLIENT_DISPLAY {
     pub ColorDepth: u32,
 }
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct WTS_CLOUD_AUTH_HANDLE(pub *mut core::ffi::c_void);
-impl Default for WTS_CLOUD_AUTH_HANDLE {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 pub const WTS_COMMENT_LENGTH: i32 = 60;
 pub type WTS_CONFIG_CLASS = i32;
 pub type WTS_CONFIG_SOURCE = i32;
@@ -1127,15 +1122,10 @@ pub const WTS_SECURITY_SET_INFORMATION: i32 = 2;
 pub const WTS_SECURITY_USER_ACCESS: i32 = 329;
 pub const WTS_SECURITY_VIRTUAL_CHANNELS: i32 = 8;
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct WTS_SERIALIZED_USER_CREDENTIAL {
     pub SerializationLength: u32,
     pub Serialization: *mut u8,
-}
-impl Default for WTS_SERIALIZED_USER_CREDENTIAL {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]

@@ -5340,6 +5340,22 @@ impl windows_core::RuntimeType for FlyoutPlacementMode {
     );
 }
 #[repr(transparent)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct FocusState(pub i32);
+impl FocusState {
+    pub const Unfocused: Self = Self(0);
+    pub const Pointer: Self = Self(1);
+    pub const Keyboard: Self = Self(2);
+    pub const Programmatic: Self = Self(3);
+}
+impl windows_core::TypeKind for FocusState {
+    type TypeKind = windows_core::CopyType;
+}
+impl windows_core::RuntimeType for FocusState {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::from_slice(b"enum(Microsoft.UI.Xaml.FocusState;i4)");
+}
+#[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FolderPicker(windows_core::IUnknown);
 windows_core::imp::interface_hierarchy!(
@@ -13548,6 +13564,16 @@ impl IFrameworkElement {
             .ok()
         }
     }
+    pub(crate) fn MaxWidth(&self) -> windows_core::Result<f64> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).MaxWidth)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
     pub(crate) fn SetMaxWidth(&self, value: f64) -> windows_core::Result<()> {
         unsafe {
             (windows_core::Interface::vtable(self).SetMaxWidth)(
@@ -13564,6 +13590,16 @@ impl IFrameworkElement {
                 value,
             )
             .ok()
+        }
+    }
+    pub(crate) fn MaxHeight(&self) -> windows_core::Result<f64> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).MaxHeight)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
         }
     }
     pub(crate) fn SetMaxHeight(&self, value: f64) -> windows_core::Result<()> {
@@ -13762,13 +13798,15 @@ pub struct IFrameworkElement_Vtbl {
     MinWidth: usize,
     pub SetMinWidth:
         unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
-    MaxWidth: usize,
+    pub MaxWidth:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut f64) -> windows_core::HRESULT,
     pub SetMaxWidth:
         unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
     MinHeight: usize,
     pub SetMinHeight:
         unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
-    MaxHeight: usize,
+    pub MaxHeight:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut f64) -> windows_core::HRESULT,
     pub SetMaxHeight:
         unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
     HorizontalAlignment: usize,
@@ -20452,6 +20490,16 @@ impl IPivot {
             .ok()
         }
     }
+    pub(crate) fn SelectedIndex(&self) -> windows_core::Result<i32> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).SelectedIndex)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
     pub(crate) fn SetSelectedIndex(&self, value: i32) -> windows_core::Result<()> {
         unsafe {
             (windows_core::Interface::vtable(self).SetSelectedIndex)(
@@ -20514,7 +20562,8 @@ pub struct IPivot_Vtbl {
     SetRightHeaderTemplate: usize,
     HeaderTemplate: usize,
     SetHeaderTemplate: usize,
-    SelectedIndex: usize,
+    pub SelectedIndex:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut i32) -> windows_core::HRESULT,
     pub SetSelectedIndex:
         unsafe extern "system" fn(*mut core::ffi::c_void, i32) -> windows_core::HRESULT,
     SelectedItem: usize,
@@ -22342,6 +22391,16 @@ impl windows_core::RuntimeType for IRichEditBox {
         windows_core::imp::ConstBuffer::for_interface::<Self>();
 }
 impl IRichEditBox {
+    pub(crate) fn IsReadOnly(&self) -> windows_core::Result<bool> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).IsReadOnly)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
     pub(crate) fn SetIsReadOnly(&self, value: bool) -> windows_core::Result<()> {
         unsafe {
             (windows_core::Interface::vtable(self).SetIsReadOnly)(
@@ -22416,7 +22475,8 @@ impl IRichEditBox {
 #[repr(C)]
 pub struct IRichEditBox_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
-    IsReadOnly: usize,
+    pub IsReadOnly:
+        unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
     pub SetIsReadOnly:
         unsafe extern "system" fn(*mut core::ffi::c_void, bool) -> windows_core::HRESULT,
     AcceptsReturn: usize,
@@ -29805,6 +29865,17 @@ impl IUIElement {
             .ok()
         }
     }
+    pub(crate) fn Focus(&self, value: FocusState) -> windows_core::Result<bool> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).Focus)(
+                windows_core::Interface::as_raw(self),
+                value,
+                &mut result__,
+            )
+            .map(|| result__)
+        }
+    }
     pub(crate) fn StartAnimation<P0>(&self, animation: P0) -> windows_core::Result<()>
     where
         P0: windows_core::Param<ICompositionAnimationBase>,
@@ -30133,7 +30204,11 @@ pub struct IUIElement_Vtbl {
     StartBringIntoView: usize,
     StartBringIntoViewWithOptions: usize,
     TryInvokeKeyboardAccelerator: usize,
-    Focus: usize,
+    pub Focus: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        FocusState,
+        *mut bool,
+    ) -> windows_core::HRESULT,
     pub StartAnimation: unsafe extern "system" fn(
         *mut core::ffi::c_void,
         *mut core::ffi::c_void,

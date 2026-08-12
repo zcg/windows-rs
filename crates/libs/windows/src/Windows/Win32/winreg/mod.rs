@@ -325,9 +325,9 @@ pub unsafe fn RegEnableReflectionKey(hbase: super::HKEY) -> i32 {
 }
 #[cfg(feature = "minwindef")]
 #[inline]
-pub unsafe fn RegEnumKeyA(hkey: super::HKEY, dwindex: u32, lpname: Option<&mut [u8]>) -> LSTATUS {
+pub unsafe fn RegEnumKeyA(hkey: super::HKEY, dwindex: u32, lpname: Option<windows_core::PSTR>, cchname: u32) -> LSTATUS {
     windows_core::link!("advapi32.dll" "system" fn RegEnumKeyA(hkey : super::HKEY, dwindex : u32, lpname : windows_core::PSTR, cchname : u32) -> LSTATUS);
-    unsafe { RegEnumKeyA(hkey, dwindex, core::mem::transmute(lpname.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut())), lpname.as_deref().map_or(0, |slice| slice.len().try_into().unwrap())) }
+    unsafe { RegEnumKeyA(hkey, dwindex, lpname.unwrap_or(core::mem::zeroed()) as _, cchname) }
 }
 #[cfg(feature = "minwindef")]
 #[inline]
@@ -343,9 +343,9 @@ pub unsafe fn RegEnumKeyExW(hkey: super::HKEY, dwindex: u32, lpname: Option<wind
 }
 #[cfg(feature = "minwindef")]
 #[inline]
-pub unsafe fn RegEnumKeyW(hkey: super::HKEY, dwindex: u32, lpname: Option<&mut [u16]>) -> LSTATUS {
+pub unsafe fn RegEnumKeyW(hkey: super::HKEY, dwindex: u32, lpname: Option<windows_core::PWSTR>, cchname: u32) -> LSTATUS {
     windows_core::link!("advapi32.dll" "system" fn RegEnumKeyW(hkey : super::HKEY, dwindex : u32, lpname : windows_core::PWSTR, cchname : u32) -> LSTATUS);
-    unsafe { RegEnumKeyW(hkey, dwindex, core::mem::transmute(lpname.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut())), lpname.as_deref().map_or(0, |slice| slice.len().try_into().unwrap())) }
+    unsafe { RegEnumKeyW(hkey, dwindex, lpname.unwrap_or(core::mem::zeroed()) as _, cchname) }
 }
 #[cfg(feature = "minwindef")]
 #[inline]
@@ -431,13 +431,13 @@ where
 }
 #[cfg(feature = "minwindef")]
 #[inline]
-pub unsafe fn RegLoadMUIStringA<P1, P6>(hkey: super::HKEY, pszvalue: P1, pszoutbuf: Option<&mut [u8]>, pcbdata: Option<*mut u32>, flags: u32, pszdirectory: P6) -> LSTATUS
+pub unsafe fn RegLoadMUIStringA<P1, P6>(hkey: super::HKEY, pszvalue: P1, pszoutbuf: Option<windows_core::PSTR>, cboutbuf: u32, pcbdata: Option<*mut u32>, flags: u32, pszdirectory: P6) -> LSTATUS
 where
     P1: windows_core::Param<windows_core::PCSTR>,
     P6: windows_core::Param<windows_core::PCSTR>,
 {
     windows_core::link!("advapi32.dll" "system" fn RegLoadMUIStringA(hkey : super::HKEY, pszvalue : windows_core::PCSTR, pszoutbuf : windows_core::PSTR, cboutbuf : u32, pcbdata : *mut u32, flags : u32, pszdirectory : windows_core::PCSTR) -> LSTATUS);
-    unsafe { RegLoadMUIStringA(hkey, pszvalue.param().abi(), core::mem::transmute(pszoutbuf.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut())), pszoutbuf.as_deref().map_or(0, |slice| slice.len().try_into().unwrap()), pcbdata.unwrap_or(core::mem::zeroed()) as _, flags, pszdirectory.param().abi()) }
+    unsafe { RegLoadMUIStringA(hkey, pszvalue.param().abi(), pszoutbuf.unwrap_or(core::mem::zeroed()) as _, cboutbuf, pcbdata.unwrap_or(core::mem::zeroed()) as _, flags, pszdirectory.param().abi()) }
 }
 #[cfg(feature = "minwindef")]
 #[inline]
@@ -571,15 +571,15 @@ pub unsafe fn RegQueryInfoKeyW(hkey: super::HKEY, lpclass: Option<windows_core::
 }
 #[cfg(feature = "minwindef")]
 #[inline]
-pub unsafe fn RegQueryMultipleValuesA(hkey: super::HKEY, val_list: &mut [VALENTA], lpvaluebuf: Option<windows_core::PSTR>, ldwtotsize: Option<*mut u32>) -> LSTATUS {
+pub unsafe fn RegQueryMultipleValuesA(hkey: super::HKEY, val_list: *mut VALENTA, num_vals: u32, lpvaluebuf: Option<windows_core::PSTR>, ldwtotsize: Option<*mut u32>) -> LSTATUS {
     windows_core::link!("advapi32.dll" "system" fn RegQueryMultipleValuesA(hkey : super::HKEY, val_list : *mut VALENTA, num_vals : u32, lpvaluebuf : windows_core::PSTR, ldwtotsize : *mut u32) -> LSTATUS);
-    unsafe { RegQueryMultipleValuesA(hkey, val_list.as_mut_ptr(), val_list.len().try_into().unwrap(), lpvaluebuf.unwrap_or(core::mem::zeroed()) as _, ldwtotsize.unwrap_or(core::mem::zeroed()) as _) }
+    unsafe { RegQueryMultipleValuesA(hkey, val_list as _, num_vals, lpvaluebuf.unwrap_or(core::mem::zeroed()) as _, ldwtotsize.unwrap_or(core::mem::zeroed()) as _) }
 }
 #[cfg(feature = "minwindef")]
 #[inline]
-pub unsafe fn RegQueryMultipleValuesW(hkey: super::HKEY, val_list: &mut [VALENTW], lpvaluebuf: Option<windows_core::PWSTR>, ldwtotsize: Option<*mut u32>) -> LSTATUS {
+pub unsafe fn RegQueryMultipleValuesW(hkey: super::HKEY, val_list: *mut VALENTW, num_vals: u32, lpvaluebuf: Option<windows_core::PWSTR>, ldwtotsize: Option<*mut u32>) -> LSTATUS {
     windows_core::link!("advapi32.dll" "system" fn RegQueryMultipleValuesW(hkey : super::HKEY, val_list : *mut VALENTW, num_vals : u32, lpvaluebuf : windows_core::PWSTR, ldwtotsize : *mut u32) -> LSTATUS);
-    unsafe { RegQueryMultipleValuesW(hkey, val_list.as_mut_ptr(), val_list.len().try_into().unwrap(), lpvaluebuf.unwrap_or(core::mem::zeroed()) as _, ldwtotsize.unwrap_or(core::mem::zeroed()) as _) }
+    unsafe { RegQueryMultipleValuesW(hkey, val_list as _, num_vals, lpvaluebuf.unwrap_or(core::mem::zeroed()) as _, ldwtotsize.unwrap_or(core::mem::zeroed()) as _) }
 }
 #[cfg(feature = "minwindef")]
 #[inline]
@@ -826,30 +826,20 @@ pub type PVALENTA = *mut VALENTA;
 pub type PVALENTW = *mut VALENTW;
 pub type PVALUE = PVALUEA;
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct PVALUEA {
     pub pv_valuename: windows_core::PSTR,
     pub pv_valuelen: i32,
     pub pv_value_context: *mut core::ffi::c_void,
     pub pv_type: u32,
 }
-impl Default for PVALUEA {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct PVALUEW {
     pub pv_valuename: windows_core::PWSTR,
     pub pv_valuelen: i32,
     pub pv_value_context: *mut core::ffi::c_void,
     pub pv_type: u32,
-}
-impl Default for PVALUEW {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 pub type QUERYHANDLER = Option<unsafe extern "C" fn(keycontext: *mut core::ffi::c_void, val_list: *mut val_context, num_vals: u32, outputbuffer: *mut core::ffi::c_void, total_outlen: *mut u32, input_blen: u32) -> u32>;
 pub const REASON_HWINSTALL: i32 = 65538;
@@ -868,7 +858,7 @@ pub const REG_ALLOW_UNSECURE_CONNECTION: i32 = 4;
 pub const REG_MUI_STRING_TRUNCATE: i32 = 1;
 pub const REG_PROCESS_APPKEY: i32 = 1;
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct REG_PROVIDER {
     pub pi_R0_1val: PQUERYHANDLER,
     pub pi_R0_allvals: PQUERYHANDLER,
@@ -876,11 +866,6 @@ pub struct REG_PROVIDER {
     pub pi_R3_allvals: PQUERYHANDLER,
     pub pi_flags: u32,
     pub pi_key_context: *mut core::ffi::c_void,
-}
-impl Default for REG_PROVIDER {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 pub const REG_SECURE_CONNECTION: i32 = 1;
 pub const REG_USE_CURRENT_SECURITY_CONTEXT: i32 = 2;
@@ -936,14 +921,9 @@ pub struct VALENTW {
 }
 pub const WIN31_CLASS: i32 = 0;
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct val_context {
     pub valuelen: i32,
     pub value_context: *mut core::ffi::c_void,
     pub val_buff_ptr: *mut core::ffi::c_void,
-}
-impl Default for val_context {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }

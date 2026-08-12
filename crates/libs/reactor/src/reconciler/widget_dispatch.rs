@@ -1,63 +1,90 @@
+use std::panic::AssertUnwindSafe;
+
 use super::*;
+use crate::reference::NativeElementRef;
+use crate::widgets::WrapGridSpan;
 
 impl<B: Backend + 'static> Reconciler<B> {
-    pub fn mount_widget(&mut self, w: &dyn Widget) -> ControlId {
+    pub(super) fn mount_widget(&mut self, w: &dyn Widget) -> ControlId {
         let id = self.acquire_control(w.kind());
-        self.apply_props(id, &w.bindings());
-        self.apply_modifiers(id, w.modifiers());
-        self.apply_attached(id, w.attached());
-        self.mount_widget_children(id, w.children());
-        if let Some(hdr) = w.header_element()
-            && let Some(hdr_id) = self.mount(hdr)
-        {
-            self.backend.set_header_element(id, Some(hdr_id));
-            self.header_elements.insert(id, hdr_id);
+        let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            self.apply_props(id, &w.bindings());
+            self.apply_modifiers(id, w.modifiers());
+            self.apply_attached(id, w.attached());
+            self.mount_widget_children(id, w.children());
+            if let Some(hdr) = w.header_element() {
+                let output = self.mount_output(hdr);
+                self.tree.set_header(id, Some(output));
+                if let Some(hdr_id) = output.native {
+                    self.backend.set_header_element(id, Some(hdr_id));
+                }
+            }
+            if let Some(pane) = w.pane_element() {
+                let output = self.mount_output(pane);
+                self.tree.set_pane(id, Some(output));
+                if let Some(pane_id) = output.native {
+                    self.backend.set_pane_element(id, Some(pane_id));
+                }
+            }
+        }));
+        if let Err(payload) = result {
+            self.unmount_inner(id);
+            std::panic::resume_unwind(payload);
         }
-        if let Some(pane) = w.pane_element()
-            && let Some(pane_id) = self.mount(pane)
-        {
-            self.backend.set_pane_element(id, Some(pane_id));
-            self.pane_elements.insert(id, pane_id);
+        let native = self.backend.get_native_element(id);
+        if let Some(reference) = element_ref(w.modifiers()) {
+            reference.set_native(native.clone());
         }
         if let Some(cb) = w.on_mounted_callback() {
-            cb.invoke(self.backend.get_native_element(id));
+            cb.invoke(native.clone());
         }
         if let Some(cb) = w.modifiers().mounted.as_ref() {
-            cb.invoke(self.backend.get_native_element(id));
+            cb.invoke(native);
         }
-        if let Some(cb) = w.on_unmounted_callback() {
-            self.unmount_callbacks.insert(id, cb.clone());
-        }
+        self.tree.set_before_unmount(
+            id,
+            element_ref(w.modifiers()).cloned(),
+            w.on_unmounted_callback().cloned(),
+        );
         id
     }
 
-    pub fn update_widget(&mut self, old: &dyn Widget, new: &dyn Widget, id: ControlId) {
+    pub(super) fn update_widget(&mut self, old: &dyn Widget, new: &dyn Widget, id: ControlId) {
         self.diff_props(id, &old.bindings(), &new.bindings());
         self.diff_modifiers(id, old.modifiers(), new.modifiers());
         self.diff_attached(id, old.attached(), new.attached());
         self.update_widget_children(id, old.children(), new.children());
         self.update_header_element(id, old.header_element(), new.header_element());
         self.update_pane_element(id, old.pane_element(), new.pane_element());
-        if let Some(cb) = new.on_unmounted_callback() {
-            self.unmount_callbacks.insert(id, cb.clone());
-        } else {
-            self.unmount_callbacks.remove(&id);
+        let old_reference = element_ref(old.modifiers());
+        let new_reference = element_ref(new.modifiers());
+        if old_reference != new_reference {
+            if let Some(reference) = old_reference {
+                reference.set_native(None);
+            }
+            if let Some(reference) = new_reference {
+                reference.set_native(self.backend.get_native_element(id));
+            }
         }
+        self.tree.set_before_unmount(
+            id,
+            new_reference.cloned(),
+            new.on_unmounted_callback().cloned(),
+        );
     }
 
     fn mount_widget_children(&mut self, id: ControlId, children: Children<'_>) {
         match children {
             Children::None => {}
             Children::PositionalSingle(child) => {
-                if let Some(child_id) = self.mount(child) {
-                    self.append_child_tracked(id, child_id);
-                }
+                let output = self.mount_output(child);
+                self.append_output_tracked(id, output);
             }
+
             Children::Keyed(list) => {
-                for child in collect_live(list) {
-                    if let Some(child_id) = self.mount(child) {
-                        self.append_child_tracked(id, child_id);
-                    }
+                for child in list {
+                    let output = self.mount_output(child);
+                    self.append_output_tracked(id, output);
                 }
             }
             Children::Tabs(tabs) => {
@@ -77,24 +104,6 @@ impl<B: Backend + 'static> Reconciler<B> {
         match (old, new) {
             (Children::None, Children::None) => {}
             (Children::PositionalSingle(o), Children::PositionalSingle(n)) => {
-                // 单 child 的身份（key）变化 → 整体重建子树。key 语义：
-                // 不同 key 表示不同控件，逐位 diff 复用同 kind 容器可能残留
-                // 旧子树（如路由切换时两个页面根容器同为 vstack）。
-                if o.key() != n.key() {
-                    let old_id = self.child_at(id, 0);
-                    if let Some(old_id) = old_id {
-                        self.unmount(old_id);
-                    }
-                    match (old_id, self.mount(n)) {
-                        (Some(_), Some(new_id)) => self.replace_child_tracked(id, 0, new_id),
-                        // 旧 child 从未挂载（render 为 Empty，被过滤出 mirror/backend）：
-                        // 不能用 replace/remove 命中索引 0——backend 空集合越界 panic。
-                        (None, Some(new_id)) => self.append_child_tracked(id, new_id),
-                        (Some(_), None) => self.remove_child_tracked(id, 0),
-                        (None, None) => {}
-                    }
-                    return;
-                }
                 let oc = std::slice::from_ref(o);
                 let nc = std::slice::from_ref(n);
                 self.reconcile_children_positional(id, oc, nc);
@@ -126,44 +135,35 @@ impl<B: Backend + 'static> Reconciler<B> {
         match (old, new) {
             (None, None) => {}
             (None, Some(hdr)) => {
-                if let Some(hdr_id) = self.mount(hdr) {
+                let output = self.mount_output(hdr);
+                if let Some(hdr_id) = output.native {
                     self.backend.set_header_element(id, Some(hdr_id));
-                    self.header_elements.insert(id, hdr_id);
                 }
+                self.tree.set_header(id, Some(output));
             }
             (Some(_), None) => {
-                if let Some(hdr_id) = self.header_elements.remove(&id) {
+                if let Some(output) = self.tree.header(id) {
+                    self.tree.set_header(id, None);
                     self.backend
                         .set_header_element(id, Option::<ControlId>::None);
-                    self.unmount(hdr_id);
+                    self.unmount_output(output);
                 }
             }
             (Some(old_el), Some(new_el)) => {
                 // Reconcile in-place when possible to preserve focus/state.
-                if let Some(hdr_id) = self.header_elements.get(&id).copied() {
-                    if old_el.kind_matches(new_el) {
-                        let new_id = self.update(old_el, new_el, hdr_id);
-                        match new_id {
-                            Some(nid) if nid != hdr_id => {
-                                self.backend.set_header_element(id, Some(nid));
-                                self.header_elements.insert(id, nid);
-                            }
-                            None => {
-                                self.backend
-                                    .set_header_element(id, Option::<ControlId>::None);
-                                self.header_elements.remove(&id);
-                            }
-                            _ => {}
-                        }
-                        return;
+                if let Some(old_output) = self.tree.header(id) {
+                    let new_output = self.update_output(old_el, new_el, old_output);
+                    if old_output.native != new_output.native {
+                        self.backend.set_header_element(id, new_output.native);
                     }
-                    self.header_elements.remove(&id);
-                    self.unmount(hdr_id);
+                    self.tree.set_header(id, Some(new_output));
+                    return;
                 }
-                if let Some(hdr_id) = self.mount(new_el) {
+                let output = self.mount_output(new_el);
+                if let Some(hdr_id) = output.native {
                     self.backend.set_header_element(id, Some(hdr_id));
-                    self.header_elements.insert(id, hdr_id);
                 }
+                self.tree.set_header(id, Some(output));
             }
         }
     }
@@ -172,73 +172,75 @@ impl<B: Backend + 'static> Reconciler<B> {
         match (old, new) {
             (None, None) => {}
             (None, Some(pane)) => {
-                if let Some(pane_id) = self.mount(pane) {
+                let output = self.mount_output(pane);
+                if let Some(pane_id) = output.native {
                     self.backend.set_pane_element(id, Some(pane_id));
-                    self.pane_elements.insert(id, pane_id);
                 }
+                self.tree.set_pane(id, Some(output));
             }
             (Some(_), None) => {
-                if let Some(pane_id) = self.pane_elements.remove(&id) {
+                if let Some(output) = self.tree.pane(id) {
+                    self.tree.set_pane(id, None);
                     self.backend.set_pane_element(id, Option::<ControlId>::None);
-                    self.unmount(pane_id);
+                    self.unmount_output(output);
                 }
             }
             (Some(old_el), Some(new_el)) => {
                 // Reconcile in-place when possible to preserve focus/state.
-                if let Some(pane_id) = self.pane_elements.get(&id).copied() {
-                    if old_el.kind_matches(new_el) {
-                        let new_id = self.update(old_el, new_el, pane_id);
-                        match new_id {
-                            Some(nid) if nid != pane_id => {
-                                self.backend.set_pane_element(id, Some(nid));
-                                self.pane_elements.insert(id, nid);
-                            }
-                            None => {
-                                self.backend.set_pane_element(id, Option::<ControlId>::None);
-                                self.pane_elements.remove(&id);
-                            }
-                            _ => {}
-                        }
-                        return;
+                if let Some(old_output) = self.tree.pane(id) {
+                    let new_output = self.update_output(old_el, new_el, old_output);
+                    if old_output.native != new_output.native {
+                        self.backend.set_pane_element(id, new_output.native);
                     }
-                    self.pane_elements.remove(&id);
-                    self.unmount(pane_id);
+                    self.tree.set_pane(id, Some(new_output));
+                    return;
                 }
-                if let Some(pane_id) = self.mount(new_el) {
+                let output = self.mount_output(new_el);
+                if let Some(pane_id) = output.native {
                     self.backend.set_pane_element(id, Some(pane_id));
-                    self.pane_elements.insert(id, pane_id);
                 }
+                self.tree.set_pane(id, Some(output));
             }
         }
     }
 
     fn mount_tab_item(&mut self, parent: ControlId, tab: &TabItem) {
         let tab_id = self.acquire_control(ControlKind::TabViewItem);
-        self.backend
-            .set_prop(tab_id, Prop::Header, &PropValue::Str(tab.header.clone()));
-        if let Some(key) = &tab.key {
+        let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
             self.backend
-                .set_prop(tab_id, Prop::ItemKey, &PropValue::Str(key.clone()));
-        }
-        if let Some(closable) = tab.is_closable {
-            self.backend
-                .set_prop(tab_id, Prop::IsClosable, &PropValue::Bool(closable));
-        }
-        if let Some(content_id) = self.mount(&tab.content) {
-            self.append_child_tracked(tab_id, content_id);
+                .set_prop(tab_id, Prop::Header, &PropValue::Str(tab.header.clone()));
+            if let Some(key) = &tab.key {
+                self.backend
+                    .set_prop(tab_id, Prop::ItemKey, &PropValue::Str(key.clone()));
+            }
+            if let Some(closable) = tab.is_closable {
+                self.backend
+                    .set_prop(tab_id, Prop::IsClosable, &PropValue::Bool(closable));
+            }
+            let output = self.mount_output(&tab.content);
+            self.append_output_tracked(tab_id, output);
+        }));
+        if let Err(payload) = result {
+            self.unmount_inner(tab_id);
+            std::panic::resume_unwind(payload);
         }
         self.append_child_tracked(parent, tab_id);
     }
 
     fn mount_pivot_item(&mut self, parent: ControlId, item: &PivotItem) {
         let item_id = self.acquire_control(ControlKind::PivotItem);
-        self.backend.set_prop(
-            item_id,
-            Prop::ItemHeader,
-            &PropValue::Str(item.header.clone()),
-        );
-        if let Some(content_id) = self.mount(&item.content) {
-            self.append_child_tracked(item_id, content_id);
+        let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            self.backend.set_prop(
+                item_id,
+                Prop::ItemHeader,
+                &PropValue::Str(item.header.clone()),
+            );
+            let output = self.mount_output(&item.content);
+            self.append_output_tracked(item_id, output);
+        }));
+        if let Err(payload) = result {
+            self.unmount_inner(item_id);
+            std::panic::resume_unwind(payload);
         }
         self.append_child_tracked(parent, item_id);
     }
@@ -288,7 +290,7 @@ impl<B: Backend + 'static> Reconciler<B> {
         while self.child_at(parent, new.len()).is_some() {
             let extra_id = self.child_at(parent, new.len()).unwrap();
             self.remove_child_tracked(parent, new.len());
-            self.unmount(extra_id);
+            self.unmount_inner(extra_id);
         }
     }
 
@@ -319,7 +321,7 @@ impl<B: Backend + 'static> Reconciler<B> {
         while self.child_at(parent, new.len()).is_some() {
             let extra_id = self.child_at(parent, new.len()).unwrap();
             self.remove_child_tracked(parent, new.len());
-            self.unmount(extra_id);
+            self.unmount_inner(extra_id);
         }
     }
 
@@ -337,7 +339,7 @@ impl<B: Backend + 'static> Reconciler<B> {
         }
     }
 
-    pub fn apply_grid_placement(&mut self, id: ControlId, p: GridPlacement) {
+    pub(super) fn apply_grid_placement(&mut self, id: ControlId, p: GridPlacement) {
         if p.row != 0 {
             self.backend
                 .set_prop(id, Prop::AttachedGridRow, &PropValue::I32(p.row));
@@ -361,7 +363,7 @@ impl<B: Backend + 'static> Reconciler<B> {
 
     /// Unconditionally emits all four grid attached props - used in the diff
     /// path to clear stale values when placement changes or is removed.
-    pub fn apply_grid_placement_full(&mut self, id: ControlId, p: GridPlacement) {
+    pub(super) fn apply_grid_placement_full(&mut self, id: ControlId, p: GridPlacement) {
         self.backend
             .set_prop(id, Prop::AttachedGridRow, &PropValue::I32(p.row));
         self.backend
@@ -373,6 +375,23 @@ impl<B: Backend + 'static> Reconciler<B> {
             Prop::AttachedGridColumnSpan,
             &PropValue::I32(p.column_span),
         );
+    }
+
+    fn apply_wrap_grid_span(&mut self, id: ControlId, p: WrapGridSpan) {
+        if p.row_span > 1 {
+            self.backend.set_prop(
+                id,
+                Prop::AttachedWrapGridRowSpan,
+                &PropValue::I32(p.row_span),
+            );
+        }
+        if p.column_span > 1 {
+            self.backend.set_prop(
+                id,
+                Prop::AttachedWrapGridColumnSpan,
+                &PropValue::I32(p.column_span),
+            );
+        }
     }
 
     fn apply_canvas_position(&mut self, id: ControlId, p: CanvasPosition) {
@@ -389,23 +408,6 @@ impl<B: Backend + 'static> Reconciler<B> {
         if p.z_index != 0 {
             self.backend
                 .set_prop(id, Prop::AttachedCanvasZIndex, &PropValue::I32(p.z_index));
-        }
-    }
-
-    pub fn apply_wrap_grid_span(&mut self, id: ControlId, p: WrapGridSpan) {
-        if p.row_span > 1 {
-            self.backend.set_prop(
-                id,
-                Prop::AttachedWrapGridRowSpan,
-                &PropValue::I32(p.row_span),
-            );
-        }
-        if p.column_span > 1 {
-            self.backend.set_prop(
-                id,
-                Prop::AttachedWrapGridColumnSpan,
-                &PropValue::I32(p.column_span),
-            );
         }
     }
 
@@ -512,4 +514,11 @@ impl<B: Backend + 'static> Reconciler<B> {
             &PropValue::Bool(p.align_v_center_with_panel),
         );
     }
+}
+
+fn element_ref(modifiers: &Modifiers) -> Option<&NativeElementRef> {
+    modifiers
+        .attached
+        .as_ref()
+        .and_then(|attached| attached.get())
 }

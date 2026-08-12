@@ -149,7 +149,7 @@ pub struct CLSIDDATA {
     pub m_cCallsFailed: u32,
 }
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct CLSIDDATA2 {
     pub m_clsid: windows_core::GUID,
     pub m_appid: windows_core::GUID,
@@ -164,11 +164,6 @@ pub struct CLSIDDATA2 {
     pub m_dwRespTime: u32,
     pub m_cCallsCompleted: u32,
     pub m_cCallsFailed: u32,
-}
-impl Default for CLSIDDATA2 {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 pub const COMEvents: windows_core::GUID = windows_core::GUID::from_u128(0xecabb0ab_7f19_11d2_978e_0000f8757e2a);
 pub type COMPLUS_APPTYPE = i32;
@@ -721,8 +716,8 @@ impl ICOMLBArguments {
     pub unsafe fn SetCLSID(&self, pclsid: *const windows_core::GUID) -> windows_core::HRESULT {
         unsafe { (windows_core::Interface::vtable(self).SetCLSID)(windows_core::Interface::as_raw(self), pclsid) }
     }
-    pub unsafe fn GetMachineName(&self, szservername: &mut [u16]) -> windows_core::HRESULT {
-        unsafe { (windows_core::Interface::vtable(self).GetMachineName)(windows_core::Interface::as_raw(self), szservername.len().try_into().unwrap(), szservername.as_mut_ptr()) }
+    pub unsafe fn GetMachineName(&self, cchsvr: u32, szservername: *mut u16) -> windows_core::HRESULT {
+        unsafe { (windows_core::Interface::vtable(self).GetMachineName)(windows_core::Interface::as_raw(self), cchsvr, szservername as _) }
     }
     pub unsafe fn SetMachineName(&self, szservername: &[u16]) -> windows_core::HRESULT {
         unsafe { (windows_core::Interface::vtable(self).SetMachineName)(windows_core::Interface::as_raw(self), szservername.len().try_into().unwrap(), szservername.as_ptr()) }

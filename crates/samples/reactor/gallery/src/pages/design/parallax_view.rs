@@ -39,9 +39,9 @@ pub fn parallax_view_page(_: &(), cx: &mut RenderCx) -> Element {
     .on_mounted(on_sv_mounted);
 
     let attach = {
-        let sv_ref = sv_ref.clone();
-        let pv_ref = pv_ref.clone();
-        let set_status = set_status.clone();
+        let sv_ref = sv_ref;
+        let pv_ref = pv_ref;
+        let set_status = set_status;
         move || {
             let sv = sv_ref.borrow().clone();
             let pv = pv_ref.borrow().clone();

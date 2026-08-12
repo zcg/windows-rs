@@ -20,7 +20,7 @@ pub fn swipe_control_page(_: &(), cx: &mut RenderCx) -> Element {
             move |label| set_status.call(format!("Action: {label}"))
         }),
         SwipeItemDef::new("Archive").on_invoked({
-            let set_status = set_status.clone();
+            let set_status = set_status;
             move |label| set_status.call(format!("Action: {label}"))
         }),
     ];
@@ -41,7 +41,7 @@ pub fn swipe_control_page(_: &(), cx: &mut RenderCx) -> Element {
                 "Swipe Right (Accept / Flag)",
                 vstack((
                     swipe_control(row("Swipe Right to reveal actions"))
-                        .left_items(left_actions.clone())
+                        .left_items(left_actions)
                         .width(380.0),
                     text_block(&*status).opacity(0.6),
                 ))
@@ -52,7 +52,7 @@ pub fn swipe_control_page(_: &(), cx: &mut RenderCx) -> Element {
                 "Swipe Left (Delete / Archive)",
                 vstack((
                     swipe_control(row("Swipe Left to reveal actions"))
-                        .right_items(right_actions.clone())
+                        .right_items(right_actions)
                         .width(380.0),
                 ))
                 .spacing(8.0),

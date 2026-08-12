@@ -291,43 +291,15 @@ pub unsafe fn GetPerAdapterInfo(ifindex: u32, pperadapterinfo: Option<*mut super
 }
 #[cfg(all(feature = "in6addr", feature = "tcpestats", feature = "tcpmib"))]
 #[inline]
-pub unsafe fn GetPerTcp6ConnectionEStats(row: *const super::MIB_TCP6ROW, estatstype: super::TCP_ESTATS_TYPE, rw: Option<&mut [u8]>, rwversion: u32, ros: Option<&mut [u8]>, rosversion: u32, rod: Option<&mut [u8]>, rodversion: u32) -> u32 {
+pub unsafe fn GetPerTcp6ConnectionEStats(row: *const super::MIB_TCP6ROW, estatstype: super::TCP_ESTATS_TYPE, rw: Option<*mut u8>, rwversion: u32, rwsize: u32, ros: Option<*mut u8>, rosversion: u32, rossize: u32, rod: Option<*mut u8>, rodversion: u32, rodsize: u32) -> u32 {
     windows_core::link!("iphlpapi.dll" "system" fn GetPerTcp6ConnectionEStats(row : *const super::MIB_TCP6ROW, estatstype : super::TCP_ESTATS_TYPE, rw : *mut u8, rwversion : u32, rwsize : u32, ros : *mut u8, rosversion : u32, rossize : u32, rod : *mut u8, rodversion : u32, rodsize : u32) -> u32);
-    unsafe {
-        GetPerTcp6ConnectionEStats(
-            row,
-            estatstype,
-            rw.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut()),
-            rwversion,
-            rw.as_deref().map_or(0, |slice| slice.len().try_into().unwrap()),
-            ros.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut()),
-            rosversion,
-            ros.as_deref().map_or(0, |slice| slice.len().try_into().unwrap()),
-            rod.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut()),
-            rodversion,
-            rod.as_deref().map_or(0, |slice| slice.len().try_into().unwrap()),
-        )
-    }
+    unsafe { GetPerTcp6ConnectionEStats(row, estatstype, rw.unwrap_or(core::mem::zeroed()) as _, rwversion, rwsize, ros.unwrap_or(core::mem::zeroed()) as _, rosversion, rossize, rod.unwrap_or(core::mem::zeroed()) as _, rodversion, rodsize) }
 }
 #[cfg(all(feature = "tcpestats", feature = "tcpmib"))]
 #[inline]
-pub unsafe fn GetPerTcpConnectionEStats(row: *const super::MIB_TCPROW_LH, estatstype: super::TCP_ESTATS_TYPE, rw: Option<&mut [u8]>, rwversion: u32, ros: Option<&mut [u8]>, rosversion: u32, rod: Option<&mut [u8]>, rodversion: u32) -> u32 {
+pub unsafe fn GetPerTcpConnectionEStats(row: *const super::MIB_TCPROW_LH, estatstype: super::TCP_ESTATS_TYPE, rw: Option<*mut u8>, rwversion: u32, rwsize: u32, ros: Option<*mut u8>, rosversion: u32, rossize: u32, rod: Option<*mut u8>, rodversion: u32, rodsize: u32) -> u32 {
     windows_core::link!("iphlpapi.dll" "system" fn GetPerTcpConnectionEStats(row : *const super::MIB_TCPROW_LH, estatstype : super::TCP_ESTATS_TYPE, rw : *mut u8, rwversion : u32, rwsize : u32, ros : *mut u8, rosversion : u32, rossize : u32, rod : *mut u8, rodversion : u32, rodsize : u32) -> u32);
-    unsafe {
-        GetPerTcpConnectionEStats(
-            row,
-            estatstype,
-            rw.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut()),
-            rwversion,
-            rw.as_deref().map_or(0, |slice| slice.len().try_into().unwrap()),
-            ros.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut()),
-            rosversion,
-            ros.as_deref().map_or(0, |slice| slice.len().try_into().unwrap()),
-            rod.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut()),
-            rodversion,
-            rod.as_deref().map_or(0, |slice| slice.len().try_into().unwrap()),
-        )
-    }
+    unsafe { GetPerTcpConnectionEStats(row, estatstype, rw.unwrap_or(core::mem::zeroed()) as _, rwversion, rwsize, ros.unwrap_or(core::mem::zeroed()) as _, rosversion, rossize, rod.unwrap_or(core::mem::zeroed()) as _, rodversion, rodsize) }
 }
 #[cfg(feature = "ntddndis")]
 #[inline]
@@ -546,13 +518,8 @@ pub unsafe fn UnregisterInterfaceTimestampConfigChange(notificationhandle: HIFTI
     unsafe { UnregisterInterfaceTimestampConfigChange(notificationhandle) }
 }
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HIFTIMESTAMPCHANGE(pub *mut core::ffi::c_void);
-impl Default for HIFTIMESTAMPCHANGE {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct INTERFACE_HARDWARE_CROSSTIMESTAMP {

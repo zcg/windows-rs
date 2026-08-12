@@ -14,7 +14,7 @@ pub fn pips_pager_page(_: &(), cx: &mut RenderCx) -> Element {
                     pips_pager(5)
                         .selected_page_index(page_index)
                         .on_selected_index_changed(move |i| set_page_index.call(i)),
-                    text_block(format!("Selected page: {}", page_index))
+                    text_block(format!("Selected page: {page_index}"))
                         .foreground(ThemeRef::SecondaryText),
                 ))
                 .spacing(8.0),

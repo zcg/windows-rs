@@ -83,9 +83,9 @@ pub unsafe fn DdeFreeStringHandle(idinst: u32, hsz: HSZ) -> windows_core::BOOL {
     unsafe { DdeFreeStringHandle(idinst, hsz) }
 }
 #[inline]
-pub unsafe fn DdeGetData(hdata: HDDEDATA, pdst: Option<&mut [u8]>, cboff: u32) -> u32 {
+pub unsafe fn DdeGetData(hdata: HDDEDATA, pdst: Option<*mut u8>, cbmax: u32, cboff: u32) -> u32 {
     windows_core::link!("user32.dll" "system" fn DdeGetData(hdata : HDDEDATA, pdst : *mut u8, cbmax : u32, cboff : u32) -> u32);
-    unsafe { DdeGetData(hdata, pdst.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut()), pdst.as_deref().map_or(0, |slice| slice.len().try_into().unwrap()), cboff) }
+    unsafe { DdeGetData(hdata, pdst.unwrap_or(core::mem::zeroed()) as _, cbmax, cboff) }
 }
 #[inline]
 pub unsafe fn DdeGetLastError(idinst: u32) -> u32 {
@@ -134,14 +134,14 @@ pub unsafe fn DdeQueryNextServer(hconvlist: HCONVLIST, hconvprev: HCONV) -> HCON
     unsafe { DdeQueryNextServer(hconvlist, hconvprev) }
 }
 #[inline]
-pub unsafe fn DdeQueryStringA(idinst: u32, hsz: HSZ, psz: Option<&mut [u8]>, icodepage: i32) -> u32 {
+pub unsafe fn DdeQueryStringA(idinst: u32, hsz: HSZ, psz: Option<windows_core::PSTR>, cchmax: u32, icodepage: i32) -> u32 {
     windows_core::link!("user32.dll" "system" fn DdeQueryStringA(idinst : u32, hsz : HSZ, psz : windows_core::PSTR, cchmax : u32, icodepage : i32) -> u32);
-    unsafe { DdeQueryStringA(idinst, hsz, core::mem::transmute(psz.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut())), psz.as_deref().map_or(0, |slice| slice.len().try_into().unwrap()), icodepage) }
+    unsafe { DdeQueryStringA(idinst, hsz, psz.unwrap_or(core::mem::zeroed()) as _, cchmax, icodepage) }
 }
 #[inline]
-pub unsafe fn DdeQueryStringW(idinst: u32, hsz: HSZ, psz: Option<&mut [u16]>, icodepage: i32) -> u32 {
+pub unsafe fn DdeQueryStringW(idinst: u32, hsz: HSZ, psz: Option<windows_core::PWSTR>, cchmax: u32, icodepage: i32) -> u32 {
     windows_core::link!("user32.dll" "system" fn DdeQueryStringW(idinst : u32, hsz : HSZ, psz : windows_core::PWSTR, cchmax : u32, icodepage : i32) -> u32);
-    unsafe { DdeQueryStringW(idinst, hsz, core::mem::transmute(psz.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut())), psz.as_deref().map_or(0, |slice| slice.len().try_into().unwrap()), icodepage) }
+    unsafe { DdeQueryStringW(idinst, hsz, psz.unwrap_or(core::mem::zeroed()) as _, cchmax, icodepage) }
 }
 #[inline]
 pub unsafe fn DdeReconnect(hconv: HCONV) -> HCONV {
@@ -275,38 +275,18 @@ pub const EC_ENABLEONE: i32 = 128;
 pub const EC_QUERYWAITING: i32 = 2;
 pub type FNCALLBACK = Option<unsafe extern "system" fn(wtype: u32, wfmt: u32, hconv: HCONV, hsz1: HSZ, hsz2: HSZ, hdata: HDDEDATA, dwdata1: usize, dwdata2: usize) -> HDDEDATA>;
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HCONV(pub *mut core::ffi::c_void);
-impl Default for HCONV {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HCONVLIST(pub *mut core::ffi::c_void);
-impl Default for HCONVLIST {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 pub const HDATA_APPOWNED: i32 = 1;
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HDDEDATA(pub *mut core::ffi::c_void);
-impl Default for HDDEDATA {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct HSZ(pub *mut core::ffi::c_void);
-impl Default for HSZ {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct HSZPAIR {

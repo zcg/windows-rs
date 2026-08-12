@@ -69,11 +69,11 @@ fn semantic_zoom_default_active_is_true() {
             prop,
             value,
         } = op
+            && *oid == id
+            && *prop == Prop::IsZoomedInViewActive
         {
-            if *oid == id && *prop == Prop::IsZoomedInViewActive {
-                assert_eq!(*value, PropValue::Bool(true), "default must be active");
-                saw_true = true;
-            }
+            assert_eq!(*value, PropValue::Bool(true), "default must be active");
+            saw_true = true;
         }
     }
     assert!(saw_true, "missing IsZoomedInViewActive=true set_prop");

@@ -12,7 +12,7 @@ fn counter_window_view(cx: &mut RenderCx, heading: &str) -> Element {
                 move || s.call(count - 1)
             }),
             button("+").on_click({
-                let s = set_count.clone();
+                let s = set_count;
                 move || s.call(count + 1)
             }),
         ))

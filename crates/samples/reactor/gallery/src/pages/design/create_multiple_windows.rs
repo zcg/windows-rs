@@ -11,7 +11,7 @@ fn mini_view(cx: &mut RenderCx, label: &str) -> Element {
                 move || s.call(count - 1)
             }),
             button("+").on_click({
-                let s = set_count.clone();
+                let s = set_count;
                 move || s.call(count + 1)
             }),
         ))

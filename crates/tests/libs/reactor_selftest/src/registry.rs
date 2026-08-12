@@ -1,6 +1,6 @@
 use crate::fixtures::reconciler::FixtureFuture;
 use crate::fixtures::{
-    all_layouts, backdrop, controls, controls_extended, dynamic, error_boundary, event_detachment,
+    all_layouts, backdrop, controls, controls_extended, dynamic, element_ref, event_detachment,
     grid_attached, hooks, image_scale, interactions, layout, pointer_input, prop_updates,
     reconciler, reconciler_stress, secondary_window, timers, tooltip, universal_props,
 };
@@ -33,12 +33,11 @@ pub static FIXTURES: &[(&str, FixtureFn)] = &[
         all_layouts::all_layouts_dynamic_child_count,
     ),
     ("Window_Backdrop_AllMaterials", backdrop::all_materials),
-    (
-        "ErrorBoundary_CatchesRenderError",
-        error_boundary::catches_render_error,
-    ),
-    ("ErrorBoundary_Recovery", error_boundary::recovery),
     ("DynamicList_GrowShrink", dynamic::list_grow_shrink),
+    (
+        "ElementRef_TextBoxFocusAndClear",
+        element_ref::text_box_focus_and_clear,
+    ),
     ("Grid_RowColumnLayout", layout::grid_row_column_layout),
     (
         "Grid_AttachedProps_AllWidgetKinds",
@@ -246,6 +245,10 @@ pub static FIXTURES: &[(&str, FixtureFn)] = &[
         controls_extended::mount_content_dialog,
     ),
     (
+        "Reconciler_ContentDialogChildProjection",
+        controls_extended::content_dialog_child_projection,
+    ),
+    (
         "Reconciler_Mount_DatePicker",
         controls_extended::mount_date_picker,
     ),
@@ -376,6 +379,10 @@ pub static FIXTURES: &[(&str, FixtureFn)] = &[
     (
         "KeyedStress_TypeMismatch",
         reconciler_stress::positional_type_mismatch,
+    ),
+    (
+        "Reconciler_LifecycleTorture",
+        reconciler_stress::lifecycle_torture,
     ),
     (
         "UniversalProp_MinMaxSizing",

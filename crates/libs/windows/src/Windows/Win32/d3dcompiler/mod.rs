@@ -155,9 +155,9 @@ pub unsafe fn D3DGetOutputSignatureBlob(psrcdata: *const core::ffi::c_void, srcd
     }
 }
 #[inline]
-pub unsafe fn D3DGetTraceInstructionOffsets(psrcdata: *const core::ffi::c_void, srcdatasize: usize, flags: u32, startinstindex: usize, poffsets: Option<&mut [usize]>, ptotalinsts: Option<*mut usize>) -> windows_core::HRESULT {
+pub unsafe fn D3DGetTraceInstructionOffsets(psrcdata: *const core::ffi::c_void, srcdatasize: usize, flags: u32, startinstindex: usize, numinsts: usize, poffsets: Option<*mut usize>, ptotalinsts: Option<*mut usize>) -> windows_core::HRESULT {
     windows_core::link!("d3dcompiler_47.dll" "system" fn D3DGetTraceInstructionOffsets(psrcdata : *const core::ffi::c_void, srcdatasize : usize, flags : u32, startinstindex : usize, numinsts : usize, poffsets : *mut usize, ptotalinsts : *mut usize) -> windows_core::HRESULT);
-    unsafe { D3DGetTraceInstructionOffsets(psrcdata, srcdatasize, flags, startinstindex, poffsets.as_deref().map_or(0, |slice| slice.len().try_into().unwrap()), poffsets.as_deref().map_or(core::ptr::null_mut(), |slice| slice.as_ptr().cast_mut()), ptotalinsts.unwrap_or(core::mem::zeroed()) as _) }
+    unsafe { D3DGetTraceInstructionOffsets(psrcdata, srcdatasize, flags, startinstindex, numinsts, poffsets.unwrap_or(core::mem::zeroed()) as _, ptotalinsts.unwrap_or(core::mem::zeroed()) as _) }
 }
 #[cfg(feature = "d3d11")]
 #[inline]
@@ -305,15 +305,10 @@ pub const D3D_DISASM_INSTRUCTION_ONLY: i32 = 64;
 pub const D3D_DISASM_PRINT_HEX_LITERALS: i32 = 128;
 pub const D3D_GET_INST_OFFSETS_INCLUDE_NON_EXECUTABLE: i32 = 1;
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct D3D_SHADER_DATA {
     pub pBytecode: *const core::ffi::c_void,
     pub BytecodeLength: usize,
-}
-impl Default for D3D_SHADER_DATA {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 #[cfg(feature = "d3dcommon")]
 pub type pD3DCompile = Option<unsafe extern "system" fn(psrcdata: *const core::ffi::c_void, srcdatasize: usize, pfilename: windows_core::PCSTR, pdefines: *const super::D3D_SHADER_MACRO, pinclude: windows_core::Ref<super::ID3DInclude>, pentrypoint: windows_core::PCSTR, ptarget: windows_core::PCSTR, flags1: u32, flags2: u32, ppcode: windows_core::OutRef<super::ID3D10Blob>, pperrormsgs: windows_core::OutRef<super::ID3D10Blob>) -> windows_core::HRESULT>;

@@ -256,7 +256,7 @@ impl ReactorHost {
         render_host.set_dpi(initial_dpi);
         render_host.with_reconciler_mut(configure);
 
-        let render_host_for_post = render_host.clone_inner();
+        let render_host_for_post = render_host.downgrade();
         let state_for_post = Rc::clone(&state);
         let last_attached: Rc<Cell<Option<ControlId>>> = Rc::new(Cell::new(None));
         let last_attached_for_hook = Rc::clone(&last_attached);
@@ -264,9 +264,9 @@ impl ReactorHost {
         // 关键：闭包必须捕获 Weak 而非 Rc clone——post_render 闭包存进
         // RenderHostInner 自身字段，捕获 Rc 会形成循环引用，导致组件树
         // （含播放器 Player）在窗口关闭后永不 drop（播放继续跑）。
-        let render_host_weak = render_host_for_post.downgrade();
+        let render_host_weak = render_host_for_post;
         render_host.set_post_render(move |new_id| {
-            let Some(render_host_for_post) = RenderHost::from_weak(&render_host_weak) else {
+            let Some(render_host_for_post) = render_host_weak.upgrade() else {
                 return;
             };
             if last_attached_for_hook.get() == new_id {
@@ -284,12 +284,12 @@ impl ReactorHost {
                             if let Ok(fe) = ui_element.cast::<FrameworkElement>() {
                                 subscribe_actual_theme_changed(
                                     &fe,
-                                    render_host_for_post.clone_inner(),
+                                    render_host_for_post.downgrade(),
                                     Rc::clone(&state_for_post),
                                 );
                                 subscribe_size_and_dpi(
                                     &fe,
-                                    render_host_for_post.clone_inner(),
+                                    render_host_for_post.downgrade(),
                                     state_for_post.window().clone(),
                                     constraints,
                                 );
@@ -389,7 +389,7 @@ impl ReactorHost {
         let icon = self.icon.borrow().clone();
         let window = self.state.window().clone();
         let handler = DispatcherQueueHandler::new(move || {
-            fault::catch("activate", || {
+            fault::abort_on_panic("activate", || {
                 let mut hwnd: HWND = HWND::default();
                 if let Ok(native) = window.cast::<IWindowNative>() {
                     let _ = unsafe { native.WindowHandle(&mut hwnd) };
@@ -458,11 +458,8 @@ impl ReactorHost {
         let _ = self.state.window().SetContent(None);
         self.render_host.with_reconciler_mut(|reconciler| {
             // 1) 直接跑所有组件实例的 cleanup（不依赖 unmount 路径）
-            reconciler.run_root_cleanups();
+            reconciler.unmount_root();
         });
-        // 2) 卸载组件树 + 阻止后续渲染。必须先于残留渲染帧对已卸载 root
-        //    的 reconcile（mirror 已清空 → positional 越界 panic）。
-        self.render_host.shutdown();
     }
 
     pub fn set_render_complete<F>(&self, f: F)
@@ -539,7 +536,7 @@ fn center_window_on_display(
 
 fn subscribe_size_and_dpi(
     fe: &FrameworkElement,
-    render_host: RenderHost<WinUIBackend, WinUIDispatcher>,
+    render_host: WeakRenderHost<WinUIBackend, WinUIDispatcher>,
     window: Window,
     constraints: InnerConstraints,
 ) {
@@ -550,6 +547,9 @@ fn subscribe_size_and_dpi(
 
     let _ = fe
         .SizeChanged(move |_sender, args| {
+            let Some(render_host) = render_host.upgrade() else {
+                return;
+            };
             let size = args.unwrap().NewSize().unwrap();
             let new_dpi = unsafe { GetDpiForWindow(hwnd) };
             if new_dpi > 0 {
@@ -694,13 +694,16 @@ impl<B: Backend + 'static, D: Dispatcher + 'static> RenderHost<B, D> {
 
 fn subscribe_actual_theme_changed(
     fe: &FrameworkElement,
-    render_host: RenderHost<WinUIBackend, WinUIDispatcher>,
+    render_host: WeakRenderHost<WinUIBackend, WinUIDispatcher>,
     state: Rc<HostWindowState>,
 ) {
     update_color_scheme_from(fe);
 
     let _ = fe
         .ActualThemeChanged(move |sender, _| {
+            let Some(render_host) = render_host.upgrade() else {
+                return;
+            };
             if let Some(fe) = sender.as_ref() {
                 update_color_scheme_from(fe);
                 state.update_titlebar_theme();

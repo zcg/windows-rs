@@ -892,6 +892,21 @@ impl RenderCx {
         }
     }
 
+    pub(crate) fn has_pending_effects(&self) -> bool {
+        self.hooks.borrow().iter().any(|slot| {
+            matches!(
+                slot,
+                HookSlot::Effect {
+                    pending: Some(_),
+                    ..
+                } | HookSlot::Effect {
+                    pending_cleanup: Some(_),
+                    ..
+                }
+            )
+        })
+    }
+
     pub fn run_cleanups(&mut self) {
         let hooks = Rc::clone(&self.hooks);
         let mut hooks = hooks.borrow_mut();
@@ -910,20 +925,6 @@ impl RenderCx {
                 }
             }
         }
-    }
-
-    /// 释放全部 hook slots，drop 其持有的资源（`use_ref` 值、`Rendering`
-    /// revoker、`DispatcherTimer` 等）。
-    ///
-    /// root 渲染函数的 hook 状态存在 `RenderHost` 的 `render_cx` 里，
-    /// 不在 `component_instances` 中——窗口关闭时若只跑 `run_cleanups` 不释放
-    /// slots，`Rendering`/`DispatcherTimer`/控件事件闭包仍持有 `HookRef`
-    /// 的 `Rc`，`use_ref` 的资源（如播放器 Player）永不 drop，解码/音频
-    /// 继续运行（"关闭窗口仍在播"）。
-    pub fn release_hooks(&mut self) {
-        let hooks = Rc::clone(&self.hooks);
-        hooks.borrow_mut().clear();
-        self.cursor = 0;
     }
 
     /// Returns the host window's client-area size in DIPs. Re-renders
@@ -1228,8 +1229,26 @@ impl StatsAccumulator {
 
 /// Owns a [`Reconciler`] and a root [`Component`], coalescing render
 /// requests onto the supplied [`Dispatcher`] (typically the UI thread).
-pub struct RenderHost<B: Backend, D: Dispatcher> {
+pub struct RenderHost<B: Backend + 'static, D: Dispatcher> {
     inner: Rc<RenderHostInner<B, D>>,
+}
+
+pub struct WeakRenderHost<B: Backend + 'static, D: Dispatcher> {
+    inner: std::rc::Weak<RenderHostInner<B, D>>,
+}
+
+impl<B: Backend + 'static, D: Dispatcher> Clone for WeakRenderHost<B, D> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<B: Backend + 'static, D: Dispatcher> WeakRenderHost<B, D> {
+    pub fn upgrade(&self) -> Option<RenderHost<B, D>> {
+        self.inner.upgrade().map(|inner| RenderHost { inner })
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -1240,7 +1259,7 @@ enum RenderState {
     RenderingDirty,
 }
 
-pub(crate) struct RenderHostInner<B: Backend, D: Dispatcher> {
+struct RenderHostInner<B: Backend + 'static, D: Dispatcher> {
     reconciler: RefCell<Reconciler<B>>,
     root: RefCell<Box<dyn Component>>,
     render_cx: RefCell<RenderCx>,
@@ -1258,14 +1277,14 @@ pub(crate) struct RenderHostInner<B: Backend, D: Dispatcher> {
     dpi: Rc<Cell<u32>>,
     /// Key for this host's UI-thread rerender hook.
     host_id: HostId,
-    /// 窗口已关闭（`shutdown` 已卸载根并置位）。置位后不再入队渲染：
-    /// 防止残留帧对已卸载 root 的 reconcile（mirror 已清空 → 越界）。
-    shut_down: Cell<bool>,
 }
 
-impl<B: Backend, D: Dispatcher> Drop for RenderHostInner<B, D> {
+impl<B: Backend + 'static, D: Dispatcher> Drop for RenderHostInner<B, D> {
     fn drop(&mut self) {
         set_ui_rerender(self.host_id, None);
+        self.root_id.take();
+        self.reconciler.get_mut().unmount_root();
+        self.render_cx.get_mut().run_cleanups();
     }
 }
 
@@ -1301,7 +1320,6 @@ impl<B: Backend + 'static, D: Dispatcher + 'static> RenderHost<B, D> {
                 inner_size,
                 dpi,
                 host_id,
-                shut_down: Cell::new(false),
             }),
         }
     }
@@ -1353,28 +1371,6 @@ impl<B: Backend + 'static, D: Dispatcher + 'static> RenderHost<B, D> {
         request_render(&self.inner);
     }
 
-    /// 关闭本 host：卸载根组件树、清空 root_id、阻止后续渲染。
-    ///
-    /// 窗口关闭时必须调用（与 `Reconciler::unmount` 配套）。若不重置
-    /// root_id 并拦下渲染，dispatcher 队列里的残留渲染帧会对已卸载的
-    /// root 做 reconcile——mirror 已清空，positional reconcile 越界。
-    pub fn shutdown(&self) {
-        self.inner.shut_down.set(true);
-        self.inner.render_state.set(RenderState::Idle);
-        if let Some(root_id) = self.inner.root_id.get() {
-            self.inner.root_id.set(None);
-            self.inner.reconciler.borrow_mut().unmount(root_id);
-        }
-        // root 渲染函数的 hook 状态不在 component_instances 里（`run_root_cleanups`
-        // 覆盖不到）。窗口关闭时必须显式清理，否则：
-        // - `use_effect_with_cleanup` 的 cleanup（保存进度、播放器 stop）不执行；
-        // - `Rendering` revoker / `DispatcherTimer` / 控件事件闭包仍持有
-        //   `HookRef` 的 Rc → `use_ref` 资源（Player）永不 drop → 关闭窗口仍在播。
-        let mut cx = self.inner.render_cx.borrow_mut();
-        cx.run_cleanups();
-        cx.release_hooks();
-    }
-
     pub fn render_count(&self) -> u32 {
         self.inner.render_count.get()
     }
@@ -1422,14 +1418,10 @@ impl<B: Backend + 'static, D: Dispatcher + 'static> RenderHost<B, D> {
         }
     }
 
-    /// Weak 引用：给可能形成 Rc 循环的闭包用（如存进本对象自身的
-    /// post_render 回调——Rc 强引用会让对象永不 drop）。
-    pub(crate) fn downgrade(&self) -> std::rc::Weak<RenderHostInner<B, D>> {
-        Rc::downgrade(&self.inner)
-    }
-
-    pub(crate) fn from_weak(weak: &std::rc::Weak<RenderHostInner<B, D>>) -> Option<Self> {
-        weak.upgrade().map(|inner| Self { inner })
+    pub fn downgrade(&self) -> WeakRenderHost<B, D> {
+        WeakRenderHost {
+            inner: Rc::downgrade(&self.inner),
+        }
     }
 
     pub fn set_post_render<F>(&self, f: F)
@@ -1455,15 +1447,12 @@ impl<B: Backend + 'static, D: Dispatcher + 'static> RenderHost<B, D> {
             return;
         }
         self.inner.inner_size.set(size);
-        if let Some(root_id) = self.inner.root_id.get() {
-            let mut changed = FxHashSet::default();
-            changed.insert(inner_size_context_id());
-            if let Ok(mut reconciler) = self.inner.reconciler.try_borrow_mut() {
-                reconciler.force_context_subscribers(root_id, &changed);
-            }
-            // If try_borrow_mut fails, the reconciler is currently borrowed.
-            // request_render will queue a render that picks up the new size.
-        }
+        let mut changed = FxHashSet::default();
+        changed.insert(inner_size_context_id());
+        self.inner
+            .reconciler
+            .borrow_mut()
+            .force_context_subscribers_root(&changed);
         self.request_render();
     }
 
@@ -1476,15 +1465,12 @@ impl<B: Backend + 'static, D: Dispatcher + 'static> RenderHost<B, D> {
             return;
         }
         self.inner.dpi.set(dpi);
-        if let Some(root_id) = self.inner.root_id.get() {
-            let mut changed = FxHashSet::default();
-            changed.insert(dpi_context_id());
-            if let Ok(mut reconciler) = self.inner.reconciler.try_borrow_mut() {
-                reconciler.force_context_subscribers(root_id, &changed);
-            }
-            // If try_borrow_mut fails, the reconciler is currently borrowed.
-            // request_render will queue a render that picks up the new dpi.
-        }
+        let mut changed = FxHashSet::default();
+        changed.insert(dpi_context_id());
+        self.inner
+            .reconciler
+            .borrow_mut()
+            .force_context_subscribers_root(&changed);
         self.request_render();
     }
 }
@@ -1492,9 +1478,6 @@ impl<B: Backend + 'static, D: Dispatcher + 'static> RenderHost<B, D> {
 fn request_render<B: Backend + 'static, D: Dispatcher + 'static>(
     inner: &Rc<RenderHostInner<B, D>>,
 ) {
-    if inner.shut_down.get() {
-        return;
-    }
     match inner.render_state.get() {
         RenderState::Idle => {
             inner.render_state.set(RenderState::Pending);
@@ -1514,9 +1497,6 @@ fn request_render<B: Backend + 'static, D: Dispatcher + 'static>(
 }
 
 fn render_loop<B: Backend + 'static, D: Dispatcher + 'static>(inner: &Rc<RenderHostInner<B, D>>) {
-    if inner.shut_down.get() {
-        return;
-    }
     inner.render_state.set(RenderState::Rendering);
     render_once(inner);
 
@@ -1535,7 +1515,7 @@ fn render_loop<B: Backend + 'static, D: Dispatcher + 'static>(inner: &Rc<RenderH
 }
 
 fn render_once<B: Backend + 'static, D: Dispatcher + 'static>(inner: &Rc<RenderHostInner<B, D>>) {
-    fault::render_scope(|| render_once_inner(inner));
+    fault::abort_on_panic("render", || render_once_inner(inner));
 }
 
 fn render_once_inner<B: Backend + 'static, D: Dispatcher + 'static>(
@@ -1564,19 +1544,19 @@ fn render_once_inner<B: Backend + 'static, D: Dispatcher + 'static>(
                 request_render(&strong);
             }
         });
-        let id = reconciler.reconcile(
+        let id = reconciler.reconcile_deferred_effects(
             old_tree_owned.as_ref(),
             &new_tree,
             existing,
             request_rerender,
         );
-        reconciler.drain_realizations();
-        reconciler.clear_forced_component_rerender();
+        reconciler.drain_realizations_deferred_effects();
+        reconciler.clear_forced_components();
         (
             id,
-            reconciler.debug_elements_diffed,
-            reconciler.debug_elements_skipped,
-            reconciler.debug_ui_elements_created,
+            reconciler.stats().elements_diffed,
+            reconciler.stats().elements_skipped,
+            reconciler.stats().ui_elements_created,
         )
     };
     let reconcile_ms = reconcile_started.elapsed().as_secs_f64() * 1000.0;
@@ -1585,6 +1565,7 @@ fn render_once_inner<B: Backend + 'static, D: Dispatcher + 'static>(
     *inner.last_tree.borrow_mut() = Some(new_tree);
 
     let effects_started = Instant::now();
+    inner.reconciler.borrow_mut().flush_pending_effects();
     inner.render_cx.borrow_mut().flush_effects();
     let effects_ms = effects_started.elapsed().as_secs_f64() * 1000.0;
 

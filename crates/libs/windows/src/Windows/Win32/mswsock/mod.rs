@@ -18,9 +18,9 @@ pub unsafe fn TransmitFile(hsocket: super::SOCKET, hfile: super::HANDLE, nnumber
 }
 #[cfg(feature = "winsock2")]
 #[inline]
-pub unsafe fn WSARecvEx(s: super::SOCKET, buf: &mut [u8], flags: *mut i32) -> i32 {
+pub unsafe fn WSARecvEx(s: super::SOCKET, buf: *mut i8, len: i32, flags: *mut i32) -> i32 {
     windows_core::link!("mswsock.dll" "system" fn WSARecvEx(s : super::SOCKET, buf : *mut i8, len : i32, flags : *mut i32) -> i32);
-    unsafe { WSARecvEx(s, core::mem::transmute(buf.as_mut_ptr()), buf.len().try_into().unwrap(), flags as _) }
+    unsafe { WSARecvEx(s, buf as _, len, flags as _) }
 }
 pub const DE_REUSE_SOCKET: i32 = 2;
 #[cfg(all(feature = "minwinbase", feature = "winnt", feature = "winsock2"))]
@@ -239,17 +239,11 @@ pub struct RIO_NOTIFICATION_COMPLETION_0_0 {
 }
 #[repr(C)]
 #[cfg(feature = "winnt")]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct RIO_NOTIFICATION_COMPLETION_0_1 {
     pub IocpHandle: super::HANDLE,
     pub CompletionKey: *mut core::ffi::c_void,
     pub Overlapped: *mut core::ffi::c_void,
-}
-#[cfg(feature = "winnt")]
-impl Default for RIO_NOTIFICATION_COMPLETION_0_1 {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 pub type RIO_NOTIFICATION_COMPLETION_TYPE = i32;
 pub const SIO_BASE_HANDLE: i32 = 1207959586;
@@ -293,17 +287,12 @@ pub const TP_USE_DEFAULT_WORKER: i32 = 0;
 pub const TP_USE_KERNEL_APC: i32 = 32;
 pub const TP_USE_SYSTEM_THREAD: i32 = 16;
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct TRANSMIT_FILE_BUFFERS {
     pub Head: *mut core::ffi::c_void,
     pub HeadLength: u32,
     pub Tail: *mut core::ffi::c_void,
     pub TailLength: u32,
-}
-impl Default for TRANSMIT_FILE_BUFFERS {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 #[repr(C)]
 #[cfg(feature = "winnt")]

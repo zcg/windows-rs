@@ -105,7 +105,7 @@ pub fn start_camera_preview_into(host: &UIElement) -> String {
         kinds.push(format!("{i}:{}", kind.0));
         if kind == bindings::MediaStreamType::VideoPreview {
             source_id = id;
-            picked_kind = format!("video-preview");
+            picked_kind = "video-preview".to_string();
             break;
         }
     }

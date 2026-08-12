@@ -70,16 +70,16 @@ pub fn webview_page(_: &(), cx: &mut RenderCx) -> Element {
     let reload = with_web(&web, WebView::reload);
 
     let toolbar = grid((
-        Element::from(button("\u{2190}" /* ← */).on_click(back)).grid_column(0),
-        Element::from(button("\u{2192}" /* → */).on_click(forward)).grid_column(1),
-        Element::from(button("\u{21BB}" /* ↻ */).on_click(reload)).grid_column(2),
+        Element::from(button("\u{2190}" /* ← */).on_click(back).grid_column(0)),
+        Element::from(button("\u{2192}" /* → */).on_click(forward).grid_column(1)),
+        Element::from(button("\u{21BB}" /* ↻ */).on_click(reload).grid_column(2)),
         Element::from(
             text_box(address)
                 .placeholder_text("Enter a URL")
-                .on_text_changed(move |value| set_address.call(value)),
-        )
-        .grid_column(3),
-        Element::from(button("Go").on_click(go)).grid_column(4),
+                .on_text_changed(move |value| set_address.call(value))
+                .grid_column(3),
+        ),
+        Element::from(button("Go").on_click(go).grid_column(4)),
     ))
     .columns([
         GridLength::Auto,
@@ -92,13 +92,13 @@ pub fn webview_page(_: &(), cx: &mut RenderCx) -> Element {
     .margin(Thickness::uniform(8.0));
 
     let browser = grid((
-        Element::from(toolbar).grid_row(0),
+        Element::from(toolbar.grid_row(0)),
         Element::from(
             webview(on_ready)
                 .vertical_alignment(VerticalAlignment::Stretch)
-                .horizontal_alignment(HorizontalAlignment::Stretch),
-        )
-        .grid_row(1),
+                .horizontal_alignment(HorizontalAlignment::Stretch)
+                .grid_row(1),
+        ),
     ))
     .rows([GridLength::Auto, GridLength::STAR])
     .vertical_alignment(VerticalAlignment::Stretch)

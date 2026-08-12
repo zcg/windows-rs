@@ -1,8 +1,8 @@
 #[cfg(feature = "windef")]
 #[inline]
-pub unsafe fn TTCharToUnicode(hdc: super::HDC, puccharcodes: &[u8], pusshortcodes: &mut [u16], ulflags: u32) -> i32 {
+pub unsafe fn TTCharToUnicode(hdc: super::HDC, puccharcodes: &[u8], pusshortcodes: *mut u16, ulshortcodesize: u32, ulflags: u32) -> i32 {
     windows_core::link!("t2embed.dll" "system" fn TTCharToUnicode(hdc : super::HDC, puccharcodes : *const u8, ulcharcodesize : u32, pusshortcodes : *mut u16, ulshortcodesize : u32, ulflags : u32) -> i32);
-    unsafe { TTCharToUnicode(hdc, puccharcodes.as_ptr(), puccharcodes.len().try_into().unwrap(), pusshortcodes.as_mut_ptr(), pusshortcodes.len().try_into().unwrap(), ulflags) }
+    unsafe { TTCharToUnicode(hdc, puccharcodes.as_ptr(), puccharcodes.len().try_into().unwrap(), pusshortcodes as _, ulshortcodesize, ulflags) }
 }
 #[cfg(feature = "winnt")]
 #[inline]
@@ -52,9 +52,9 @@ pub unsafe fn TTGetEmbeddingType(hdc: super::HDC, pulembedtype: *mut u32) -> i32
 }
 #[cfg(feature = "winnt")]
 #[inline]
-pub unsafe fn TTGetNewFontName(phfontreference: *const super::HANDLE, wzwinfamilyname: &mut [u16], szmacfamilyname: &mut [u8]) -> i32 {
+pub unsafe fn TTGetNewFontName(phfontreference: *const super::HANDLE, wzwinfamilyname: windows_core::PWSTR, cchmaxwinname: i32, szmacfamilyname: windows_core::PSTR, cchmaxmacname: i32) -> i32 {
     windows_core::link!("t2embed.dll" "system" fn TTGetNewFontName(phfontreference : *const super::HANDLE, wzwinfamilyname : windows_core::PWSTR, cchmaxwinname : i32, szmacfamilyname : windows_core::PSTR, cchmaxmacname : i32) -> i32);
-    unsafe { TTGetNewFontName(phfontreference, core::mem::transmute(wzwinfamilyname.as_mut_ptr()), wzwinfamilyname.len().try_into().unwrap(), core::mem::transmute(szmacfamilyname.as_mut_ptr()), szmacfamilyname.len().try_into().unwrap()) }
+    unsafe { TTGetNewFontName(phfontreference, wzwinfamilyname, cchmaxwinname, szmacfamilyname, cchmaxmacname) }
 }
 #[cfg(feature = "windef")]
 #[inline]
@@ -165,16 +165,11 @@ pub const LICENSE_PREVIEWPRINT: i32 = 4;
 pub type READEMBEDPROC = Option<unsafe extern "C" fn(param0: *mut core::ffi::c_void, param1: *mut core::ffi::c_void, param2: u32) -> u32>;
 pub const TTDELETE_DONTREMOVEFONT: i32 = 1;
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct TTEMBEDINFO {
     pub usStructSize: u16,
     pub usRootStrSize: u16,
     pub pusRootStr: *mut u16,
-}
-impl Default for TTEMBEDINFO {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 pub const TTEMBED_EMBEDEUDC: i32 = 32;
 pub const TTEMBED_EUDCEMBEDDED: i32 = 2;
@@ -187,16 +182,11 @@ pub const TTEMBED_VARIATIONSIMULATED: i32 = 1;
 pub const TTEMBED_WEBOBJECT: i32 = 128;
 pub const TTEMBED_XORENCRYPTDATA: i32 = 268435456;
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct TTLOADINFO {
     pub usStructSize: u16,
     pub usRefStrSize: u16,
     pub pusRefStr: *mut u16,
-}
-impl Default for TTLOADINFO {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 pub const TTLOAD_EUDC_OVERWRITE: i32 = 2;
 pub const TTLOAD_EUDC_SET: i32 = 4;
@@ -204,7 +194,7 @@ pub const TTLOAD_FONT_IN_SYSSTARTUP: i32 = 2;
 pub const TTLOAD_FONT_SUBSETTED: i32 = 1;
 pub const TTLOAD_PRIVATE: i32 = 1;
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct TTVALIDATIONTESTSPARAMS {
     pub ulStructSize: u32,
     pub lTestFromSize: i32,
@@ -214,13 +204,8 @@ pub struct TTVALIDATIONTESTSPARAMS {
     pub usCharCodeCount: u16,
     pub pusCharCodeSet: *mut u16,
 }
-impl Default for TTVALIDATIONTESTSPARAMS {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-}
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct TTVALIDATIONTESTSPARAMSEX {
     pub ulStructSize: u32,
     pub lTestFromSize: i32,
@@ -229,10 +214,5 @@ pub struct TTVALIDATIONTESTSPARAMSEX {
     pub usReserved1: u16,
     pub usCharCodeCount: u16,
     pub pulCharCodeSet: *mut u32,
-}
-impl Default for TTVALIDATIONTESTSPARAMSEX {
-    fn default() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
 }
 pub type WRITEEMBEDPROC = Option<unsafe extern "C" fn(param0: *mut core::ffi::c_void, param1: *const core::ffi::c_void, param2: u32) -> u32>;

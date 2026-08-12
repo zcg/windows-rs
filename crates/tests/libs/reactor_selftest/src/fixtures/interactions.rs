@@ -15,7 +15,7 @@ use windows_reactor::NavigationView;
 use windows_reactor::Symbol;
 use windows_reactor::vstack;
 use windows_reactor::{ComboBox, PasswordBox, RadioButtons, Slider, ToggleSwitch};
-use windows_reactor::{ElementExt, button, check_box, text_block, text_box};
+use windows_reactor::{KeyExt, VisualExt, button, check_box, text_block, text_box};
 
 use crate::fixtures::reconciler::{FixtureFuture, cc};
 use crate::harness::Harness;
@@ -529,6 +529,17 @@ pub fn button_icon_subclasses(h: Harness) -> FixtureFuture {
         h.check(
             "Interaction_ButtonIcon_ImageIconsCreated",
             image_icons.len() == 2,
+        );
+        let image_icons_constrained = image_icons.iter().all(|icon| {
+            icon.cast::<crate::bindings::IFrameworkElement>()
+                .ok()
+                .is_some_and(|element| {
+                    element.MaxWidth().ok() == Some(20.0) && element.MaxHeight().ok() == Some(20.0)
+                })
+        });
+        h.check(
+            "Interaction_ButtonIcon_ImageIconsConstrained",
+            image_icons_constrained,
         );
 
         let sources: Vec<_> = image_icons
