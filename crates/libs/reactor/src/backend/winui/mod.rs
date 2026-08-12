@@ -2023,6 +2023,20 @@ impl Backend for WinUIBackend {
         let Some(handle) = map.get(&id) else { return };
         // ItemsRepeater shares the DataTemplate + ItemsSource approach.
         if let Handle::ItemsRepeater(ir) = handle {
+            // ItemsRepeater lays out realized elements only when a Layout is
+            // attached; without one (default is null) nothing is realized.
+            let layout = match bindings::StackLayout::new() {
+                Ok(layout) => layout,
+                Err(error) => {
+                    diag::warn(format_args!(
+                        "ItemsRepeater: StackLayout::new failed for {id}: {error:?}"
+                    ));
+                    return;
+                }
+            };
+            diag::dropped(layout.SetOrientation(Orientation::Vertical));
+            diag::dropped(layout.SetSpacing(2.0));
+            diag::dropped(ir.SetLayout(&layout));
             let mut lists = self.templated.borrow_mut();
             let entry = lists.entry(id).or_insert_with(TemplatedList::new);
             let source_slot = &entry.shared.source;
