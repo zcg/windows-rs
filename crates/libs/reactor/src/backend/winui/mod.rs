@@ -80,11 +80,13 @@ define_handles! {
     HyperlinkButton,
     Image,
     ItemsRepeater,
+    ItemsView,
     InfoBadge,
     InfoBar,
     Line,
     ListBox,
     ListView,
+    MapControl,
     MediaPlayerElement,
     MenuBar,
     NavigationView,
@@ -109,6 +111,7 @@ define_handles! {
     ScrollView,
     ScrollViewer,
     SelectorBar,
+    SemanticZoom,
     Slider,
     SplitButton,
     ToggleSplitButton,
@@ -543,7 +546,9 @@ fn classify_container(h: &Handle) -> Option<ContainerChildren<'_>> {
         Handle::SwipeControl(sc) => Some(ContainerChildren::ContentControl(sc.cast().ok()?)),
         Handle::NavigationView(nv) => Some(ContainerChildren::ContentControl(nv.cast().ok()?)),
         Handle::PivotItem(pi) => Some(ContainerChildren::ContentControl(pi.cast().ok()?)),
-        Handle::ScrollView(_) | Handle::SplitView(_) => Some(ContainerChildren::DirectContent(h)),
+        Handle::ScrollView(_) | Handle::SplitView(_) | Handle::SemanticZoom(_) => {
+            Some(ContainerChildren::DirectContent(h))
+        }
         Handle::TabView(tv) => Some(ContainerChildren::InspectableVector(tv.TabItems().ok()?)),
         Handle::Pivot(p) => Some(ContainerChildren::InspectableVector(
             p.cast::<bindings::IItemsControl>()
@@ -645,6 +650,18 @@ fn put_direct_content(h: &Handle, child: Option<&UIElement>) {
     match h {
         Handle::ScrollView(sv) => sv.SetContent(child).unwrap(),
         Handle::SplitView(sv) => sv.SetContent(child).unwrap(),
+        Handle::SemanticZoom(sz) => {
+            let Some(child) = child else {
+                diag::dropped(sz.SetZoomedInView(None));
+                return;
+            };
+            match child.cast::<bindings::ISemanticZoomInformation>() {
+                Ok(view) => diag::dropped(sz.SetZoomedInView(&view)),
+                Err(err) => diag::warn(format_args!(
+                    "SemanticZoom: ZoomedInView cast failed: {err:?}"
+                )),
+            }
+        }
         _ => unreachable!(),
     }
 }
@@ -1045,6 +1062,14 @@ fn try_universal_prop(handle: &Handle, prop: Prop, value: &PropValue) -> Result<
         }
         (Prop::AttachedGridColumnSpan, PropValue::I32(v)) => {
             bindings::Grid::SetColumnSpan(&handle.as_framework_element(), *v)?;
+            Ok(true)
+        }
+        (Prop::AttachedWrapGridRowSpan, PropValue::I32(v)) => {
+            bindings::VariableSizedWrapGrid::SetRowSpan(&handle.as_framework_element(), *v)?;
+            Ok(true)
+        }
+        (Prop::AttachedWrapGridColumnSpan, PropValue::I32(v)) => {
+            bindings::VariableSizedWrapGrid::SetColumnSpan(&handle.as_framework_element(), *v)?;
             Ok(true)
         }
         (Prop::AttachedCanvasLeft, PropValue::F64(v)) => {
@@ -1572,10 +1597,79 @@ impl Backend for WinUIBackend {
                     None => img.SetSource(None),
                 },
                 (Prop::ImageSource, PropValue::Unset, Handle::Image(img)) => img.SetSource(None),
+                (Prop::MapCenter, PropValue::MapCenter(lat, lon), Handle::MapControl(mc)) => {
+                    let position = bindings::BasicGeoposition {
+                        latitude: *lat,
+                        longitude: *lon,
+                        altitude: 0.0,
+                    };
+                    let point = bindings::Geopoint::Create(position)?;
+                    mc.SetCenter(&point)?;
+
+                    // Attach a marker layer once. Layers is an IVector<MapLayer>;
+                    // the icon element is added to the layer's MapElements vector.
+                    let icon = bindings::MapIcon::new()?;
+                    icon.SetLocation(&point)?;
+                    let layer = bindings::MapElementsLayer::new()?;
+                    let elements = layer.MapElements()?;
+                    elements.Append(&icon)?;
+                    let layers = mc.Layers()?;
+                    layers.Append(&layer)?;
+                    Ok(())
+                }
+                (Prop::MapZoom, PropValue::F64(v), Handle::MapControl(mc)) => mc.SetZoomLevel(*v),
+                (Prop::MapServiceToken, PropValue::Str(s), Handle::MapControl(mc)) => {
+                    mc.SetMapServiceToken(s)
+                }
+                (Prop::MapInteractive, PropValue::Bool(v), Handle::MapControl(mc)) => {
+                    mc.SetInteractiveControlsVisible(*v)
+                }
                 (Prop::MediaSource, PropValue::Str(s), Handle::MediaPlayerElement(m)) => {
                     let uri = bindings::Uri::CreateUri(s.as_str())?;
                     let source = bindings::MediaSource::CreateFromUri(&uri)?;
                     m.SetSource(&source)
+                }
+                (Prop::ItemsViewSource, PropValue::StrList(items), Handle::ItemsView(iv)) => {
+                    // ItemsView.ItemsSource requires a vector whose elements are
+                    // IInspectable; box each string as IReference<HSTRING>.
+                    let vector: windows_collections::IVector<windows_core::IInspectable> = items
+                        .iter()
+                        .map(|item| {
+                            let reference = windows_reference::IReference::from(
+                                windows_core::HSTRING::from(item),
+                            );
+                            let inspectable: windows_core::IInspectable = reference.into();
+                            Some(inspectable)
+                        })
+                        .collect::<Vec<_>>()
+                        .into();
+                    iv.SetItemsSource(&vector)?;
+                    iv.SetIsItemInvokedEnabled(true)?;
+                    // ItemTemplate is intentionally not set: the Windows App
+                    // SDK 2.3.1 runtime crashes when ItemsView lays out with
+                    // any IElementFactory (reproduced with an official
+                    // DataTemplate). The gallery demonstrates ItemsView's
+                    // data-driven model via ItemsRepeater instead.
+                    Ok(())
+                }
+                (Prop::ItemsViewLayout, PropValue::I32(kind), Handle::ItemsView(iv)) => {
+                    match *kind {
+                        0 => {
+                            let layout = bindings::StackLayout::new()?;
+                            layout.SetSpacing(8.0)?;
+                            layout.SetOrientation(Orientation::Vertical)?;
+                            iv.SetLayout(&layout)?;
+                        }
+                        _ => {
+                            let layout = bindings::UniformGridLayout::new()?;
+                            layout.SetMinItemWidth(120.0)?;
+                            layout.SetMinItemHeight(48.0)?;
+                            layout.SetMinRowSpacing(8.0)?;
+                            layout.SetMinColumnSpacing(8.0)?;
+                            iv.SetLayout(&layout)?;
+                        }
+                    }
+                    Ok(())
                 }
                 (Prop::Header, PropValue::Str(s), Handle::TabViewItem(ti)) => {
                     let tb = string_as_textblock(s)?;
@@ -2267,6 +2361,20 @@ impl Backend for WinUIBackend {
             } else {
                 diag::dropped(sv.SetPane(None));
             }
+        } else if let Handle::SemanticZoom(sz) = handle {
+            if let Some(pid) = pane_id {
+                if let Some(pane_handle) = map.get(&pid) {
+                    let ui_elem = pane_handle.as_ui_element();
+                    match ui_elem.cast::<bindings::ISemanticZoomInformation>() {
+                        Ok(view) => diag::dropped(sz.SetZoomedOutView(&view)),
+                        Err(err) => diag::warn(format_args!(
+                            "SemanticZoom: ZoomedOutView cast failed: {err:?}"
+                        )),
+                    }
+                }
+            } else {
+                diag::dropped(sz.SetZoomedOutView(None));
+            }
         } else if let Handle::TitleBar(tb) = handle {
             if let Some(pid) = pane_id {
                 if let Some(pane_handle) = map.get(&pid) {
@@ -2863,6 +2971,24 @@ impl Backend for WinUIBackend {
                             .and_then(|content| {
                                 content
                                     .cast::<windows_reference::IReference<windows_core::HSTRING>>()
+                                    .ok()
+                                    .and_then(|r| r.Value().ok())
+                            })
+                            .map(|h| h.to_string_lossy())
+                            .unwrap_or_default();
+                        handler.invoke_string(text);
+                    })
+                    .unwrap(),
+                );
+            }
+            (Event::ItemInvoked, Handle::ItemsView(iv)) => {
+                revokers.push(
+                    iv.ItemInvoked(move |_sender, args| {
+                        let text = args
+                            .as_ref()
+                            .and_then(|a| a.InvokedItem().ok())
+                            .and_then(|insp| {
+                                insp.cast::<windows_reference::IReference<windows_core::HSTRING>>()
                                     .ok()
                                     .and_then(|r| r.Value().ok())
                             })

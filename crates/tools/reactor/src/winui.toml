@@ -348,3 +348,10 @@ MaximumRowsOrColumns = {}
 Orientation = {}
 ["Microsoft.UI.Xaml.Controls.Viewbox"]
 Stretch = {}
+
+["Microsoft.UI.Xaml.Controls.SemanticZoom"]
+IsZoomedInViewActive = {}
+
+["Microsoft.UI.Xaml.Controls.ItemsView"]
+ItemInvoked = { manual = true, type = "Str" }
+SelectionMode = {}

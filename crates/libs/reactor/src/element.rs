@@ -260,6 +260,7 @@ define_element! {
     TextBox,
     Grid,
     ScrollViewer,
+    SemanticZoom,
     ToggleSwitch,
     Slider,
     RadioButton,
@@ -274,6 +275,7 @@ define_element! {
     PipsPager,
     Shape,
     Image,
+    ItemsView,
     TabView,
     NavigationView,
     TitleBar,
@@ -302,6 +304,7 @@ define_element! {
     AutoSuggestBox,
     SplitView,
     SwipeControl,
+    MapControl,
     MediaPlayerElement,
     MenuBar,
     ScrollView,
@@ -428,6 +431,22 @@ impl Element {
         if let Some(bag) = self.attached_mut() {
             let mut p = bag.get::<CanvasPosition>().copied().unwrap_or_default();
             p.z_index = z;
+            bag.set(p);
+        }
+        self
+    }
+    pub fn wrap_grid_row_span(mut self, span: i32) -> Self {
+        if let Some(bag) = self.attached_mut() {
+            let mut p = bag.get::<WrapGridSpan>().copied().unwrap_or_default();
+            p.row_span = span;
+            bag.set(p);
+        }
+        self
+    }
+    pub fn wrap_grid_column_span(mut self, span: i32) -> Self {
+        if let Some(bag) = self.attached_mut() {
+            let mut p = bag.get::<WrapGridSpan>().copied().unwrap_or_default();
+            p.column_span = span;
             bag.set(p);
         }
         self
@@ -759,6 +778,26 @@ pub trait ElementExt: Sized {
             let bag = m.attached.get_or_insert_with(AttachedProps::default);
             let mut p = bag.get::<CanvasPosition>().copied().unwrap_or_default();
             p.z_index = z;
+            bag.set(p);
+        }
+        self
+    }
+
+    fn wrap_grid_row_span(mut self, span: i32) -> Self {
+        if let Some(m) = self.modifiers_mut() {
+            let bag = m.attached.get_or_insert_with(AttachedProps::default);
+            let mut p = bag.get::<WrapGridSpan>().copied().unwrap_or_default();
+            p.row_span = span;
+            bag.set(p);
+        }
+        self
+    }
+
+    fn wrap_grid_column_span(mut self, span: i32) -> Self {
+        if let Some(m) = self.modifiers_mut() {
+            let bag = m.attached.get_or_insert_with(AttachedProps::default);
+            let mut p = bag.get::<WrapGridSpan>().copied().unwrap_or_default();
+            p.column_span = span;
             bag.set(p);
         }
         self
@@ -1222,6 +1261,7 @@ impl_element_ext!(
     TextBox,
     Grid,
     ScrollViewer,
+    SemanticZoom,
     ToggleSwitch,
     Slider,
     RadioButton,
@@ -1236,6 +1276,7 @@ impl_element_ext!(
     PipsPager,
     Shape,
     Image,
+    ItemsView,
     TabView,
     NavigationView,
     TitleBar,
@@ -1262,6 +1303,7 @@ impl_element_ext!(
     SwipeControl,
     SwapChainPanel,
     CompositionHost,
+    MapControl,
     MediaPlayerElement,
     WebView2,
 );
@@ -1292,6 +1334,7 @@ impl ElementExt for Element {
             Self::TextBox(t) => t.key = Some(key),
             Self::Grid(g) => g.key = Some(key),
             Self::ScrollViewer(s) => s.key = Some(key),
+            Self::SemanticZoom(s) => s.key = Some(key),
             Self::ToggleSwitch(v) => v.key = Some(key),
             Self::Slider(v) => v.key = Some(key),
             Self::RadioButton(v) => v.key = Some(key),
@@ -1305,6 +1348,7 @@ impl ElementExt for Element {
             Self::PersonPicture(v) => v.key = Some(key),
             Self::Shape(v) => v.key = Some(key),
             Self::Image(v) => v.key = Some(key),
+            Self::ItemsView(v) => v.key = Some(key),
             Self::TabView(v) => v.key = Some(key),
             Self::NavigationView(v) => v.key = Some(key),
             Self::TitleBar(v) => v.key = Some(key),

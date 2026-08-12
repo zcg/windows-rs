@@ -1,10 +1,45 @@
 use crate::controls::*;
 use windows_reactor::*;
 
-pub fn app_notification_page(_: &(), _cx: &mut RenderCx) -> Element {
+pub fn app_notification_page(_: &(), cx: &mut RenderCx) -> Element {
+    let (status, set_status) = cx.use_state(String::new());
+    let supported = app_notification_supported();
+
+    let send = move || match send_app_notification(
+        "Reactor WinUI Gallery",
+        "This notification was sent from the Rust gallery.",
+    ) {
+        Ok(()) => set_status.call("Notification sent.".into()),
+        Err(err) => set_status.call(format!("Cannot send: {err}")),
+    };
+
     page_content(
         "App Notifications",
-        "Send notifications from the app through the notification platform.",
-        vec![sample_card("Overview", text_block("AppNotification APIs send Windows notifications with a title, body, and actions.").font_size(13.0), r#"AppNotificationManager.Default.Show(...)"#)],
+        "Send a Windows app notification from the current process.",
+        vec![sample_card(
+            "Send a Notification",
+            vstack((
+                button("Send notification").on_click(send),
+                text_block(if supported {
+                    if status.is_empty() {
+                        "Ready. Click to send."
+                    } else {
+                        status.as_str()
+                    }
+                } else {
+                    "App notifications are not supported in this build: unpackaged apps need a \
+                     registered app identity (AUMID), which the self-contained gallery does not \
+                     provide. This mirrors the WinUI Gallery behavior on unsupported systems."
+                })
+                .opacity(0.6),
+            ))
+            .spacing(8.0),
+            r#"if AppNotificationManager::IsSupported()? {
+    let manager = AppNotificationManager::Default()?;
+    manager.Register()?;
+    let notification = AppNotification::CreateInstance(payload)?;
+    manager.Show(&notification)?;
+}"#,
+        )],
     )
 }

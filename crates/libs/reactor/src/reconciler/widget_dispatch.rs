@@ -332,6 +332,9 @@ impl<B: Backend + 'static> Reconciler<B> {
         if let Some(p) = att.get::<RelativePanelAlignment>() {
             self.apply_relative_panel_alignment(id, *p);
         }
+        if let Some(p) = att.get::<WrapGridSpan>() {
+            self.apply_wrap_grid_span(id, *p);
+        }
     }
 
     pub fn apply_grid_placement(&mut self, id: ControlId, p: GridPlacement) {
@@ -389,6 +392,23 @@ impl<B: Backend + 'static> Reconciler<B> {
         }
     }
 
+    pub fn apply_wrap_grid_span(&mut self, id: ControlId, p: WrapGridSpan) {
+        if p.row_span > 1 {
+            self.backend.set_prop(
+                id,
+                Prop::AttachedWrapGridRowSpan,
+                &PropValue::I32(p.row_span),
+            );
+        }
+        if p.column_span > 1 {
+            self.backend.set_prop(
+                id,
+                Prop::AttachedWrapGridColumnSpan,
+                &PropValue::I32(p.column_span),
+            );
+        }
+    }
+
     fn diff_attached(
         &mut self,
         id: ControlId,
@@ -414,6 +434,22 @@ impl<B: Backend + 'static> Reconciler<B> {
         if old_rp != new_rp {
             let p = new_rp.unwrap_or_default();
             self.apply_relative_panel_alignment_full(id, p);
+        }
+
+        let old_wg = old.and_then(|a| a.get::<WrapGridSpan>()).copied();
+        let new_wg = new.and_then(|a| a.get::<WrapGridSpan>()).copied();
+        if old_wg != new_wg {
+            let p = new_wg.unwrap_or_default();
+            self.backend.set_prop(
+                id,
+                Prop::AttachedWrapGridRowSpan,
+                &PropValue::I32(p.row_span),
+            );
+            self.backend.set_prop(
+                id,
+                Prop::AttachedWrapGridColumnSpan,
+                &PropValue::I32(p.column_span),
+            );
         }
     }
 

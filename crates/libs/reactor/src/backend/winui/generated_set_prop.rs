@@ -337,6 +337,9 @@ pub fn dispatch(handle: &Handle, prop: Prop, value: &PropValue) -> Result<bool> 
         (Prop::IsTodayHighlighted, PropValue::Bool(v), Handle::CalendarView(h)) => {
             h.SetIsTodayHighlighted(*v)?;
         }
+        (Prop::IsZoomedInViewActive, PropValue::Bool(v), Handle::SemanticZoom(h)) => {
+            h.SetIsZoomedInViewActive(*v)?;
+        }
         (Prop::ItemHeight, PropValue::F64(v), Handle::VariableSizedWrapGrid(h)) => {
             h.SetItemHeight(*v)?;
         }
@@ -481,6 +484,9 @@ pub fn dispatch(handle: &Handle, prop: Prop, value: &PropValue) -> Result<bool> 
         }
         (Prop::SelectedPageIndex, PropValue::I32(v), Handle::PipsPager(h)) => {
             h.SetSelectedPageIndex(*v)?;
+        }
+        (Prop::SelectionMode, PropValue::I32(v), Handle::ItemsView(h)) => {
+            h.SetSelectionMode(ItemsViewSelectionMode(*v))?;
         }
         (Prop::SelectionMode, PropValue::I32(v), Handle::TreeView(h)) => {
             h.SetSelectionMode(TreeViewSelectionMode(*v))?;

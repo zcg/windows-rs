@@ -364,6 +364,7 @@ Microsoft::UI::Xaml::Controls::SwipeControl
 Microsoft::UI::Xaml::Controls::ToggleSplitButton
 Microsoft::UI::Xaml::Controls::ToolTip
 Microsoft::UI::Xaml::Controls::VariableSizedWrapGrid
+Microsoft::UI::Xaml::Controls::VariableSizedWrapGrid::{SetRowSpan, SetColumnSpan}
 Microsoft::UI::Xaml::Input::StandardUICommand
 Microsoft::UI::Xaml::Input::XamlUICommand
 Microsoft::UI::Xaml::Media::RadialGradientBrush
@@ -382,7 +383,7 @@ Microsoft::UI::Xaml::Controls::IFlipView
 Microsoft::UI::Xaml::Controls::IGridView
 Microsoft::UI::Xaml::Controls::IListView
 Microsoft::UI::Xaml::Controls::IItemsRepeater
-Microsoft::UI::Xaml::Controls::IItemsView
+Microsoft::UI::Xaml::Controls::IItemsView::{add_ItemInvoked, put_IsItemInvokedEnabled, put_ItemTemplate, put_ItemsSource, put_Layout}
 Microsoft::UI::Xaml::Controls::IToggleSplitButton::{get_IsChecked, IsCheckedChanged}
 Microsoft::UI::Xaml::Controls::ISwipeControl
 Microsoft::UI::Xaml::Controls::IToolTip
@@ -432,3 +433,106 @@ Windows::Media::Playback::IMediaPlaybackSource
 Microsoft::UI::Xaml::Media::Animation::ConnectedAnimationService::{GetForCurrentView, PrepareToAnimate, DefaultDuration}
 Microsoft::UI::Xaml::Media::Animation::IConnectedAnimation::TryStart
 Microsoft::UI::Xaml::Controls::ParallaxView::CreateInstance
+Microsoft::UI::Windowing::IAppWindow::get_Id
+Microsoft::UI::WindowId
+Microsoft::Windows::Storage::Pickers::FileOpenPicker
+Microsoft::Windows::Storage::Pickers::FileSavePicker
+Microsoft::Windows::Storage::Pickers::FolderPicker
+Microsoft::Windows::Storage::Pickers::IFileOpenPicker::{get_CommitButtonText, get_FileTypeFilter, get_SuggestedStartLocation, get_ViewMode, put_CommitButtonText, put_SuggestedStartLocation, put_ViewMode, PickMultipleFilesAsync, PickSingleFileAsync}
+Microsoft::Windows::Storage::Pickers::IFileOpenPickerFactory
+Microsoft::Windows::Storage::Pickers::IFileSavePicker::{get_CommitButtonText, get_DefaultFileExtension, get_FileTypeChoices, get_SuggestedFileName, get_SuggestedStartLocation, put_CommitButtonText, put_DefaultFileExtension, put_SuggestedFileName, put_SuggestedStartLocation, PickSaveFileAsync}
+Microsoft::Windows::Storage::Pickers::IFileSavePickerFactory
+Microsoft::Windows::Storage::Pickers::IFolderPicker::{get_CommitButtonText, get_SuggestedStartLocation, get_ViewMode, put_CommitButtonText, put_SuggestedStartLocation, put_ViewMode, PickSingleFolderAsync}
+Microsoft::Windows::Storage::Pickers::IFolderPickerFactory
+Microsoft::Windows::Storage::Pickers::PickFolderResult
+Microsoft::Windows::Storage::Pickers::PickerLocationId
+Microsoft::Windows::Storage::Pickers::PickerViewMode
+Windows::Storage::IStorageFile
+Windows::Storage::IStorageFolder
+Windows::Storage::IStorageItem
+Windows::Storage::StorageFile
+Windows::Storage::StorageFolder
+Microsoft::Windows::Storage::Pickers::IPickFileResult::get_Path
+Microsoft::Windows::Storage::Pickers::IPickFolderResult::get_Path
+Microsoft::UI::Windowing::IAppWindowTitleBar::{put_ButtonBackgroundColor, put_ButtonForegroundColor, put_ExtendsContentIntoTitleBar, put_ForegroundColor, ResetToDefault}
+Microsoft::UI::Xaml::Controls::SemanticZoom
+Microsoft::UI::Xaml::Controls::ISemanticZoom::{get_CanChangeViews, put_CanChangeViews, get_IsZoomedInViewActive, put_IsZoomedInViewActive, get_ZoomedInView, put_ZoomedInView, get_ZoomedOutView, put_ZoomedOutView, ToggleActiveView}
+Microsoft::UI::Xaml::Controls::ISemanticZoomInformation
+Microsoft::UI::Xaml::Controls::IItemsViewItemInvokedEventArgs::get_InvokedItem
+Microsoft::UI::Xaml::Controls::IStackLayout::{put_Orientation, put_Spacing}
+Microsoft::UI::Xaml::Controls::IUniformGridLayout::{put_MinColumnSpacing, put_MinItemHeight, put_MinItemWidth, put_MinRowSpacing, put_Orientation}
+Microsoft::UI::Xaml::Controls::Layout
+Microsoft::UI::Xaml::Controls::StackLayout::CreateInstance
+Microsoft::UI::Xaml::Controls::UniformGridLayout::CreateInstance
+Microsoft::UI::Xaml::ElementFactoryGetArgs::CreateInstance
+Microsoft::UI::Xaml::ElementFactoryRecycleArgs::CreateInstance
+Microsoft::UI::Xaml::IElementFactory
+Microsoft::UI::Xaml::IElementFactoryGetArgs::{get_Data, get_Parent}
+Microsoft::UI::Xaml::IElementFactoryRecycleArgs::{get_Element, put_Element}
+Microsoft::UI::Composition::Compositor::{CreateExpressionAnimation, CreateVector3KeyFrameAnimation}
+Microsoft::UI::Composition::ExpressionAnimation
+Microsoft::UI::Composition::ICompositionAnimation::{SetReferenceParameter, SetScalarParameter, SetVector3Parameter}
+Microsoft::UI::Composition::ICompositionAnimation2::put_Target
+Microsoft::UI::Composition::ICompositionAnimationBase
+Microsoft::UI::Composition::IExpressionAnimation::put_Expression
+Microsoft::UI::Composition::IKeyFrameAnimation::put_Duration
+Microsoft::UI::Composition::IVector3KeyFrameAnimation::InsertKeyFrame
+Microsoft::UI::Composition::Vector3KeyFrameAnimation
+Microsoft::UI::Xaml::Media::CompositionTarget::GetCompositorForCurrentThread
+Microsoft::UI::Xaml::UIElement::StartAnimation
+Windows::Foundation::Numerics::Vector3
+Microsoft::UI::Composition::CompositionColorBrush
+Microsoft::UI::Composition::Compositor::{CreateColorBrushWithColor, CreateSpriteVisual}
+Microsoft::UI::Composition::ICompositionColorBrush::put_Color
+Microsoft::UI::Composition::ICompositionObject::get_Compositor
+Microsoft::UI::Composition::ISpriteVisual::put_Brush
+Microsoft::UI::Composition::IVisual::put_Size
+Microsoft::UI::Composition::SpriteVisual
+Microsoft::UI::Composition::Visual
+Microsoft::UI::Composition::ContainerVisual
+Microsoft::UI::Content::ChildSiteLink
+Microsoft::UI::Content::IChildSiteLink::{put_ActualSize, put_LocalToParentTransformMatrix, Connect}
+Microsoft::UI::Content::IChildSiteLinkStatics::Create
+Microsoft::UI::Content::ContentIsland
+Microsoft::UI::Content::IContentIsland
+Microsoft::UI::Content::IContentIslandStatics::Create
+Microsoft::UI::Composition::SpriteVisual
+Microsoft::UI::Content::ChildSiteLink::{Close, Connect, Create, get_IsClosed, put_ActualSize, put_LocalToParentTransformMatrix}
+Microsoft::UI::Content::ContentIsland::{Close, Create, get_IsClosed}
+Microsoft::UI::Xaml::Hosting::ElementCompositionPreview::GetElementVisual
+Microsoft::UI::Xaml::IXamlRoot4::get_ContentIsland
+Windows::Foundation::Numerics::Matrix4x4
+Windows::Foundation::Numerics::Vector2
+Windows::UI::Color
+Microsoft::Windows::AppNotifications::AppNotification
+Microsoft::Windows::AppNotifications::AppNotificationManager::{get_Default, IsSupported, Register, Show}
+Microsoft::Windows::AppNotifications::IAppNotificationFactory
+Microsoft::Windows::BadgeNotifications::BadgeNotificationGlyph
+Microsoft::Windows::BadgeNotifications::BadgeNotificationManager::{ClearBadge, SetBadgeAsCount, SetBadgeAsGlyph, get_Current}
+Microsoft::UI::Xaml::Controls::MapControl::{get_Layers, put_Center, put_InteractiveControlsVisible, put_Layers, put_MapServiceToken, put_ZoomLevel}
+Microsoft::UI::Xaml::Controls::MapElement
+Microsoft::UI::Xaml::Controls::MapElementsLayer::{CreateInstance, get_MapElements}
+Microsoft::UI::Xaml::Controls::MapIcon::{CreateInstance, put_Location}
+Microsoft::UI::Xaml::Controls::MapLayer
+Windows::Devices::Geolocation::BasicGeoposition
+Windows::Devices::Geolocation::Geopoint
+Windows::Devices::Geolocation::IGeopointFactory::Create
+Windows::UI::StartScreen::JumpList::{LoadCurrentAsync, SaveAsync, get_Items}
+Windows::UI::StartScreen::JumpListItem::{CreateWithArguments, put_Description, put_Logo}
+Windows::Media::Capture::Frames::MediaFrameSource
+Windows::Media::Capture::Frames::MediaFrameSourceGroup::{FindAllAsync, get_DisplayName, get_SourceInfos}
+Windows::Media::Capture::Frames::MediaFrameSourceInfo::get_Id
+Windows::Media::Capture::IMediaCapture::{InitializeAsync, InitializeWithSettingsAsync}
+Windows::Media::Capture::IMediaCapture5::get_FrameSources
+Windows::Media::Capture::MediaCapture
+Windows::Media::Capture::MediaCaptureInitializationSettings::{put_MemoryPreference, put_SharingMode, put_SourceGroup, put_StreamingCaptureMode}
+Windows::Media::Capture::MediaCaptureMemoryPreference
+Windows::Media::Capture::MediaCaptureSharingMode
+Windows::Media::Capture::StreamingCaptureMode
+Windows::Media::Core::MediaSource::CreateFromMediaFrameSource
+Microsoft::UI::Xaml::ElementSoundKind
+Microsoft::UI::Xaml::ElementSoundPlayer::{Play, get_SpatialAudioMode, get_State, put_SpatialAudioMode, put_State, put_Volume}
+Microsoft::UI::Xaml::ElementSoundPlayerState
+Microsoft::UI::Xaml::ElementSpatialAudioMode
+Windows::Media::Capture::Frames::IMediaFrameSourceInfo::get_MediaStreamType
+Windows::Media::Capture::MediaStreamType

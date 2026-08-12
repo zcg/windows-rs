@@ -34,6 +34,10 @@ impl VariableSizedWrapGrid {
         self.maximum_rows_or_columns = v;
         self
     }
+    pub fn orientation(mut self, v: Orientation) -> Self {
+        self.orientation = v;
+        self
+    }
     pub fn child(mut self, el: impl Into<Element>) -> Self {
         self.children.push(el.into());
         self
@@ -43,6 +47,24 @@ impl VariableSizedWrapGrid {
         self
     }
 }
+
+/// Attached property for children of [`VariableSizedWrapGrid`]. Set via
+/// [`Element::wrap_grid_row_span`] / [`Element::wrap_grid_column_span`].
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct WrapGridSpan {
+    pub row_span: i32,
+    pub column_span: i32,
+}
+
+impl Default for WrapGridSpan {
+    fn default() -> Self {
+        Self {
+            row_span: 1,
+            column_span: 1,
+        }
+    }
+}
+
 impl Widget for VariableSizedWrapGrid {
     widget_header!(ControlKind::VariableSizedWrapGrid);
     fn children(&self) -> Children<'_> {

@@ -309,3 +309,4 @@ changes (the `gen` workflow enforces this).
 | --- | --- |
 | `metadata` `Remapper` (`merge/remap.rs`) | No tests anywhere; routing/`split_apis` logic is exercised only in the live build, so a regression yields a malformed namespaced winmd with no failing test. |
 | webview | `process-failed`, download, and deferral paths untested. |
+| `reactor` `items_view` widget + Windows App SDK 2.3.1 | Setting `ItemsView.ItemTemplate` to any `IElementFactory` (reproduced with an official `DataTemplate`) crashes the runtime during layout (`0xC000027B`). The widget intentionally leaves `ItemTemplate` unset; the gallery demonstrates the data-driven model through `ItemsRepeater`. Revisit when the runtime is fixed or upgraded. |

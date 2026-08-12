@@ -108,7 +108,66 @@ Build elements with plain builder functions. Each returns a widget that becomes 
   the bitmap decoder. Sample: `cargo run -p reactor_samples --example image`.
 - Layout: `vstack((..))` and `hstack((..))` with `.spacing(..)`; `grid((..))` with `.rows([..])` and
   `.columns([..])` (using `GridLength::STAR` and `GridLength::Auto`) and per-child `.grid_row(n)`
-  and `.grid_column(n)`.
+  and `.grid_column(n)`. `variable_sized_wrap_grid()` with `.children(..)` arranges tiles with a fixed cell size;
+  per-child `.wrap_grid_row_span(n)` / `.wrap_grid_column_span(n)` set the WinUI attached
+  properties so a tile can span multiple cells.
+
+Storage pickers bind to the current window: `active_window_id()` returns the `AppWindowId`, then
+`pick_single_file_async`, `pick_multiple_files_async`, `pick_save_file_async`, and
+`pick_folder_async` open the WinAppSDK modal dialogs and invoke the callback on the UI thread with
+the selected path(s). The dialog runs on a `DispatcherQueueTimer` poll, so the UI thread never
+blocks.
+
+The active window's title bar is reachable through `active_title_bar()`. `title_bar_set_extended`,
+`title_bar_set_height`, `title_bar_set_theme`, `title_bar_set_accent`, and `title_bar_reset` wrap
+the `AppWindowTitleBar` settings (content extension, `TitleBarHeightOption`, `TitleBarTheme`,
+button colors, and reset-to-default).
+
+`semantic_zoom(zoomed_in_view)` pairs a detailed view with `.zoomed_out(overview_view)` and
+switches between them through `.is_zoomed_in_view_active(bool)`. The views are real
+`ListView`/`GridView` controls (both implement `ISemanticZoomInformation`), so WinUI drives the
+zoom transition itself.
+
+`items_view(items)` maps to the real `ItemsView` control with an `ItemsSource` vector and a
+`StackLayout`/`UniformGridLayout`. The `ItemTemplate` is deliberately not set: the Windows App
+SDK 2.3.1 runtime crashes when `ItemsView` lays out with any `IElementFactory` (reproduced with an
+official `DataTemplate`), so the gallery demonstrates the same data-driven model through
+`ItemsRepeater`, which `ItemsView` builds upon. `.selection_mode(ItemsViewSelectionMode)` and
+`.on_item_invoked(..)` remain available.
+
+Composition animations on XAML elements are available through `start_expression_animation`
+(expression string plus scalar parameters) and `start_scale_keyframes` (vector key frames with a
+duration). Both fetch the thread's compositor via `compositor_for_current_thread()` and start the
+animation on the element's `UIElement`.
+
+Content islands host separate content inside the current tree: `attach_island(element, size,
+color)` connects a composition-backed `ContentIsland` to the element through `ChildSiteLink` and
+returns an `IslandHandle`; `IslandHandle::close` tears the island down.
+
+App notifications go through `app_notification_supported()` and `send_app_notification(title,
+body)`. Unpackaged processes have no app identity, so the support check is false there and the
+send helper returns `ERROR_NOT_SUPPORTED`, matching the WinUI Gallery behavior on systems without
+a registered AUMID.
+
+`play_element_sound(kind)`, `set_element_sound_state(on)`, and `set_element_spatial_audio(on)`
+wrap `ElementSoundPlayer` so apps can play WinUI control sounds.
+
+`map_control()` renders the real `MapControl` with `.center(lat, lon)`, `.zoom_level(..)`,
+`.map_service_token(..)`, and an attached `MapIcon` marker layer. `start_camera_preview_into(element)`
+shows a live camera preview on a `MediaPlayerElement` through `MediaFrameSourceGroup`/`MediaCapture`
+(the WinUI 3 equivalent of the UWP CaptureElement sample). Initialization uses the settings overload
+(`InitializeWithSettingsAsync` with `StreamingCaptureMode::Video`), prefers a `VideoPreview` source over
+infrared/depth/metadata sources, and tries shared-read-only/Cpu, exclusive/Cpu, and exclusive/Auto
+combinations. A missing camera reports `No camera devices found.`; a system-denied camera reports
+`0x80070005`. On systems where unpackaged `MediaCapture` is denied even with the privacy switches on,
+packaging with `runFullTrust` identity (see `crates/samples/reactor/gallery/packaging`) is the way to
+make the camera available. `jumplist_add_tasks`/`jumplist_clear` update the taskbar jump list
+and fail cleanly in unpackaged processes without an AUMID.
+
+Taskbar badges use `badge_set_count(u32)`, `badge_set_glyph(BadgeNotificationGlyph)`, and
+`badge_clear()` against `BadgeNotificationManager`. The gallery settings page switches the window
+theme through `set_requested_theme(RequestedTheme::Default | Light | Dark)`; the effective scheme
+is reported by `use_color_scheme()`.
 
 About 60 WinUI controls are wrapped, including `check_box`, `combo_box`, `slider`, `list_view`,
 `tree_view`, `navigation_view`, `tab_view`, `pivot`, `text_box`, `number_box`, `color_picker`,

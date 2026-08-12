@@ -335,6 +335,17 @@ pub fn info_bar_bindings(w: &InfoBar) -> PropBindings {
         Binding::Prop(Prop::Title, PropValue::Str(w.title.clone())),
     ]
 }
+pub fn items_view_bindings(w: &ItemsView) -> PropBindings {
+    vec![
+        Binding::Event(
+            Event::ItemInvoked,
+            w.on_item_invoked
+                .as_ref()
+                .map(|cb| EventHandler::Str(cb.clone())),
+        ),
+        Binding::Prop(Prop::SelectionMode, PropValue::I32(w.selection_mode.0)),
+    ]
+}
 pub fn list_box_bindings(w: &ListBox) -> PropBindings {
     vec![
         Binding::Event(
@@ -693,6 +704,12 @@ pub fn selector_bar_bindings(w: &SelectorBar) -> PropBindings {
         w.on_selection_changed
             .as_ref()
             .map(|cb| EventHandler::Str(cb.clone())),
+    )]
+}
+pub fn semantic_zoom_bindings(w: &SemanticZoom) -> PropBindings {
+    vec![Binding::Prop(
+        Prop::IsZoomedInViewActive,
+        PropValue::Bool(w.is_zoomed_in_view_active),
     )]
 }
 pub fn slider_bindings(w: &Slider) -> PropBindings {
