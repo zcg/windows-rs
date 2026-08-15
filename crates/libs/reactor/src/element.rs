@@ -876,6 +876,23 @@ pub trait InputExt: capability::Input + Sized {
         self
     }
 
+    /// Mouse wheel / tilt delta callback. `PointerEventInfo` carries
+    /// `mouse_wheel_delta` (positive = scroll up/away). Routed events bubble:
+    /// attaching to a child of a `ScrollViewer` observes wheel input before the
+    /// viewer marks it handled.
+    fn on_pointer_wheel(mut self, f: impl IntoCallback<PointerEventInfo>) -> Self {
+        ensure_pointer_handlers(capability::Input::input_modifiers_mut(&mut self))
+            .on_pointer_wheel = Some(f.into_callback());
+        self
+    }
+
+    /// Pointer hit-test transparency: `false` lets pointer input pass through
+    /// this element to what is underneath (useful for invisible overlay layers).
+    fn hit_test_visible(mut self, value: bool) -> Self {
+        capability::Input::input_modifiers_mut(&mut self).hit_test_visible = Some(value);
+        self
+    }
+
     fn keyboard_accelerator(mut self, accel: KeyboardAccelerator) -> Self {
         capability::Input::input_modifiers_mut(&mut self)
             .keyboard_accelerators
