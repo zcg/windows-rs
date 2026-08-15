@@ -44,16 +44,14 @@ pub fn app_window_page(_: &(), cx: &mut RenderCx) -> Element {
     page_content(
         "AppWindow",
         "Open independent windows with their own content.",
-        vec![
-            sample_card(
-                "Open a Secondary Window",
-                vstack((
-                    button("Open New Window").on_click(open),
-                    text_block(format!("Windows opened: {opened}")).opacity(0.6),
-                ))
-                .spacing(8.0),
-                r#"ReactorWindow::new().title("...").inner_size(320.0, 220.0).render(move |cx| view)"#,
-            ),
-        ],
+        vec![sample_card(
+            "Open a Secondary Window",
+            vstack((
+                button("Open New Window").on_click(open),
+                text_block(format!("Windows opened: {opened}")).opacity(0.6),
+            ))
+            .spacing(8.0),
+            r#"ReactorWindow::new().title("...").inner_size(320.0, 220.0).render(move |cx| view)"#,
+        )],
     )
 }

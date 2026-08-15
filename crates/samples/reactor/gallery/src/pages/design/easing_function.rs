@@ -1,6 +1,6 @@
 use crate::controls::*;
-use windows_reactor::*;
 use std::time::Duration;
+use windows_reactor::*;
 
 pub fn easing_function_page(_: &(), _cx: &mut RenderCx) -> Element {
     let block = |color: (u8, u8, u8), easing: Easing| -> Element {
@@ -21,22 +21,20 @@ pub fn easing_function_page(_: &(), _cx: &mut RenderCx) -> Element {
     page_content(
         "Easing Functions",
         "Easing functions control how animations accelerate and decelerate.",
-        vec![
-            sample_card(
-                "Easing Comparison",
-                vstack((
-                    text_block("Linear").font_size(12.0).opacity(0.6),
-                    block((0, 120, 215), Easing::Linear),
-                    text_block("EaseOut").font_size(12.0).opacity(0.6),
-                    block((16, 124, 16), Easing::EaseOut),
-                    text_block("EaseIn").font_size(12.0).opacity(0.6),
-                    block((157, 93, 0), Easing::EaseIn),
-                    text_block("EaseInOut").font_size(12.0).opacity(0.6),
-                    block((196, 43, 28), Easing::EaseInOut),
-                ))
-                .spacing(6.0),
-                r#".animate(AnimationConfig { scale: Some(1.0), duration, easing })"#,
-            ),
-        ],
+        vec![sample_card(
+            "Easing Comparison",
+            vstack((
+                text_block("Linear").font_size(12.0).opacity(0.6),
+                block((0, 120, 215), Easing::Linear),
+                text_block("EaseOut").font_size(12.0).opacity(0.6),
+                block((16, 124, 16), Easing::EaseOut),
+                text_block("EaseIn").font_size(12.0).opacity(0.6),
+                block((157, 93, 0), Easing::EaseIn),
+                text_block("EaseInOut").font_size(12.0).opacity(0.6),
+                block((196, 43, 28), Easing::EaseInOut),
+            ))
+            .spacing(6.0),
+            r#".animate(AnimationConfig { scale: Some(1.0), duration, easing })"#,
+        )],
     )
 }

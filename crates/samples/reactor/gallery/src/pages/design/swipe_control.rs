@@ -50,11 +50,9 @@ pub fn swipe_control_page(_: &(), cx: &mut RenderCx) -> Element {
             ),
             sample_card(
                 "Swipe Left (Delete / Archive)",
-                vstack((
-                    swipe_control(row("Swipe Left to reveal actions"))
-                        .right_items(right_actions)
-                        .width(380.0),
-                ))
+                vstack((swipe_control(row("Swipe Left to reveal actions"))
+                    .right_items(right_actions)
+                    .width(380.0),))
                 .spacing(8.0),
                 r#"swipe_control(row).right_items(vec![SwipeItemDef::new("Delete"), SwipeItemDef::new("Archive")])"#,
             ),

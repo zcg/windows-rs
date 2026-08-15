@@ -24,24 +24,16 @@ pub fn pull_to_refresh_page(_: &(), cx: &mut RenderCx) -> Element {
     page_content(
         "Pull to Refresh",
         "RefreshContainer provides the standard pull-to-refresh experience for scrollable content.",
-        vec![
-            sample_card(
-                "Basic Pull-to-Refresh",
-                vstack((
-                    RefreshContainer::new(
-                        ScrollViewer::new(list)
-                            .height(320.0)
-                    )
+        vec![sample_card(
+            "Basic Pull-to-Refresh",
+            vstack((
+                RefreshContainer::new(ScrollViewer::new(list).height(320.0))
                     .on_refresh_requested(on_refresh),
-                    text_block(format!(
-                        "Refreshed {} times",
-                        *counter.borrow()
-                    ))
+                text_block(format!("Refreshed {} times", *counter.borrow()))
                     .foreground(ThemeRef::SecondaryText),
-                ))
-                .spacing(8.0),
-                r#"RefreshContainer::new(ScrollViewer::new(list_view(...))).on_refresh_requested(...)"#,
-            ),
-        ],
+            ))
+            .spacing(8.0),
+            r#"RefreshContainer::new(ScrollViewer::new(list_view(...))).on_refresh_requested(...)"#,
+        )],
     )
 }

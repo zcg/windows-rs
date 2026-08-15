@@ -22,8 +22,14 @@ pub fn xaml_styles_page(_: &(), _cx: &mut RenderCx) -> Element {
             sample_card(
                 "Shared Appearance via Helpers",
                 hstack((
-                    border(text_block("Card A")).corner_radius(8.0).padding(Thickness::uniform(12.0)).background(ThemeRef::CardBackground),
-                    border(text_block("Card B")).corner_radius(8.0).padding(Thickness::uniform(12.0)).background(ThemeRef::CardBackground),
+                    border(text_block("Card A"))
+                        .corner_radius(8.0)
+                        .padding(Thickness::uniform(12.0))
+                        .background(ThemeRef::CardBackground),
+                    border(text_block("Card B"))
+                        .corner_radius(8.0)
+                        .padding(Thickness::uniform(12.0))
+                        .background(ThemeRef::CardBackground),
                 ))
                 .spacing(8.0),
                 r#"border(...).corner_radius(8.0).background(ThemeRef::CardBackground) // consistent style"#,

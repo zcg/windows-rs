@@ -561,7 +561,6 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         tag: "text-block",
         image: "TextBlock.png",
     },
-
     ControlInfo {
         title: "Accessibility: Color Contrast",
         description: "Accessibility: Color Contrast sample.",
@@ -891,7 +890,6 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         tag: "xaml-ui-command",
         image: "XamlUICommand.png",
     },
-
     ControlInfo {
         title: "System Backdrops",
         description: "System Backdrops sample.",

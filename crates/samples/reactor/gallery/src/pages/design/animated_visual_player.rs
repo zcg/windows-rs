@@ -1,6 +1,6 @@
 use crate::controls::*;
-use windows_reactor::*;
 use std::time::Duration;
+use windows_reactor::*;
 
 pub fn animated_visual_player_page(_: &(), _cx: &mut RenderCx) -> Element {
     page_content(

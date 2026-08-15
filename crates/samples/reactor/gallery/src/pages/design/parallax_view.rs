@@ -4,23 +4,32 @@ use windows_reactor::*;
 pub fn parallax_view_page(_: &(), cx: &mut RenderCx) -> Element {
     let sv_ref = cx.use_ref::<Option<windows_core::IInspectable>>(None);
     let pv_ref = cx.use_ref::<Option<windows_core::IInspectable>>(None);
-    let (status, set_status) = cx.use_state(String::from("Scroll the list, then attach the parallax source"));
+    let (status, set_status) = cx.use_state(String::from(
+        "Scroll the list, then attach the parallax source",
+    ));
 
     let on_sv_mounted = {
         let sv_ref = sv_ref.clone();
         Callback::new(move |native: Option<windows_core::IInspectable>| {
-            if let Some(n) = native { *sv_ref.borrow_mut() = Some(n); }
+            if let Some(n) = native {
+                *sv_ref.borrow_mut() = Some(n);
+            }
         })
     };
     let on_pv_mounted = {
         let pv_ref = pv_ref.clone();
         Callback::new(move |native: Option<windows_core::IInspectable>| {
-            if let Some(n) = native { *pv_ref.borrow_mut() = Some(n); }
+            if let Some(n) = native {
+                *pv_ref.borrow_mut() = Some(n);
+            }
         })
     };
 
     let background: Element = border(
-        text_block("Parallax Background").font_size(16.0).bold().opacity(0.8),
+        text_block("Parallax Background")
+            .font_size(16.0)
+            .bold()
+            .opacity(0.8),
     )
     .background(Color::rgb(0, 120, 212))
     .width(320.0)
@@ -31,7 +40,9 @@ pub fn parallax_view_page(_: &(), cx: &mut RenderCx) -> Element {
     let foreground: Element = list_view(
         (0..20).map(|i| format!("Scrollable row {i}")).collect(),
         |item, _| {
-            let t: Element = text_block(item.clone()).padding(Thickness::uniform(8.0)).into();
+            let t: Element = text_block(item.clone())
+                .padding(Thickness::uniform(8.0))
+                .into();
             t
         },
     )
@@ -56,7 +67,9 @@ pub fn parallax_view_page(_: &(), cx: &mut RenderCx) -> Element {
                 return;
             };
             match parallax_attach_source(&pv, &sv) {
-                Ok(()) => set_status.call("Parallax source attached - scroll to see the effect".into()),
+                Ok(()) => {
+                    set_status.call("Parallax source attached - scroll to see the effect".into());
+                }
                 Err(_) => set_status.call("Attach failed".into()),
             }
         }
@@ -65,21 +78,16 @@ pub fn parallax_view_page(_: &(), cx: &mut RenderCx) -> Element {
     page_content(
         "ParallaxView",
         "Parallax scrolling links a background element to a scrolling source.",
-        vec![
-            sample_card(
-                "Scroll-linked Background",
-                vstack((
-                    background,
-                    foreground,
-                    hstack((
-                        button("Attach Parallax Source").on_click(attach),
-                    ))
-                    .spacing(8.0),
-                    text_block(status).font_size(12.0).opacity(0.6),
-                ))
-                .spacing(8.0),
-                r#"parallax_attach_source(&parallax, &scroll_viewer) // scroll-linked background"#,
-            ),
-        ],
+        vec![sample_card(
+            "Scroll-linked Background",
+            vstack((
+                background,
+                foreground,
+                hstack((button("Attach Parallax Source").on_click(attach),)).spacing(8.0),
+                text_block(status).font_size(12.0).opacity(0.6),
+            ))
+            .spacing(8.0),
+            r#"parallax_attach_source(&parallax, &scroll_viewer) // scroll-linked background"#,
+        )],
     )
 }

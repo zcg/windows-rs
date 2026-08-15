@@ -19,8 +19,16 @@ pub fn templates_page(_: &(), _cx: &mut RenderCx) -> Element {
             sample_card(
                 "Reusable Card Layout",
                 hstack((
-                    sample_card("Card 1", text_block("Reusable layout"), r#"sample_card(...)"#),
-                    sample_card("Card 2", text_block("Composed from primitives"), r#"sample_card(...)"#),
+                    sample_card(
+                        "Card 1",
+                        text_block("Reusable layout"),
+                        r#"sample_card(...)"#,
+                    ),
+                    sample_card(
+                        "Card 2",
+                        text_block("Composed from primitives"),
+                        r#"sample_card(...)"#,
+                    ),
                 ))
                 .spacing(8.0),
                 r#"sample_card(title, sample, source) // a reusable template in code"#,

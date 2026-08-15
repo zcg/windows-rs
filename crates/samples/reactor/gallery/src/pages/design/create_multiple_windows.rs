@@ -4,7 +4,9 @@ use windows_reactor::*;
 fn mini_view(cx: &mut RenderCx, label: &str) -> Element {
     let (count, set_count) = cx.use_state(0_i32);
     vstack((
-        text_block(format!("{label} - {count}")).bold().font_size(18.0),
+        text_block(format!("{label} - {count}"))
+            .bold()
+            .font_size(18.0),
         hstack((
             button("-").on_click({
                 let s = set_count.clone();
@@ -43,16 +45,14 @@ pub fn create_multiple_windows_page(_: &(), cx: &mut RenderCx) -> Element {
     page_content(
         "Create Multiple Windows",
         "Open more than one window for an app.",
-        vec![
-            sample_card(
-                "Multiple Independent Windows",
-                vstack((
-                    button("Open Another Window").on_click(open),
-                    text_block(format!("Windows opened: {count}")).opacity(0.6),
-                ))
-                .spacing(8.0),
-                r#"ReactorWindow::new().render(move |cx| view) // independent per-window state"#,
-            ),
-        ],
+        vec![sample_card(
+            "Multiple Independent Windows",
+            vstack((
+                button("Open Another Window").on_click(open),
+                text_block(format!("Windows opened: {count}")).opacity(0.6),
+            ))
+            .spacing(8.0),
+            r#"ReactorWindow::new().render(move |cx| view) // independent per-window state"#,
+        )],
     )
 }

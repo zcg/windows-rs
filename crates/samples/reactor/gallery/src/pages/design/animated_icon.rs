@@ -1,6 +1,6 @@
 use crate::controls::*;
-use windows_reactor::*;
 use std::time::Duration;
+use windows_reactor::*;
 
 pub fn animated_icon_page(_: &(), cx: &mut RenderCx) -> Element {
     let (play, set_play) = cx.use_state(false);

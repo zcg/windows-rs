@@ -1,7 +1,6 @@
 use crate::controls::*;
 use windows_reactor::*;
 
-
 pub fn connected_animation_page(_: &(), cx: &mut RenderCx) -> Element {
     let (status, set_status) = cx.use_state(String::from("Press to run a connected animation"));
     let element_ref = cx.use_ref::<Option<windows_core::IInspectable>>(None);
@@ -48,19 +47,17 @@ pub fn connected_animation_page(_: &(), cx: &mut RenderCx) -> Element {
     page_content(
         "Connected Animations",
         "Connected animations move an element between two views during navigation.",
-        vec![
-            sample_card(
-                "ConnectedAnimationService",
-                vstack((
-                    badge,
-                    button("Run Connected Animation").on_click(run_animation),
-                    text_block(status).opacity(0.6),
-                ))
-                .spacing(12.0),
-                r#"ConnectedAnimationService::GetForCurrentView()
+        vec![sample_card(
+            "ConnectedAnimationService",
+            vstack((
+                badge,
+                button("Run Connected Animation").on_click(run_animation),
+                text_block(status).opacity(0.6),
+            ))
+            .spacing(12.0),
+            r#"ConnectedAnimationService::GetForCurrentView()
     .PrepareToAnimate(key, element)?
     .TryStart(&target)"#,
-            ),
-        ],
+        )],
     )
 }

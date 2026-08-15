@@ -12,9 +12,18 @@ pub fn app_bar_button_page(_: &(), cx: &mut RenderCx) -> Element {
                 "AppBarButtons in a CommandBar",
                 vstack((
                     command_bar(vec![
-                        CommandBarCommandDef::Button { label: "Add".into(), icon: Some(Symbol::Add.into()) },
-                        CommandBarCommandDef::Button { label: "Edit".into(), icon: Some(Symbol::Edit.into()) },
-                        CommandBarCommandDef::Button { label: "Delete".into(), icon: Some(Symbol::Delete.into()) },
+                        CommandBarCommandDef::Button {
+                            label: "Add".into(),
+                            icon: Some(Symbol::Add.into()),
+                        },
+                        CommandBarCommandDef::Button {
+                            label: "Edit".into(),
+                            icon: Some(Symbol::Edit.into()),
+                        },
+                        CommandBarCommandDef::Button {
+                            label: "Delete".into(),
+                            icon: Some(Symbol::Delete.into()),
+                        },
                     ])
                     .on_click({
                         let set_status = set_status;
@@ -28,9 +37,18 @@ pub fn app_bar_button_page(_: &(), cx: &mut RenderCx) -> Element {
             sample_card(
                 "Icon-only Buttons",
                 command_bar(vec![
-                    CommandBarCommandDef::Button { label: String::new(), icon: Some(Symbol::Add.into()) },
-                    CommandBarCommandDef::Button { label: String::new(), icon: Some(Symbol::Edit.into()) },
-                    CommandBarCommandDef::Button { label: String::new(), icon: Some(Symbol::Delete.into()) },
+                    CommandBarCommandDef::Button {
+                        label: String::new(),
+                        icon: Some(Symbol::Add.into()),
+                    },
+                    CommandBarCommandDef::Button {
+                        label: String::new(),
+                        icon: Some(Symbol::Edit.into()),
+                    },
+                    CommandBarCommandDef::Button {
+                        label: String::new(),
+                        icon: Some(Symbol::Delete.into()),
+                    },
                 ]),
                 r#"CommandBarCommandDef::Button { label: String::new(), icon: Some(Symbol::Add.into()) }"#,
             ),

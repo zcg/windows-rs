@@ -9,11 +9,15 @@ fn counter_component(cx: &mut RenderCx, label: &str) -> Element {
         text_block(label).font_size(14.0),
         button("-").on_click({
             let counter = counter.clone();
-            move || { *counter.borrow_mut() -= 1; }
+            move || {
+                *counter.borrow_mut() -= 1;
+            }
         }),
         text_block("0").font_size(16.0).bold().width(48.0),
         button("+").on_click({
-            move || { *counter.borrow_mut() += 1; }
+            move || {
+                *counter.borrow_mut() += 1;
+            }
         }),
     ))
     .spacing(8.0)

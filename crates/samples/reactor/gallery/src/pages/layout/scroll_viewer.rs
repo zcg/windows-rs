@@ -3,11 +3,13 @@ use windows_reactor::*;
 
 pub fn scroll_viewer_page(_: &(), _cx: &mut RenderCx) -> Element {
     let content: Element = vstack(
-        (0..30).map(|i| {
-            text_block(format!("Scrollable content item {i}"))
-                .padding(Thickness::uniform(12.0))
-                .into()
-        }).collect::<Vec<Element>>(),
+        (0..30)
+            .map(|i| {
+                text_block(format!("Scrollable content item {i}"))
+                    .padding(Thickness::uniform(12.0))
+                    .into()
+            })
+            .collect::<Vec<Element>>(),
     )
     .spacing(4.0)
     .into();
@@ -27,9 +29,16 @@ pub fn scroll_viewer_page(_: &(), _cx: &mut RenderCx) -> Element {
             sample_card(
                 "Hidden Scroll Bars",
                 ScrollViewer::new(
-                    vstack((0..10).map(|i| {
-                        text_block(format!("Hidden bar item {i}")).padding(Thickness::uniform(10.0)).into()
-                    }).collect::<Vec<Element>>()).spacing(4.0),
+                    vstack(
+                        (0..10)
+                            .map(|i| {
+                                text_block(format!("Hidden bar item {i}"))
+                                    .padding(Thickness::uniform(10.0))
+                                    .into()
+                            })
+                            .collect::<Vec<Element>>(),
+                    )
+                    .spacing(4.0),
                 )
                 .vertical_scroll_bar_visibility(ScrollBarVisibility::Hidden)
                 .height(200.0)

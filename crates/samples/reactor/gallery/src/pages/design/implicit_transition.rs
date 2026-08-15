@@ -1,6 +1,6 @@
 use crate::controls::*;
-use windows_reactor::*;
 use std::time::Duration;
+use windows_reactor::*;
 
 pub fn implicit_transition_page(_: &(), cx: &mut RenderCx) -> Element {
     let (visible, set_visible) = cx.use_state(true);
@@ -24,16 +24,14 @@ pub fn implicit_transition_page(_: &(), cx: &mut RenderCx) -> Element {
     page_content(
         "Implicit Transitions",
         "Implicit transitions animate property changes on a target element.",
-        vec![
-            sample_card(
-                "Show / Hide with Transition",
-                vstack((
-                    button("Toggle Visibility").on_click(move || set_visible.call(!visible)),
-                    block.unwrap_or(Element::Empty),
-                ))
-                .spacing(8.0),
-                r#".transition(Some(AnimationConfig::fade_in(400ms)), Some(AnimationConfig::fade_out(400ms)))"#,
-            ),
-        ],
+        vec![sample_card(
+            "Show / Hide with Transition",
+            vstack((
+                button("Toggle Visibility").on_click(move || set_visible.call(!visible)),
+                block.unwrap_or(Element::Empty),
+            ))
+            .spacing(8.0),
+            r#".transition(Some(AnimationConfig::fade_in(400ms)), Some(AnimationConfig::fade_out(400ms)))"#,
+        )],
     )
 }

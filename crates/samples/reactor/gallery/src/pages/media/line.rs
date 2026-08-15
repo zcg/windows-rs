@@ -27,8 +27,16 @@ pub fn line_page(_: &(), _cx: &mut RenderCx) -> Element {
             sample_card(
                 "Multiple Lines (approximating Polyline)",
                 vstack((
-                    Shape::line(0.0, 0.0, 110.0, 40.0).stroke_rgb(0, 0, 0).stroke_thickness(3.0).width(220.0).height(40.0),
-                    Shape::line(110.0, 0.0, 220.0, 40.0).stroke_rgb(0, 0, 0).stroke_thickness(3.0).width(220.0).height(40.0),
+                    Shape::line(0.0, 0.0, 110.0, 40.0)
+                        .stroke_rgb(0, 0, 0)
+                        .stroke_thickness(3.0)
+                        .width(220.0)
+                        .height(40.0),
+                    Shape::line(110.0, 0.0, 220.0, 40.0)
+                        .stroke_rgb(0, 0, 0)
+                        .stroke_thickness(3.0)
+                        .width(220.0)
+                        .height(40.0),
                 ))
                 .spacing(0.0),
                 r#"multiple Shape::line segments approximate a Polyline"#,
