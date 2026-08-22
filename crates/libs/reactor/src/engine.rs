@@ -412,6 +412,21 @@ impl<T> HookRef<T> {
         self.inner.borrow_mut()
     }
 
+    /// Non-panicking [`Self::borrow`]. Useful in re-entrant callbacks (timers,
+    /// events) that may run while another borrow of the same ref is alive.
+    pub fn try_borrow(&self) -> std::result::Result<Ref<'_, T>, std::cell::BorrowError> {
+        self.inner.try_borrow()
+    }
+
+    /// Non-panicking [`Self::borrow_mut`]. Useful in re-entrant callbacks
+    /// (timers, events) that may run while another borrow of the same ref is
+    /// alive; conflict is reported as an error instead of panicking.
+    pub fn try_borrow_mut(
+        &self,
+    ) -> std::result::Result<std::cell::RefMut<'_, T>, std::cell::BorrowMutError> {
+        self.inner.try_borrow_mut()
+    }
+
     pub fn replace(&self, v: T) -> T {
         self.inner.replace(v)
     }
