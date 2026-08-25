@@ -873,12 +873,11 @@ fn try_universal_prop(handle: &Handle, prop: Prop, value: &PropValue) -> Result<
             set_font_weight(handle, bindings::FontWeight { weight: 400 })
         }
         (Prop::FontFamily, PropValue::Str(s)) => {
-            set_font_family(handle, &bindings::FontFamily::CreateInstanceWithName(s)?)
+            set_font_family(handle, &cached_font_family(s)?)
         }
-        (Prop::FontFamily, PropValue::Unset) => set_font_family(
-            handle,
-            &bindings::FontFamily::CreateInstanceWithName("Segoe UI")?,
-        ),
+        (Prop::FontFamily, PropValue::Unset) => {
+            set_font_family(handle, &cached_font_family("Segoe UI")?)
+        }
         (Prop::Margin, PropValue::Thickness(t)) => {
             handle.as_framework_element().SetMargin(*t)?;
             Ok(true)
@@ -1213,6 +1212,23 @@ fn set_font_weight(handle: &Handle, fw: bindings::FontWeight) -> Result<bool> {
         }
     }
     Ok(true)
+}
+
+/// FontFamily 对象缓存（按名字复用）：FontFamily 是 WinRT COM 对象，
+/// 每次渲染为每个文本控件重建（首页数百个 × 拖拽连续重渲染）会产生
+/// 大量分配。缓存后热路径只剩 Clone（引用计数 +1）。
+/// 仅 UI 线程访问（所有 prop 应用都在 UI 线程），Mutex 仅保护插入。
+fn cached_font_family(name: &str) -> Result<bindings::FontFamily> {
+    static CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, bindings::FontFamily>>> =
+        std::sync::OnceLock::new();
+    let cache = CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+    let mut guard = cache.lock().unwrap();
+    if let Some(ff) = guard.get(name) {
+        return Ok(ff.clone());
+    }
+    let ff = bindings::FontFamily::CreateInstanceWithName(name)?;
+    guard.insert(name.to_string(), ff.clone());
+    Ok(ff)
 }
 
 fn set_font_family(handle: &Handle, ff: &bindings::FontFamily) -> Result<bool> {
