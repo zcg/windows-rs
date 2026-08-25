@@ -51,6 +51,8 @@ pub struct NavigationView {
     pub on_back_requested: Option<Callback<()>>,
     pub is_settings_visible: bool,
     pub pane_title: String,
+    /// 全局字体族（FontFamily 属性可继承 → 设此一处全窗口生效）
+    pub font_family: Option<String>,
     pub header: Option<String>,
     pub auto_suggest_placeholder: Option<String>,
     pub auto_suggest_items: Vec<String>,
@@ -79,6 +81,7 @@ impl Default for NavigationView {
             on_back_requested: None,
             is_settings_visible: true,
             pane_title: String::new(),
+            font_family: None,
             header: None,
             auto_suggest_placeholder: None,
             auto_suggest_items: Vec::new(),
@@ -142,6 +145,11 @@ impl NavigationView {
         self.is_settings_visible = v;
         self
     }
+    /// 全局字体族（FontFamily 属性可继承 → 设此一处全窗口生效）
+    pub fn font_family(mut self, v: impl Into<String>) -> Self {
+        self.font_family = Some(v.into());
+        self
+    }
     pub fn pane_title(mut self, s: impl Into<String>) -> Self {
         self.pane_title = s.into();
         self
@@ -196,6 +204,9 @@ impl Widget for NavigationView {
     widget_header!(ControlKind::NavigationView);
     fn bindings(&self) -> PropBindings {
         let mut out = generated::navigation_view_bindings(self);
+        if let Some(f) = &self.font_family {
+            out.push(Binding::Prop(Prop::FontFamily, PropValue::Str(f.clone())));
+        }
         // 顶栏搜索框必须先创建（insert 到最前）：backend 据 AutoSuggestBox=true
         // 调 SetAutoSuggestBox(nv)，后续 AutoSuggestPlaceholder/Items 与
         // QuerySubmitted/TextChanged/SuggestionChosen 事件挂接都依赖它已存在。

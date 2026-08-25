@@ -7,10 +7,34 @@ pub struct TextBlock {
     pub text: String,
     pub font_size: Option<f64>,
     pub font_weight: Option<u16>,
+    pub font_family: Option<String>,
     pub max_lines: Option<i32>,
     pub text_trimming: Option<TextTrimming>,
     pub text_wrapping: TextWrapping,
     pub is_text_selection_enabled: bool,
+}
+
+/// 全局默认字体族（宿主设置；None = 用 XAML 默认）。
+/// 只应用于 TextBlock（不设容器继承——避免个别字体整树渲染失败）。
+static GLOBAL_FONT: std::sync::OnceLock<std::sync::Mutex<Option<String>>> =
+    std::sync::OnceLock::new();
+
+/// 设置全局默认字体族（之后创建/重渲染的 TextBlock 均应用）
+pub fn set_default_font_family(name: impl Into<String>) {
+    let cell = GLOBAL_FONT.get_or_init(|| std::sync::Mutex::new(None));
+    *cell.lock().unwrap() = Some(name.into());
+}
+
+/// 清除全局默认字体族
+pub fn clear_default_font_family() {
+    if let Some(cell) = GLOBAL_FONT.get() {
+        *cell.lock().unwrap() = None;
+    }
+}
+
+fn default_font_family() -> Option<String> {
+    let cell = GLOBAL_FONT.get()?;
+    cell.lock().unwrap().clone()
 }
 impl TextBlock {
     pub fn new(content: impl Into<String>) -> Self {
@@ -30,6 +54,14 @@ impl Widget for TextBlock {
         }
         if let Some(v) = self.font_weight {
             out.push(Binding::Prop(Prop::FontWeight, PropValue::U16(v)));
+        }
+        if let Some(f) = &self.font_family {
+            out.push(Binding::Prop(Prop::FontFamily, PropValue::Str(f.clone())));
+        } else if let Some(f) = default_font_family() {
+            // 全局默认字体（宿主经 set_default_font_family 设置）：未显式指定
+            // 字体的 TextBlock 统一应用。不设到 NavigationView 等容器——
+            // FontFamily 继承进内部模板会导致个别字体整树渲染失败（黑屏）。
+            out.push(Binding::Prop(Prop::FontFamily, PropValue::Str(f)));
         }
         if let Some(v) = self.max_lines {
             out.push(Binding::Prop(Prop::MaxLines, PropValue::I32(v)));
@@ -57,6 +89,11 @@ impl TextBlock {
 
     pub fn font_weight(mut self, weight: u16) -> Self {
         self.font_weight = Some(weight);
+        self
+    }
+
+    pub fn font_family(mut self, v: impl Into<String>) -> Self {
+        self.font_family = Some(v.into());
         self
     }
 
