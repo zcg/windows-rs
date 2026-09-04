@@ -1,6 +1,7 @@
 #![doc = include_str!("../readme.md")]
 
 use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -13,6 +14,7 @@ const NUGET_URL: &str = "https://www.nuget.org/api/v2/package/{name}/{version}";
 const WEBVIEW2_PKG: &str = "Microsoft.Web.WebView2";
 const WEBVIEW2_VER: &str = "1.0.4078.44";
 const WEBVIEW2_CORE_DLL: &str = "Microsoft.Web.WebView2.Core.dll";
+const SELF_CONTAINED_MARKER: &str = "windows-reactor-self-contained";
 
 fn assert_windows() {
     match env::var("CARGO_CFG_TARGET_OS").as_deref() {
@@ -20,28 +22,6 @@ fn assert_windows() {
         Ok(os) => panic!("unsupported target OS: {os}"),
         Err(_) => panic!("CARGO_CFG_TARGET_OS not set"),
     }
-}
-
-/// Configures the app to run with a Windows App Runtime dependency.
-pub fn as_framework_dependent() {
-    assert_windows();
-    as_framework_dependent_impl("");
-}
-
-/// Configures an example to run with a Windows App Runtime dependency.
-pub fn as_example() {
-    assert_windows();
-    as_framework_dependent_impl("examples");
-}
-
-fn as_framework_dependent_impl(subdir: &str) {
-    let out_dir = out_dir();
-    let dest = if subdir.is_empty() {
-        target_dir_from_out(&out_dir)
-    } else {
-        target_dir_from_out(&out_dir).join(subdir)
-    };
-    copy_bootstrap_to(&dest);
 }
 
 /// Configures the app to run completely self-contained.
@@ -52,16 +32,19 @@ pub fn as_self_contained() {
     let temp_dir = temp_dir();
     let runtime = stage_pkg(RUNTIME_PKG, RUNTIME_VER, &temp_dir);
     let extract = ensure_msix_extracted(&runtime);
-    copy_runtime_to(&extract, &target_dir_from_out(&out_dir));
-    deploy_webview2(&temp_dir, &target_dir_from_out(&out_dir));
-    // MSIX 里不含 bootstrap DLL（它是独立的引导可再发行组件），但 reactor 的
-    // bindings.rs 对 `MddBootstrapInitialize2` 用 windows-core `link!` 静态导入
-    // —— exe 导入表里有 microsoft.windowsappruntime.bootstrap.dll，缺了它
-    // 加载器直接弹「找不到 DLL」拒绝启动，与是否调用 bootstrap() 无关。
-    copy_bootstrap_to(&target_dir_from_out(&out_dir));
+    let dest = target_dir_from_out(&out_dir);
+    copy_runtime_to(&extract, &dest);
+    deploy_webview2(&temp_dir, &dest);
 
     let manifest_path = out_dir.join("app.manifest");
-    fs::write(&manifest_path, APP_MANIFEST).unwrap_or_else(|e| {
+    let mut manifest = APP_MANIFEST.to_string();
+    let assembly = manifest.find("<assembly").unwrap();
+    let opening = assembly + manifest[assembly..].find('>').unwrap() + 1;
+    manifest.insert_str(
+        opening,
+        &format!("<description>{SELF_CONTAINED_MARKER}</description>"),
+    );
+    fs::write(&manifest_path, manifest).unwrap_or_else(|e| {
         panic!(
             "failed to write manifest to {}: {e}",
             manifest_path.display()
@@ -123,25 +106,6 @@ fn temp_dir() -> PathBuf {
     let temp = base.join("windows-reactor-setup").join("temp");
     let _ = fs::create_dir_all(&temp);
     temp
-}
-
-fn copy_bootstrap_to(dest: &Path) {
-    let bytes: &[u8] = match env::var("CARGO_CFG_TARGET_ARCH").as_deref() {
-        Ok("x86") => include_bytes!("../bootstrap/x86/Microsoft.WindowsAppRuntime.Bootstrap.dll"),
-        Ok("x86_64") => {
-            include_bytes!("../bootstrap/x64/Microsoft.WindowsAppRuntime.Bootstrap.dll")
-        }
-        Ok("aarch64") => {
-            include_bytes!("../bootstrap/arm64/Microsoft.WindowsAppRuntime.Bootstrap.dll")
-        }
-        Ok(arch) => panic!("Unsupported bootstrap target architecture: {arch}"),
-        Err(_) => panic!("CARGO_CFG_TARGET_ARCH not set"),
-    };
-    let _ = fs::create_dir_all(dest);
-    let _ = fs::write(
-        dest.join("microsoft.windowsappruntime.bootstrap.dll"),
-        bytes,
-    );
 }
 
 fn ensure_msix_extracted(runtime: &Path) -> PathBuf {
@@ -263,7 +227,15 @@ fn extract_tar(src: &Path, dst: &Path, extra: &[&str]) {
 }
 
 fn target_dir_from_out(out: &Path) -> PathBuf {
-    out.ancestors().nth(3).unwrap_or(out).to_path_buf()
+    env::var_os("PROFILE")
+        .and_then(|profile| target_dir_for_profile(out, &profile))
+        .unwrap_or_else(|| out.ancestors().nth(3).unwrap_or(out).to_path_buf())
+}
+
+fn target_dir_for_profile(out: &Path, profile: &OsStr) -> Option<PathBuf> {
+    out.ancestors()
+        .find(|path| path.file_name() == Some(profile))
+        .map(Path::to_path_buf)
 }
 
 fn target_arch() -> &'static str {
@@ -271,5 +243,28 @@ fn target_arch() -> &'static str {
         Ok("aarch64") => "arm64",
         Ok("x86") => "x86",
         _ => "x64",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn finds_profile_in_standard_cargo_out_dir() {
+        let out = Path::new(r"C:\repo\target\debug\build\package-hash\out");
+        assert_eq!(
+            target_dir_for_profile(out, OsStr::new("debug")),
+            Some(PathBuf::from(r"C:\repo\target\debug"))
+        );
+    }
+
+    #[test]
+    fn finds_profile_in_split_package_cargo_out_dir() {
+        let out = Path::new(r"C:\repo\target\debug\build\package\hash\out");
+        assert_eq!(
+            target_dir_for_profile(out, OsStr::new("debug")),
+            Some(PathBuf::from(r"C:\repo\target\debug"))
+        );
     }
 }

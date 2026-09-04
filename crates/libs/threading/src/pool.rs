@@ -50,16 +50,18 @@ impl Pool {
         // SAFETY: the closure has `'static` lifetime, and the boxed callback environment
         // (`self.0`) is kept alive until `Pool::drop` calls `join` to ensure all callbacks
         // have finished using it.
-        unsafe {
-            try_submit(&*self.0, f);
-        }
+        assert!(
+            unsafe { submit_with_environment(&*self.0, f) },
+            "allocation failed"
+        );
     }
 
     /// Create a scope for submitting closures.
     ///
     /// Within this scope local variables can be sent to the pool thread for execution.
-    /// This is possible because `scope` will wait for all submitted closures to finish before returning,
-    /// Note however that it will also wait for closures that were submitted from other threads.
+    /// This is possible because `scope` will wait for all submitted closures to finish before
+    /// returning. It also waits for closures submitted to the same `Pool` from other threads,
+    /// not just those submitted within this scope.
     pub fn scope<'env, F>(&self, f: F)
     where
         F: for<'scope> FnOnce(&'scope Scope<'scope, 'env>),
@@ -126,9 +128,10 @@ impl<'scope, 'env> Scope<'scope, 'env> {
     ///
     /// The closure cannot outlive the `Scope` it's run in.
     pub fn submit<F: FnOnce() + Send + 'scope>(&'scope self, f: F) {
-        unsafe {
-            try_submit(&*self.pool.0, f);
-        }
+        assert!(
+            unsafe { submit_with_environment(&*self.pool.0, f) },
+            "allocation failed"
+        );
     }
 }
 

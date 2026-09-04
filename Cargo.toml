@@ -11,6 +11,11 @@ members = [
 lto = "thin"
 strip = "debuginfo"
 
+[profile.profiling]
+inherits = "release"
+debug = 1
+strip = "none"
+
 [profile.dev.package."*"]
 opt-level = 2
 
@@ -42,7 +47,6 @@ proc-macro2 = { version = "1.0", default-features = false }
 quote = { version = "1.0", default-features = false }
 serde = { version = "1.0", default-features = false }
 syn = { version = "2.0", default-features = false }
-serde_json = {version = "1.0", default-features = false }
 rustc-hash = { version = "2" }
 # generated dependencies
 cppwinrt = { version = "0.100.0", path = "crates/libs/cppwinrt", default-features = false }

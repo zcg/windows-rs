@@ -1,12 +1,12 @@
-/// Reads WinUI `.winmd` files and resolves `put_*` method → interface mappings.
+/// Reads WinUI `.winmd` files and resolves `put_*` method -> interface mappings.
 ///
 /// Given a WinUI class name (e.g. `"TextBlock"`) and a method (e.g. `"put_Text"`),
 /// the resolver finds which exclusive interface owns that method (e.g. `"ITextBlock"`).
 use std::collections::HashMap;
 use std::path::Path;
 
-use windows_metadata::Type;
-use windows_metadata::reader::{File, Index, TypeDef, TypeDefOrRef};
+use windows_metadata::reader::{File, Index, TypeCategory, TypeDef, TypeDefOrRef};
+use windows_metadata::{HasAttributes, Type, Value};
 
 /// Resolved interface location: namespace + name.
 #[derive(Clone, Debug)]
@@ -40,28 +40,47 @@ pub struct MethodRef {
 /// Classification of a metadata parameter type for setter pattern inference.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ParamClass {
-    /// Primitive type (String, Bool, F64, etc.) → direct `put_X(value)`.
+    /// Primitive type (String, Bool, F64, etc.) -> direct `put_X(value)`.
     Primitive,
-    /// IInspectable → needs wrapping (textblock by default, or IReference when
+    /// IInspectable -> needs wrapping (textblock by default, or IReference when
     /// the TOML specifies an explicit type).
     IInspectable,
-    /// IReference<bool> → `put_X(Some(value))`.
+    /// IReference<bool> -> `put_X(Some(value))`.
     NullableBool,
-    /// Enum, struct, or other complex type → needs explicit TOML config.
+    /// Enum, struct, or other complex type -> needs explicit TOML config.
     Complex,
 }
 
-/// Pre-built lookup: `(class_short_name, method_name) → MethodRef`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CollectionType {
+    InspectableVector,
+    ItemCollection,
+    TypedVector(String),
+    ObservableVector(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ReadValueConversion {
+    Identity,
+    Field(String),
+    Nullable,
+}
+
+/// Pre-built lookup from `(class_short_name, method_name)` to `MethodRef`.
 pub struct MetadataResolver {
     lookup: HashMap<(String, String), MethodRef>,
+    base_classes: HashMap<(String, String), (String, String)>,
+    /// Exclusive interface -> runtime class. Ambiguous non-exclusive interfaces map to `None`.
+    interface_owners: HashMap<(String, String), Option<(String, String)>>,
     /// Value-type structs that wrap a single primitive field.
-    /// Maps `(namespace, name)` → the unwrapped inner `Type`.
-    single_field_types: HashMap<(String, String), Type>,
-    /// Enum types: maps `(namespace, name)` → list of variant names.
+    /// Maps `(namespace, name)` to the unwrapped inner `Type`.
+    single_field_types: HashMap<(String, String), (String, Type)>,
+    /// Maps enum `(namespace, name)` pairs to their variant names.
     enum_variants: HashMap<(String, String), Vec<String>>,
-    /// Non-generic delegate → args class short name, resolved from the
+    /// Maps non-generic delegates to argument class short names, resolved from the
     /// delegate's `Invoke` method signature.
     delegate_args: HashMap<String, String>,
+    content_properties: HashMap<(String, String), String>,
 }
 
 impl MetadataResolver {
@@ -96,11 +115,64 @@ impl MetadataResolver {
 
         let index = Index::new(files);
         let mut lookup = HashMap::new();
+        let mut interface_owners = HashMap::new();
+        let mut base_classes = HashMap::new();
+        let mut content_properties = HashMap::new();
 
-        // Walk all types in the index, collecting method→interface for classes
+        // Walk all types in the index, collecting method-to-interface mappings for classes
         // in Microsoft.UI.Xaml namespaces.
         for (namespace, name, typedef) in index.iter() {
-            if namespace.starts_with("Microsoft.UI.Xaml") {
+            if namespace.starts_with("Microsoft.UI.Xaml")
+                && typedef.category() == TypeCategory::Class
+            {
+                if let Some(extends) = typedef.extends() {
+                    let base = match extends {
+                        TypeDefOrRef::TypeDef(base) => {
+                            Some((base.namespace().to_string(), base.name().to_string()))
+                        }
+                        TypeDefOrRef::TypeRef(base) => {
+                            Some((base.namespace().to_string(), base.name().to_string()))
+                        }
+                        _ => None,
+                    };
+                    if let Some(base) = base {
+                        base_classes.insert((namespace.to_string(), name.to_string()), base);
+                    }
+                }
+                if let Some(content) =
+                    typedef
+                        .find_attribute("ContentPropertyAttribute")
+                        .and_then(|attribute| {
+                            attribute.value().into_iter().find_map(|(name, value)| {
+                                (name == "Name")
+                                    .then_some(value)
+                                    .and_then(|value| match value {
+                                        Value::Utf8(value) => Some(value),
+                                        _ => None,
+                                    })
+                            })
+                        })
+                {
+                    content_properties.insert((namespace.to_string(), name.to_string()), content);
+                }
+                for implementation in typedef.interface_impls() {
+                    let interface = implementation.interface(&[]);
+                    let (interface_namespace, interface_name) = match interface {
+                        Type::ClassName(type_name) | Type::ValueName(type_name) => {
+                            (type_name.namespace, type_name.name)
+                        }
+                        _ => continue,
+                    };
+                    let owner = (namespace.to_string(), name.to_string());
+                    interface_owners
+                        .entry((interface_namespace, interface_name))
+                        .and_modify(|existing: &mut Option<(String, String)>| {
+                            if existing.as_ref() != Some(&owner) {
+                                *existing = None;
+                            }
+                        })
+                        .or_insert(Some(owner));
+                }
                 Self::collect_methods_for_class(&index, name, &typedef, &mut lookup);
             }
         }
@@ -113,8 +185,7 @@ impl MetadataResolver {
                 .is_some()
         });
 
-        // Build single-field struct map: value types with exactly one field
-        // get mapped to their inner primitive type (e.g. FontWeight → U16).
+        // Map single-field value types to their inner primitive type.
         let mut single_field_types = HashMap::new();
         let mut enum_variants = HashMap::new();
         for (namespace, name, typedef) in index.iter() {
@@ -128,17 +199,19 @@ impl MetadataResolver {
             let has_value_field = fields.iter().any(|f| f.name() == "value__");
 
             if has_value_field && !variant_names.is_empty() {
-                // This is an enum.
                 enum_variants.insert((namespace.to_string(), name.to_string()), variant_names);
             } else if fields.len() == 1 {
                 let inner_ty = fields[0].ty();
                 if Self::primitive_value_for_type(&inner_ty).is_some() {
-                    single_field_types.insert((namespace.to_string(), name.to_string()), inner_ty);
+                    single_field_types.insert(
+                        (namespace.to_string(), name.to_string()),
+                        (crate::helpers::to_snake_case(fields[0].name()), inner_ty),
+                    );
                 }
             }
         }
 
-        // Build delegate→args map: for non-generic delegates used by add_*
+        // Build the delegate-to-args map for non-generic delegates used by `add_*`
         // methods, resolve the Invoke method's second parameter to find the
         // event args class.
         let mut delegate_args = HashMap::new();
@@ -152,14 +225,12 @@ impl MetadataResolver {
             if !tn.generics.is_empty() || delegate_args.contains_key(&tn.name) {
                 continue;
             }
-            // Look up the delegate typedef and find its Invoke method.
             let Some(delegate_def) = index.get(&tn.namespace, &tn.name).next() else {
                 continue;
             };
             for method in delegate_def.methods() {
                 if method.name() == "Invoke" {
                     let sig = method.signature(&[]);
-                    // Second parameter is the args type (first is sender).
                     if let Some(args_type) = sig.types.get(1) {
                         let args_name = match args_type {
                             Type::ClassName(args_tn) => Some(args_tn.name.clone()),
@@ -177,9 +248,40 @@ impl MetadataResolver {
 
         Self {
             lookup,
+            base_classes,
+            interface_owners,
             single_field_types,
             enum_variants,
             delegate_args,
+            content_properties,
+        }
+    }
+
+    pub fn class_derives_from(&self, class: &str, base: &str) -> bool {
+        let Some((class_namespace, class_name)) = class.rsplit_once('.') else {
+            return false;
+        };
+        let Some((base_namespace, base_name)) = base.rsplit_once('.') else {
+            return false;
+        };
+        let mut current = (class_namespace.to_string(), class_name.to_string());
+        while let Some(parent) = self.base_classes.get(&current) {
+            if parent.0 == base_namespace && parent.1 == base_name {
+                return true;
+            }
+            current.clone_from(parent);
+        }
+        false
+    }
+
+    pub fn content_property(&self, class: &str) -> Option<String> {
+        let (namespace, name) = class.rsplit_once('.')?;
+        let mut current = (namespace.to_string(), name.to_string());
+        loop {
+            if let Some(content) = self.content_properties.get(&current) {
+                return Some(content.clone());
+            }
+            current = self.base_classes.get(&current)?.clone();
         }
     }
 
@@ -271,6 +373,15 @@ impl MetadataResolver {
             .map(|m| &m.interface)
     }
 
+    /// Resolve an exclusive interface to the runtime class that owns its static members.
+    pub fn runtime_class(&self, interface: &InterfaceRef) -> Option<String> {
+        let (namespace, name) = self
+            .interface_owners
+            .get(&(interface.namespace.clone(), interface.name.clone()))?
+            .as_ref()?;
+        Some(format!("{namespace}.{name}"))
+    }
+
     /// Check if a method exists for a class in metadata.
     pub fn has_method(&self, class_name: &str, method_name: &str) -> bool {
         self.lookup
@@ -291,6 +402,38 @@ impl MetadataResolver {
         } else {
             None
         }
+    }
+
+    pub fn enum_path(&self, class_name: &str, method_name: &str) -> Option<String> {
+        let mref = self
+            .lookup
+            .get(&(class_name.to_string(), method_name.to_string()))?;
+        let Type::ValueName(type_name) = mref.param_types.first()? else {
+            return None;
+        };
+        self.enum_variants
+            .contains_key(&(type_name.namespace.clone(), type_name.name.clone()))
+            .then(|| format!("{}.{}", type_name.namespace, type_name.name))
+    }
+
+    pub fn single_field_param(
+        &self,
+        class_name: &str,
+        method_name: &str,
+    ) -> Option<(String, String)> {
+        let mref = self
+            .lookup
+            .get(&(class_name.to_string(), method_name.to_string()))?;
+        let Type::ValueName(type_name) = mref.param_types.first()? else {
+            return None;
+        };
+        let (field, _) = self
+            .single_field_types
+            .get(&(type_name.namespace.clone(), type_name.name.clone()))?;
+        Some((
+            format!("{}.{}", type_name.namespace, type_name.name),
+            field.clone(),
+        ))
     }
 
     /// Infer the `PropValue` variant name and Copy-ness from a method's parameter
@@ -315,33 +458,93 @@ impl MetadataResolver {
     /// Given `(class, add_event, property)`, resolves the delegate parameter of
     /// `add_{event}` to find the args class, then looks up `get_{property}` on
     /// that class and returns the value type from its return type.
+    #[cfg(test)]
     pub fn infer_event_args_type(
         &self,
         class_name: &str,
         add_event: &str,
         property: &str,
     ) -> Option<String> {
-        // Get the delegate type from the add method's first param.
+        self.resolve_event_args_property(class_name, add_event, property)
+            .map(|(value, _, _)| value)
+    }
+
+    pub fn resolve_event_args_property(
+        &self,
+        class_name: &str,
+        add_event: &str,
+        property: &str,
+    ) -> Option<(String, String, ReadValueConversion)> {
+        let getter_ref = self.resolve_event_args_getter(class_name, add_event, property)?;
+        let (value, conversion) = self.read_value_for_type(&getter_ref.return_type)?;
+        Some((value, getter_ref.interface.full_path(), conversion))
+    }
+
+    pub fn resolve_event_args_property_interface(
+        &self,
+        class_name: &str,
+        add_event: &str,
+        property: &str,
+    ) -> Option<String> {
+        self.resolve_event_args_getter(class_name, add_event, property)
+            .map(|method| method.interface.full_path())
+    }
+
+    pub fn resolve_event_args_object_property(
+        &self,
+        class_name: &str,
+        add_event: &str,
+        property: &str,
+    ) -> Option<String> {
+        let getter_ref = self.resolve_event_args_getter(class_name, add_event, property)?;
+        matches!(getter_ref.return_type, Type::Object).then(|| getter_ref.interface.full_path())
+    }
+
+    /// Resolves an event-args property that returns a class type (not a primitive or
+    /// IInspectable). Returns the interface path for the getter on the event args.
+    pub fn resolve_event_args_class_property(
+        &self,
+        class_name: &str,
+        add_event: &str,
+        property: &str,
+    ) -> Option<String> {
+        let getter_ref = self.resolve_event_args_getter(class_name, add_event, property)?;
+        matches!(getter_ref.return_type, Type::ClassName(_))
+            .then(|| getter_ref.interface.full_path())
+    }
+
+    fn resolve_event_args_getter(
+        &self,
+        class_name: &str,
+        add_event: &str,
+        property: &str,
+    ) -> Option<&MethodRef> {
         let add_ref = self
             .lookup
             .get(&(class_name.to_string(), add_event.to_string()))?;
         let delegate_type = add_ref.param_types.first()?;
-        // Extract the args class name from the delegate type.
         let args_class = match delegate_type {
-            // TypedEventHandler<TSender, TArgs> - extract TArgs from generics.
             Type::ClassName(tn) if tn.generics.len() == 2 => match &tn.generics[1] {
                 Type::ClassName(args_tn) => args_tn.name.clone(),
                 Type::ValueName(args_tn) => args_tn.name.clone(),
                 _ => return None,
             },
-            // Non-generic delegate - look up args class from Invoke signature.
             Type::ClassName(tn) => self.delegate_args.get(&tn.name)?.clone(),
             _ => return None,
         };
-        // Look up get_{property} on the args class.
         let getter = format!("get_{property}");
-        let getter_ref = self.lookup.get(&(args_class, getter))?;
-        self.value_for_type(&getter_ref.return_type)
+        self.lookup.get(&(args_class, getter))
+    }
+
+    pub fn resolve_property_read(
+        &self,
+        class_name: &str,
+        property: &str,
+    ) -> Option<(String, String, ReadValueConversion)> {
+        let getter = format!("get_{property}");
+        let getter_ref = self.lookup.get(&(class_name.to_string(), getter))?;
+        let (value, conversion) = self.read_value_for_type(&getter_ref.return_type)?;
+        Some((value, getter_ref.interface.full_path(), conversion))
     }
 
     /// Returns true if a metadata `Type` is Copy (primitive or value type).
@@ -353,16 +556,16 @@ impl MetadataResolver {
         match ty {
             Type::String | Type::Object | Type::ClassName(_) => false,
             Type::Generic(..) | Type::Array(_) => false,
-            // Primitives, ValueName (enums + structs), etc. → Copy
+            // Primitives and value types are `Copy`.
             _ => true,
         }
     }
 
     /// Check copy-ness after applying the same unwrapping as `value_for_type`:
-    /// IReference<T> → check T, single-field wrappers → check inner type.
+    /// `IReference<T>` uses `T`; single-field wrappers use their inner type.
     fn is_unwrapped_copy(&self, ty: &Type) -> bool {
         match ty {
-            // IReference<T> → the PropValue wraps T, not IReference
+            // `PropValue` wraps `T`, not `IReference<T>`.
             Type::ClassName(tn)
                 if tn.namespace == "Windows.Foundation" && tn.name == "IReference`1" =>
             {
@@ -370,11 +573,9 @@ impl MetadataResolver {
             }
             Type::ValueName(tn) => {
                 let key = (tn.namespace.clone(), tn.name.clone());
-                if let Some(inner) = self.single_field_types.get(&key) {
-                    // Single-field wrapper → unwraps to inner primitive
+                if let Some((_, inner)) = self.single_field_types.get(&key) {
                     Self::is_copy(inner)
                 } else {
-                    // Multi-field value type or enum → Copy
                     true
                 }
             }
@@ -384,6 +585,7 @@ impl MetadataResolver {
 
     /// Check copy-ness for a method's parameter type, applying IReference
     /// unwrapping.
+    #[cfg(test)]
     pub fn is_method_copy(&self, class_name: &str, method_name: &str) -> bool {
         let Some(mref) = self
             .lookup
@@ -397,46 +599,10 @@ impl MetadataResolver {
         self.is_unwrapped_copy(param)
     }
 
-    /// Check if a PropValue variant name wraps a Copy type.
-    ///
-    /// Used as a fallback when no metadata method exists (setter_fn properties).
-    /// Reverse-maps the name through `primitive_value_for_type` to find the
-    /// underlying `Type` and checks `is_copy` on it. Unknown names default
-    /// to non-Copy (safe - `.clone()` always works on Clone types).
-    pub fn is_copy_value_name(&self, value_name: &str) -> bool {
-        // Check every primitive Type - if primitive_value_for_type produces
-        // this name, use is_copy on that Type.
-        if [
-            Type::String,
-            Type::Bool,
-            Type::F64,
-            Type::I32,
-            Type::U16,
-            Type::U32,
-            Type::U8,
-            Type::Object,
-        ]
-        .iter()
-        .any(|ty| {
-            Self::primitive_value_for_type(ty).as_deref() == Some(value_name) && Self::is_copy(ty)
-        }) {
-            return true;
-        }
-        // Check metadata enums and value types by short name - enums and
-        // value-type structs are always Copy in WinUI.
-        self.enum_variants
-            .keys()
-            .any(|(_, name)| name == value_name)
-            || self
-                .single_field_types
-                .keys()
-                .any(|(_, name)| name == value_name)
-    }
-
     /// Map a metadata Type to a PropValue variant name.
     /// Handles primitives, IReference<bool>, single-field wrapper structs
-    /// (e.g. FontWeight{Weight: u16} → U16), and multi-field value-type
-    /// structs by using the struct's short name (e.g. Thickness → "Thickness").
+    /// (for example, `FontWeight { Weight: u16 }` -> `U16`), and multi-field value-type
+    /// structs by using the struct's short name (for example, `Thickness` -> `"Thickness"`).
     pub fn value_for_type(&self, ty: &Type) -> Option<String> {
         // Try primitives and well-known types first.
         if let Some(v) = Self::primitive_value_for_type(ty) {
@@ -445,17 +611,54 @@ impl MetadataResolver {
         match ty {
             Type::ValueName(tn) => {
                 let key = (tn.namespace.clone(), tn.name.clone());
-                // Single-field wrapper structs → unwrap to inner primitive
-                if let Some(inner) = self.single_field_types.get(&key) {
+                if let Some((_, inner)) = self.single_field_types.get(&key) {
                     return Self::primitive_value_for_type(inner);
                 }
-                // Multi-field value types → use the struct's short name as
-                // the PropValue variant (e.g. Thickness → "Thickness").
+                // Multi-field value types use the struct's short name as the `PropValue`
+                // variant.
                 // If there's no matching PropValue variant the generated code
                 // won't compile, signalling that an explicit override is needed.
                 Some(tn.name.clone())
             }
             _ => None,
+        }
+    }
+
+    fn read_value_for_type(&self, ty: &Type) -> Option<(String, ReadValueConversion)> {
+        match ty {
+            Type::ClassName(type_name)
+                if type_name.namespace == "Windows.Foundation"
+                    && type_name.name == "IReference`1"
+                    && type_name.generics.first() == Some(&Type::Bool) =>
+            {
+                Some(("Bool".to_string(), ReadValueConversion::Identity))
+            }
+            Type::ClassName(type_name)
+                if type_name.namespace == "Windows.Foundation"
+                    && type_name.name == "IReference`1" =>
+            {
+                let Type::ValueName(value) = type_name.generics.first()? else {
+                    return None;
+                };
+                matches!(value.name.as_str(), "DateTime" | "TimeSpan")
+                    .then(|| (value.name.clone(), ReadValueConversion::Nullable))
+            }
+            Type::Object | Type::ClassName(_) => None,
+            Type::ValueName(type_name) => {
+                let key = (type_name.namespace.clone(), type_name.name.clone());
+                if let Some((field, inner)) = self.single_field_types.get(&key) {
+                    return Some((
+                        Self::primitive_value_for_type(inner)?,
+                        ReadValueConversion::Field(field.clone()),
+                    ));
+                }
+                (type_name.name == "Color")
+                    .then(|| (type_name.name.clone(), ReadValueConversion::Identity))
+            }
+            _ => Some((
+                Self::primitive_value_for_type(ty)?,
+                ReadValueConversion::Identity,
+            )),
         }
     }
 
@@ -490,6 +693,62 @@ impl MetadataResolver {
         Some(Self::classify_type(param))
     }
 
+    pub fn param_class_name(&self, class_name: &str, method_name: &str) -> Option<String> {
+        let mref = self
+            .lookup
+            .get(&(class_name.to_string(), method_name.to_string()))?;
+        let Type::ClassName(name) = mref.param_types.first()? else {
+            return None;
+        };
+        Some(format!("{}.{}", name.namespace, name.name))
+    }
+
+    pub fn classify_collection(
+        &self,
+        class_name: &str,
+        method_name: &str,
+    ) -> Option<CollectionType> {
+        let method = self
+            .lookup
+            .get(&(class_name.to_string(), method_name.to_string()))?;
+        let Type::ClassName(name) = &method.return_type else {
+            return None;
+        };
+        if name.namespace == "Microsoft.UI.Xaml.Controls" && name.name == "ItemCollection" {
+            return Some(CollectionType::ItemCollection);
+        }
+        if name.namespace != "Windows.Foundation.Collections" {
+            return None;
+        }
+        match (name.name.as_str(), name.generics.first()?) {
+            ("IVector`1", Type::Object) => Some(CollectionType::InspectableVector),
+            ("IVector`1", Type::ClassName(item)) => Some(CollectionType::TypedVector(format!(
+                "{}.{}",
+                item.namespace, item.name
+            ))),
+            ("IObservableVector`1", Type::ClassName(item)) => Some(
+                CollectionType::ObservableVector(format!("{}.{}", item.namespace, item.name)),
+            ),
+            _ => None,
+        }
+    }
+
+    pub fn returns_object(&self, class_name: &str, method_name: &str) -> bool {
+        self.lookup
+            .get(&(class_name.to_string(), method_name.to_string()))
+            .is_some_and(|method| method.return_type == Type::Object)
+    }
+
+    pub fn return_class_name(&self, class_name: &str, method_name: &str) -> Option<String> {
+        let method = self
+            .lookup
+            .get(&(class_name.to_string(), method_name.to_string()))?;
+        let Type::ClassName(name) = &method.return_type else {
+            return None;
+        };
+        Some(format!("{}.{}", name.namespace, name.name))
+    }
+
     /// Classify a Type into a setter pattern category.
     fn classify_type(ty: &Type) -> ParamClass {
         match ty {
@@ -506,67 +765,6 @@ impl MetadataResolver {
             }
             _ => ParamClass::Complex,
         }
-    }
-
-    /// Print a diagnostic report of resolution results for the given controls.
-    pub fn report(&self, controls: &[crate::schema::Control]) {
-        let mut resolved = 0u32;
-        let mut custom = 0u32;
-        let mut failed = 0u32;
-
-        for ctrl in controls {
-            for p in &ctrl.prop {
-                match p.setter() {
-                    crate::schema::SetterKind::Method { method }
-                    | crate::schema::SetterKind::MethodOptional { method }
-                    | crate::schema::SetterKind::MethodIReference { method }
-                    | crate::schema::SetterKind::MethodTextblock { method } => {
-                        if let Some(iface) = self.resolve(ctrl.handle(), method) {
-                            eprintln!(
-                                "  \u{2713} {}.{} -> {} resolved to {}",
-                                ctrl.handle(),
-                                p.prop(),
-                                method,
-                                iface.short_name()
-                            );
-                            resolved += 1;
-                        } else {
-                            eprintln!(
-                                "  \u{2717} {}.{} -> {} NOT FOUND",
-                                ctrl.handle(),
-                                p.prop(),
-                                method
-                            );
-                            failed += 1;
-                        }
-                    }
-                    crate::schema::SetterKind::MethodEnumMap { setter } => {
-                        if let Some(iface) = self.resolve(ctrl.handle(), setter.method()) {
-                            eprintln!(
-                                "  \u{2713} {}.{} -> {} resolved to {} (enum_map)",
-                                ctrl.handle(),
-                                p.prop(),
-                                setter.method(),
-                                iface.short_name()
-                            );
-                            resolved += 1;
-                        } else {
-                            eprintln!(
-                                "  \u{2717} {}.{} -> {} NOT FOUND (enum_map)",
-                                ctrl.handle(),
-                                p.prop(),
-                                setter.method()
-                            );
-                            failed += 1;
-                        }
-                    }
-                    crate::schema::SetterKind::Custom => {
-                        custom += 1;
-                    }
-                }
-            }
-        }
-        eprintln!("  metadata: {resolved} resolved, {custom} custom, {failed} unresolved");
     }
 }
 
@@ -602,37 +800,93 @@ mod tests {
     }
 
     #[test]
+    fn classifies_collection_getters() {
+        let resolver = MetadataResolver::load(Path::new("winmd"));
+
+        assert_eq!(
+            resolver.classify_collection("ListBox", "get_Items"),
+            Some(CollectionType::ItemCollection)
+        );
+        assert_eq!(
+            resolver.classify_collection("NavigationView", "get_MenuItems"),
+            Some(CollectionType::InspectableVector)
+        );
+        assert_eq!(
+            resolver.classify_collection("SelectorBar", "get_Items"),
+            Some(CollectionType::TypedVector(
+                "Microsoft.UI.Xaml.Controls.SelectorBarItem".to_string()
+            ))
+        );
+        assert_eq!(
+            resolver.classify_collection("CommandBar", "get_PrimaryCommands"),
+            Some(CollectionType::ObservableVector(
+                "Microsoft.UI.Xaml.Controls.ICommandBarElement".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn resolves_inherited_content_properties() {
+        let resolver = MetadataResolver::load(Path::new("winmd"));
+
+        assert_eq!(
+            resolver.content_property("Microsoft.UI.Xaml.Controls.Border"),
+            Some("Child".to_string())
+        );
+        assert_eq!(
+            resolver.content_property("Microsoft.UI.Xaml.Controls.Button"),
+            Some("Content".to_string())
+        );
+        assert_eq!(
+            resolver.content_property("Microsoft.UI.Xaml.Controls.TextBlock"),
+            Some("Inlines".to_string())
+        );
+    }
+
+    #[test]
+    fn resolve_runtime_classes_for_versioned_and_digit_named_interfaces() {
+        let resolver = MetadataResolver::load(Path::new("winmd"));
+
+        let navigation = resolver
+            .resolve("NavigationView", "put_IsBackButtonVisible")
+            .unwrap();
+        assert_eq!(
+            resolver.runtime_class(navigation).as_deref(),
+            Some("Microsoft.UI.Xaml.Controls.NavigationView")
+        );
+
+        let webview = resolver.resolve("WebView2", "put_Source").unwrap();
+        assert_eq!(
+            resolver.runtime_class(webview).as_deref(),
+            Some("Microsoft.UI.Xaml.Controls.WebView2")
+        );
+    }
+
+    #[test]
     fn infer_single_field_wrapper_types() {
         let resolver = MetadataResolver::load(Path::new("winmd"));
-        // FontWeight is a struct with one field (Weight: u16) → unwraps to U16, Copy
         assert_eq!(
             resolver.infer_value_type("TextBlock", "put_FontWeight"),
             Some(("U16".to_string(), true))
         );
-        // Thickness is a multi-field struct → uses struct short name, Copy
         assert_eq!(
             resolver.infer_value_type("Border", "put_BorderThickness"),
             Some(("Thickness".to_string(), true))
         );
-        // NavigateUri takes a Uri class → not a ValueName, returns None
         assert_eq!(
             resolver.infer_value_type("HyperlinkButton", "put_NavigateUri"),
             None
         );
-        // Text takes a String → non-Copy
         assert_eq!(
             resolver.infer_value_type("TextBlock", "put_Text"),
             Some(("Str".to_string(), false))
         );
-        // IsChecked takes IReference<bool> → unwraps to Copy bool
         assert!(resolver.is_method_copy("CheckBox", "put_IsChecked"));
-        // ContentDialog.IsOpen - might not exist as put_IsOpen in metadata
-        // (uses custom ShowAsync pattern)
+        // `ContentDialog` uses `ShowAsync` rather than `put_IsOpen`.
         assert!(
             !resolver.has_method("ContentDialog", "put_IsOpen"),
             "ContentDialog.put_IsOpen should not be in metadata"
         );
-        // Text takes String → non-Copy
         assert!(!resolver.is_method_copy("TextBlock", "put_Text"));
     }
 
@@ -666,6 +920,32 @@ mod tests {
             result.as_deref(),
             Some("I32"),
             "BreadcrumbBar ItemClicked Index should be I32"
+        );
+    }
+
+    #[test]
+    fn resolves_event_args_getter_shapes() {
+        let resolver = MetadataResolver::load(Path::new("winmd"));
+
+        assert!(
+            resolver
+                .resolve_event_args_property_interface("Border", "add_Drop", "DataView")
+                .is_some()
+        );
+        assert!(
+            resolver
+                .resolve_event_args_class_property("TabView", "add_TabCloseRequested", "Tab")
+                .is_some()
+        );
+        assert!(
+            resolver
+                .resolve_event_args_object_property("TreeView", "add_ItemInvoked", "InvokedItem")
+                .is_some()
+        );
+        assert!(
+            resolver
+                .resolve_event_args_class_property("TreeView", "add_ItemInvoked", "InvokedItem")
+                .is_none()
         );
     }
 }

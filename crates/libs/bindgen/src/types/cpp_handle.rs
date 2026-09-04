@@ -22,7 +22,8 @@ impl Config<'_> {
         // Handle-to-handle typedefs stay aliases; base and primitive-backed handles keep newtypes.
         let aliases_handle = matches!(&ty, Type::CppStruct(inner) if inner.is_handle(self.reader));
 
-        // Pointers to named types are pointer aliases, not handles; void pointers keep handle newtypes.
+        // Pointers to named types are pointer aliases, not handles; void pointers keep handle
+        // newtypes.
         let aliases_pointer = matches!(
             &ty,
             Type::PtrMut(inner, _) | Type::PtrConst(inner, _) if !matches!(inner.as_ref(), Type::Void)
@@ -55,10 +56,15 @@ impl Config<'_> {
             // Arch-divergent handles are separate rows; each emitted item needs its own gate.
             let arches = write_arches(def);
             let arches = quote! { #arches #cfg };
+            let derives = if ty.is_eq(self.reader) {
+                quote! { #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)] }
+            } else {
+                quote! { #[derive(Clone, Copy, Debug, PartialEq, Default)] }
+            };
             quote! {
                 #arches
                 #[repr(transparent)]
-                #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+                #derives
                 pub struct #name(pub #ty_name);
             }
         }

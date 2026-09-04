@@ -1443,6 +1443,10 @@ pub use sal::*;
 pub mod sapi;
 #[cfg(feature = "sapi")]
 pub use sapi::*;
+#[cfg(feature = "sapiddk")]
+pub mod sapiddk;
+#[cfg(feature = "sapiddk")]
+pub use sapiddk::*;
 #[cfg(feature = "schannel")]
 pub mod schannel;
 #[cfg(feature = "schannel")]
@@ -1707,6 +1711,10 @@ pub use traffic::*;
 pub mod transact;
 #[cfg(feature = "transact")]
 pub use transact::*;
+#[cfg(feature = "tsvirtualchannels")]
+pub mod tsvirtualchannels;
+#[cfg(feature = "tsvirtualchannels")]
+pub use tsvirtualchannels::*;
 #[cfg(feature = "tuner")]
 pub mod tuner;
 #[cfg(feature = "tuner")]

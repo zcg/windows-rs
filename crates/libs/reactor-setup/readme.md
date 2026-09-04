@@ -1,7 +1,11 @@
-## Windows Reactor Setup
+## windows-reactor-setup
 
 Windows Reactor Setup stages the Windows App SDK runtime files needed by a
-[`windows-reactor`](https://crates.io/crates/windows-reactor) application.
+[`windows-reactor`](https://crates.io/crates/windows-reactor) application that runs
+fully self-contained.
+
+* [Getting
+  started](https://github.com/microsoft/windows-rs/blob/master/docs/crates/windows-reactor-setup.md)
 
 Add it as a build dependency:
 
@@ -10,15 +14,8 @@ Add it as a build dependency:
 windows-reactor-setup = "0.100"
 ```
 
-Call one setup function from `build.rs`:
+Call the setup function from `build.rs`:
 
 ```rust,no_run
-windows_reactor_setup::as_framework_dependent();
+windows_reactor_setup::as_self_contained();
 ```
-
-Use `as_framework_dependent` when the Windows App Runtime is installed on the target machine.
-Use `as_self_contained` to stage a private copy of the runtime next to the application.
-`as_example` is the framework-dependent setup for Cargo examples.
-
-A framework-dependent application also calls `windows_reactor::bootstrap()` before creating its
-first window. A self-contained application does not call `bootstrap()`.

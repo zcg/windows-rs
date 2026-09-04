@@ -150,7 +150,7 @@ impl IClusterDetector {
     {
         unsafe {
             let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).Detect)(windows_core::Interface::as_raw(self), dwmaxnumclusters, fminclusterduration, fmaxclusterduration, psrctoc.param().abi(), &mut result__).and_then(|| windows_core::Type::from_abi(result__))
+            (windows_core::Interface::vtable(self).Detect)(windows_core::Interface::as_raw(self), dwmaxnumclusters, fminclusterduration, fmaxclusterduration, psrctoc.param().abi(), &mut result__).and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
 }
@@ -497,7 +497,7 @@ impl IToc {
     pub unsafe fn GetEntryListByIndex(&self, wentrylistindex: u16) -> windows_core::Result<ITocEntryList> {
         unsafe {
             let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).GetEntryListByIndex)(windows_core::Interface::as_raw(self), wentrylistindex, &mut result__).and_then(|| windows_core::Type::from_abi(result__))
+            (windows_core::Interface::vtable(self).GetEntryListByIndex)(windows_core::Interface::as_raw(self), wentrylistindex, &mut result__).and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
     pub unsafe fn AddEntryList<P0>(&self, pentrylist: P0) -> windows_core::Result<u16>
@@ -666,7 +666,7 @@ impl ITocCollection {
     pub unsafe fn GetEntryByIndex(&self, dwentryindex: u32) -> windows_core::Result<IToc> {
         unsafe {
             let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).GetEntryByIndex)(windows_core::Interface::as_raw(self), dwentryindex, &mut result__).and_then(|| windows_core::Type::from_abi(result__))
+            (windows_core::Interface::vtable(self).GetEntryByIndex)(windows_core::Interface::as_raw(self), dwentryindex, &mut result__).and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
     pub unsafe fn AddEntry<P0>(&self, ptoc: P0) -> windows_core::Result<u32>
@@ -902,7 +902,7 @@ impl ITocEntryList {
     pub unsafe fn GetEntryByIndex(&self, dwentryindex: u32) -> windows_core::Result<ITocEntry> {
         unsafe {
             let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).GetEntryByIndex)(windows_core::Interface::as_raw(self), dwentryindex, &mut result__).and_then(|| windows_core::Type::from_abi(result__))
+            (windows_core::Interface::vtable(self).GetEntryByIndex)(windows_core::Interface::as_raw(self), dwentryindex, &mut result__).and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
     pub unsafe fn AddEntry<P0>(&self, pentry: P0) -> windows_core::Result<u32>
@@ -1023,13 +1023,13 @@ impl ITocParser {
     pub unsafe fn GetTocByIndex(&self, enumtocpostype: TOC_POS_TYPE, dwtocindex: u32) -> windows_core::Result<IToc> {
         unsafe {
             let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).GetTocByIndex)(windows_core::Interface::as_raw(self), enumtocpostype, dwtocindex, &mut result__).and_then(|| windows_core::Type::from_abi(result__))
+            (windows_core::Interface::vtable(self).GetTocByIndex)(windows_core::Interface::as_raw(self), enumtocpostype, dwtocindex, &mut result__).and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
     pub unsafe fn GetTocByType(&self, enumtocpostype: TOC_POS_TYPE, guidtoctype: windows_core::GUID) -> windows_core::Result<ITocCollection> {
         unsafe {
             let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).GetTocByType)(windows_core::Interface::as_raw(self), enumtocpostype, guidtoctype, &mut result__).and_then(|| windows_core::Type::from_abi(result__))
+            (windows_core::Interface::vtable(self).GetTocByType)(windows_core::Interface::as_raw(self), enumtocpostype, guidtoctype, &mut result__).and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
     pub unsafe fn AddToc<P1>(&self, enumtocpostype: TOC_POS_TYPE, ptoc: P1) -> windows_core::Result<u32>
@@ -1960,8 +1960,11 @@ impl IWMVideoDecoderReconBuffer {
         }
     }
     #[cfg(feature = "mediaobj")]
-    pub unsafe fn GetReconstructedVideoFrame(&self, pbuf: &Option<super::IMediaBuffer>) -> windows_core::HRESULT {
-        unsafe { (windows_core::Interface::vtable(self).GetReconstructedVideoFrame)(windows_core::Interface::as_raw(self), core::mem::transmute_copy(pbuf)) }
+    pub unsafe fn GetReconstructedVideoFrame<P0>(&self, pbuf: P0) -> windows_core::HRESULT
+    where
+        P0: windows_core::Param<super::IMediaBuffer>,
+    {
+        unsafe { (windows_core::Interface::vtable(self).GetReconstructedVideoFrame)(windows_core::Interface::as_raw(self), pbuf.param().abi()) }
     }
     #[cfg(feature = "mediaobj")]
     pub unsafe fn SetReconstructedVideoFrame<P0>(&self, pbuf: P0) -> windows_core::HRESULT
@@ -1988,7 +1991,7 @@ pub struct IWMVideoDecoderReconBuffer_Vtbl {
 #[cfg(feature = "mediaobj")]
 pub trait IWMVideoDecoderReconBuffer_Impl: windows_core::IUnknownImpl {
     fn GetReconstructedVideoFrameSize(&self) -> windows_core::Result<u32>;
-    fn GetReconstructedVideoFrame(&self, pbuf: windows_core::OutRef<super::IMediaBuffer>) -> windows_core::Result<()>;
+    fn GetReconstructedVideoFrame(&self, pbuf: windows_core::Ref<super::IMediaBuffer>) -> windows_core::Result<()>;
     fn SetReconstructedVideoFrame(&self, pbuf: windows_core::Ref<super::IMediaBuffer>) -> windows_core::Result<()>;
 }
 #[cfg(feature = "mediaobj")]
@@ -2009,7 +2012,7 @@ impl IWMVideoDecoderReconBuffer_Vtbl {
         unsafe extern "system" fn GetReconstructedVideoFrame<Identity: IWMVideoDecoderReconBuffer_Impl, const OFFSET: isize>(this: *mut core::ffi::c_void, pbuf: *mut core::ffi::c_void) -> windows_core::HRESULT {
             unsafe {
                 let this: &Identity = &*((this as *const *const ()).offset(OFFSET) as *const Identity);
-                IWMVideoDecoderReconBuffer_Impl::GetReconstructedVideoFrame(this, core::mem::transmute(&pbuf)).into()
+                IWMVideoDecoderReconBuffer_Impl::GetReconstructedVideoFrame(this, core::mem::transmute_copy(&pbuf)).into()
             }
         }
         unsafe extern "system" fn SetReconstructedVideoFrame<Identity: IWMVideoDecoderReconBuffer_Impl, const OFFSET: isize>(this: *mut core::ffi::c_void, pbuf: *mut core::ffi::c_void) -> windows_core::HRESULT {

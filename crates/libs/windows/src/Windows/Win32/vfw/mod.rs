@@ -126,7 +126,7 @@ pub unsafe fn AVIGetFromClipboard() -> windows_core::Result<IAVIFile> {
     windows_core::link!("avifil32.dll" "system" fn AVIGetFromClipboard(lppf : *mut *mut core::ffi::c_void) -> windows_core::HRESULT);
     unsafe {
         let mut result__ = core::mem::zeroed();
-        AVIGetFromClipboard(&mut result__).and_then(|| windows_core::Type::from_abi(result__))
+        AVIGetFromClipboard(&mut result__).and_then(|| windows_core::imp::Type::from_abi(result__))
     }
 }
 #[inline]
@@ -148,7 +148,7 @@ pub unsafe fn AVIMakeStreamFromClipboard(cfformat: u32, hglobal: super::HANDLE) 
     windows_core::link!("avifil32.dll" "system" fn AVIMakeStreamFromClipboard(cfformat : u32, hglobal : super::HANDLE, ppstream : *mut *mut core::ffi::c_void) -> windows_core::HRESULT);
     unsafe {
         let mut result__ = core::mem::zeroed();
-        AVIMakeStreamFromClipboard(cfformat, hglobal, &mut result__).and_then(|| windows_core::Type::from_abi(result__))
+        AVIMakeStreamFromClipboard(cfformat, hglobal, &mut result__).and_then(|| windows_core::imp::Type::from_abi(result__))
     }
 }
 #[inline]
@@ -470,7 +470,7 @@ where
     windows_core::link!("avifil32.dll" "system" fn EditStreamClone(pavi : *mut core::ffi::c_void, ppresult : *mut *mut core::ffi::c_void) -> windows_core::HRESULT);
     unsafe {
         let mut result__ = core::mem::zeroed();
-        EditStreamClone(pavi.param().abi(), &mut result__).and_then(|| windows_core::Type::from_abi(result__))
+        EditStreamClone(pavi.param().abi(), &mut result__).and_then(|| windows_core::imp::Type::from_abi(result__))
     }
 }
 #[inline]
@@ -1189,13 +1189,16 @@ impl IAVIEditStream {
     pub unsafe fn Copy(&self, plstart: *mut i32, pllength: *mut i32, ppresult: *mut Option<IAVIStream>) -> windows_core::HRESULT {
         unsafe { (windows_core::Interface::vtable(self).Copy)(windows_core::Interface::as_raw(self), plstart as _, pllength as _, core::mem::transmute(ppresult)) }
     }
-    pub unsafe fn Paste(&self, plpos: *mut i32, pllength: *mut i32, pstream: &Option<IAVIStream>, lstart: i32, lend: i32) -> windows_core::HRESULT {
-        unsafe { (windows_core::Interface::vtable(self).Paste)(windows_core::Interface::as_raw(self), plpos as _, pllength as _, core::mem::transmute_copy(pstream), lstart, lend) }
+    pub unsafe fn Paste<P2>(&self, plpos: *mut i32, pllength: *mut i32, pstream: P2, lstart: i32, lend: i32) -> windows_core::HRESULT
+    where
+        P2: windows_core::Param<IAVIStream>,
+    {
+        unsafe { (windows_core::Interface::vtable(self).Paste)(windows_core::Interface::as_raw(self), plpos as _, pllength as _, pstream.param().abi(), lstart, lend) }
     }
     pub unsafe fn Clone(&self) -> windows_core::Result<IAVIStream> {
         unsafe {
             let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).Clone)(windows_core::Interface::as_raw(self), &mut result__).and_then(|| windows_core::Type::from_abi(result__))
+            (windows_core::Interface::vtable(self).Clone)(windows_core::Interface::as_raw(self), &mut result__).and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
     #[cfg(feature = "windef")]
@@ -1220,7 +1223,7 @@ pub struct IAVIEditStream_Vtbl {
 pub trait IAVIEditStream_Impl: windows_core::IUnknownImpl {
     fn Cut(&self, plstart: *mut i32, pllength: *mut i32, ppresult: windows_core::OutRef<IAVIStream>) -> windows_core::Result<()>;
     fn Copy(&self, plstart: *mut i32, pllength: *mut i32, ppresult: windows_core::OutRef<IAVIStream>) -> windows_core::Result<()>;
-    fn Paste(&self, plpos: *mut i32, pllength: *mut i32, pstream: windows_core::OutRef<IAVIStream>, lstart: i32, lend: i32) -> windows_core::Result<()>;
+    fn Paste(&self, plpos: *mut i32, pllength: *mut i32, pstream: windows_core::Ref<IAVIStream>, lstart: i32, lend: i32) -> windows_core::Result<()>;
     fn Clone(&self) -> windows_core::Result<IAVIStream>;
     fn SetInfo(&self, lpinfo: *const AVISTREAMINFOW, cbinfo: i32) -> windows_core::Result<()>;
 }
@@ -1242,7 +1245,7 @@ impl IAVIEditStream_Vtbl {
         unsafe extern "system" fn Paste<Identity: IAVIEditStream_Impl, const OFFSET: isize>(this: *mut core::ffi::c_void, plpos: *mut i32, pllength: *mut i32, pstream: *mut core::ffi::c_void, lstart: i32, lend: i32) -> windows_core::HRESULT {
             unsafe {
                 let this: &Identity = &*((this as *const *const ()).offset(OFFSET) as *const Identity);
-                IAVIEditStream_Impl::Paste(this, core::mem::transmute_copy(&plpos), core::mem::transmute_copy(&pllength), core::mem::transmute(&pstream), core::mem::transmute_copy(&lstart), core::mem::transmute_copy(&lend)).into()
+                IAVIEditStream_Impl::Paste(this, core::mem::transmute_copy(&plpos), core::mem::transmute_copy(&pllength), core::mem::transmute_copy(&pstream), core::mem::transmute_copy(&lstart), core::mem::transmute_copy(&lend)).into()
             }
         }
         unsafe extern "system" fn Clone<Identity: IAVIEditStream_Impl, const OFFSET: isize>(this: *mut core::ffi::c_void, ppresult: *mut *mut core::ffi::c_void) -> windows_core::HRESULT {

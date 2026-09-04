@@ -28,8 +28,8 @@ pub enum TypeRole {
     Shell,
 }
 
-/// Returns true if `method_name` matches either the raw metadata name or the
-/// overload-disambiguated name of `m`.
+/// Resolved `--filter` rules: which namespaces, types, methods, and enum variants to
+/// include or exclude, plus the seeds used to build the bottom-up type closure.
 #[derive(Debug, Default)]
 pub struct Filter {
     pub rules: Vec<(String, bool)>,
@@ -43,6 +43,10 @@ pub struct Filter {
     pub requested_interfaces: HashMap<(String, String), MethodSet>,
     /// Types directly included without `::` (for type closure).
     pub direct_types: Vec<(String, String)>,
+    /// Types whose full metadata hierarchy was explicitly requested.
+    hierarchy_types: HashSet<(String, String)>,
+    /// Individual class-to-interface hierarchy edges selected through class members.
+    hierarchy_interfaces: HashSet<(String, String, String, String)>,
     /// `true` if the filter includes broad entries (a whole namespace)
     /// that are not compatible with bottom-up type closure.
     pub has_broad_filter: bool,
@@ -61,6 +65,21 @@ pub struct MethodFilter {
 }
 
 impl Filter {
+    pub fn includes_full_hierarchy(&self, namespace: &str, name: &str) -> bool {
+        self.hierarchy_types
+            .contains(&(namespace.to_string(), name.to_string()))
+    }
+
+    pub fn includes_hierarchy(&self, namespace: &str, name: &str, interface: &Interface) -> bool {
+        self.includes_full_hierarchy(namespace, name)
+            || self.hierarchy_interfaces.contains(&(
+                namespace.to_string(),
+                name.to_string(),
+                interface.def.namespace().to_string(),
+                interface.def.name().to_string(),
+            ))
+    }
+
     /// Validate that no method-level filter entry targets a type matched by
     /// `--implement`. Methods on implemented types must always be emitted.
     #[track_caller]
@@ -182,7 +201,7 @@ impl Filter {
     }
 
     /// Returns `true` if the class was explicitly marked as activatable
-    /// (i.e. `CreateInstance` or `::*` was in the filter).
+    /// (i.e. `CreateInstance` was in the filter).
     pub fn is_activatable(&self, namespace: &str, name: &str) -> bool {
         self.activatable
             .contains(&(namespace.to_string(), name.to_string()))
@@ -199,6 +218,8 @@ impl Filter {
         let mut activatable: HashSet<(String, String)> = HashSet::new();
         let mut requested_interfaces: HashMap<(String, String), MethodSet> = HashMap::new();
         let mut direct_types: Vec<(String, String)> = Vec::new();
+        let mut hierarchy_types = HashSet::new();
+        let mut hierarchy_interfaces = HashSet::new();
         let mut has_broad_filter = false;
 
         for entry in entries {
@@ -216,12 +237,19 @@ impl Filter {
                     rules.push((full, include));
 
                     if include {
+                        Self::register_hierarchy_type(
+                            reader,
+                            namespace,
+                            name,
+                            &mut hierarchy_types,
+                        );
                         // Bare interface mentions seed all methods; other types use `direct_types`.
                         let key = (namespace.clone(), name.clone());
                         if Self::is_interface(reader, namespace, name) {
                             requested_interfaces.entry(key).or_insert(MethodSet::All);
                         } else {
-                            // Unscoped enum variants are standalone constants; pull them in explicitly.
+                            // Unscoped enum variants are standalone constants; include them
+                            // explicitly.
                             if Self::is_unscoped_enum(reader, namespace, name) {
                                 enum_variants.entry(key.clone()).or_insert(MethodSet::All);
                             }
@@ -267,6 +295,7 @@ impl Filter {
                                 &mut direct_types,
                                 &mut activatable,
                                 &mut enum_variants,
+                                &mut hierarchy_interfaces,
                                 namespace,
                                 name,
                                 member,
@@ -291,6 +320,8 @@ impl Filter {
             activatable,
             requested_interfaces,
             direct_types,
+            hierarchy_types,
+            hierarchy_interfaces,
             has_broad_filter,
             uses_closure: false,
         }
@@ -324,6 +355,35 @@ impl Filter {
         )
     }
 
+    fn register_hierarchy_type(
+        reader: &Reader,
+        namespace: &str,
+        name: &str,
+        hierarchy_types: &mut HashSet<(String, String)>,
+    ) {
+        let mut current = reader.with_full_name(namespace, name).next();
+        while let Some(ty) = current {
+            let Type::Class(class) = ty else {
+                let name = ty.type_name();
+                hierarchy_types.insert((name.namespace().to_string(), name.name().to_string()));
+                return;
+            };
+            hierarchy_types.insert((
+                class.def.namespace().to_string(),
+                class.def.name().to_string(),
+            ));
+            let Some(extends) = class.def.extends() else {
+                return;
+            };
+            if extends == (TypeName::Object.0, TypeName::Object.1) {
+                return;
+            }
+            current = reader
+                .with_full_name(extends.namespace(), extends.name())
+                .next();
+        }
+    }
+
     /// Register a specific member (method/variant) on a type.
     #[expect(clippy::too_many_arguments, clippy::redundant_clone)]
     fn register_member(
@@ -333,6 +393,7 @@ impl Filter {
         direct_types: &mut Vec<(String, String)>,
         activatable: &mut HashSet<(String, String)>,
         enum_variants: &mut HashMap<(String, String), MethodSet>,
+        hierarchy_interfaces: &mut HashSet<(String, String, String, String)>,
         namespace: &str,
         name: &str,
         member: &str,
@@ -343,7 +404,6 @@ impl Filter {
         if let Some(ty) = reader.with_full_name(namespace, name).next() {
             match &ty {
                 Type::Enum(e) => {
-                    // Check variant exists
                     assert!(
                         e.def.fields().any(|f| {
                             f.flags().contains(FieldAttributes::Literal) && f.name() == member
@@ -385,6 +445,30 @@ impl Filter {
                             direct_types.push(key.clone());
                         }
                         activatable.insert(key.clone());
+
+                        // A composable class uses its parameterless factory method as `new()`.
+                        // Select that constructor only; other overloads are independent APIs.
+                        for iface in required
+                            .iter()
+                            .filter(|iface| iface.kind == InterfaceKind::Composable)
+                        {
+                            let defs: Vec<MethodDef> = iface.def.methods().collect();
+                            let expanded = expand_method_part(member, &defs);
+                            if expanded.is_empty() {
+                                continue;
+                            }
+                            let iface_key = (
+                                iface.def.namespace().to_string(),
+                                iface.def.name().to_string(),
+                            );
+                            let set = requested_interfaces
+                                .entry(iface_key.clone())
+                                .or_insert_with(|| MethodSet::Names(BTreeSet::new()));
+                            if let MethodSet::Names(names) = set {
+                                names.extend(expanded.iter().cloned());
+                            }
+                            methods.entry(iface_key).or_default().keep.extend(expanded);
+                        }
                     } else {
                         // Find which interface carries this method
                         let mut found = false;
@@ -410,6 +494,14 @@ impl Filter {
                                 iface.def.namespace().to_string(),
                                 iface.def.name().to_string(),
                             );
+                            if include {
+                                hierarchy_interfaces.insert((
+                                    namespace.to_string(),
+                                    name.to_string(),
+                                    iface_key.0.clone(),
+                                    iface_key.1.clone(),
+                                ));
+                            }
                             // Register expanded names in requested_interfaces
                             let set = requested_interfaces
                                 .entry(iface_key.clone())
@@ -433,7 +525,7 @@ impl Filter {
                             found = true;
                             break;
                         }
-                        // Check composable interfaces too
+
                         if !found {
                             for iface in &required {
                                 if matches!(iface.kind, InterfaceKind::Composable) {
@@ -449,18 +541,6 @@ impl Filter {
                             found,
                             "method `{member}` not found on class `{namespace}.{name}`"
                         );
-                    }
-                    // Include composable factory interfaces so new() works.
-                    for iface in &required {
-                        if matches!(iface.kind, InterfaceKind::Composable) {
-                            let iface_key = (
-                                iface.def.namespace().to_string(),
-                                iface.def.name().to_string(),
-                            );
-                            requested_interfaces
-                                .entry(iface_key)
-                                .or_insert(MethodSet::All);
-                        }
                     }
                 }
                 Type::Interface(_) | Type::CppInterface(_) | Type::Delegate(_) => {

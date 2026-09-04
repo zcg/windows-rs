@@ -1,13 +1,5 @@
-mod icon_element;
 mod image;
-mod line;
-mod person_picture;
-mod shape;
-mod webview;
+pub use image::ImagePage;
 
-pub use icon_element::icon_element_page;
-pub use image::image_page;
-pub use line::line_page;
-pub use person_picture::person_picture_page;
-pub use shape::shape_page;
-pub use webview::webview_page;
+mod person_picture;
+pub use person_picture::PersonPicturePage;

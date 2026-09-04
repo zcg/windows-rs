@@ -1,263 +1,348 @@
 # windows-canvas
 
-> A safe, fast 2D graphics library backed by Direct2D, Direct3D 11, DXGI, DirectWrite, and WIC.
+> Safe 2D drawing over Direct2D, Direct3D 11, DXGI, DirectWrite, and WIC.
 
 - 📦 [crates.io](https://crates.io/crates/windows-canvas)
 - 📖 [docs.rs](https://docs.rs/windows-canvas)
 - 🚀 [Getting started](../../crates/libs/canvas/readme.md)
-- 📁 [Source](https://github.com/microsoft/windows-rs/tree/master/crates/libs/canvas)
 - 🧩 [Samples](https://github.com/microsoft/windows-rs/tree/master/crates/samples/canvas)
+- 📁 [Source](https://github.com/microsoft/windows-rs/tree/master/crates/libs/canvas)
+- [Reactor guide](windows-reactor.md)
+- [Composition guide](windows-composition.md)
 
-`windows-canvas` wraps the DirectX graphics stack behind safe Rust types. A `GpuDevice` owns the
-Direct3D and Direct2D devices. From it, you create a `SwapChain` to present frames. Each frame,
-`begin_draw` returns a `DrawingSession`. Use it to clear, draw shapes and text, and fill regions.
+## When to use it
 
-Use it inside a [`windows-reactor`](windows-reactor.md) window, or use it with your own `HWND`.
+Use Canvas for custom 2D graphics, charts, diagrams, image processing, text layout, geometry hit
+testing, or animation. It is a drawing API rather than a control toolkit. Combine it with Reactor
+when the app also needs WinUI controls.
 
-## Getting started inside a reactor window
+Use Composition when the scene is primarily a retained tree of visuals that Windows animates and
+composes. Use Canvas when the app draws pixels and paths for each requested frame. The two can be
+combined by drawing Canvas content into a composition surface.
 
-Enable the reactor `canvas` feature. Then call `animated_canvas(draw)`. It returns a
-`SwapChainPanel` element. The element creates the device and swap chain. It handles resize, DPI
-changes, and device loss.
+## The basic idea
 
-The closure receives a `DrawContext` and returns `Result<()>`, so resource creation inside it can
-use `?`. It derefs to the frame `DrawingSession`, so all drawing methods are available on `ctx`.
+Canvas is an immediate-mode drawing API. The application receives a drawing session and describes
+the current frame with commands such as `clear`, `fill_rect`, `draw_text`, and `draw_bitmap`.
 
-```toml
-[dependencies]
-windows-reactor = { version = "0.100", features = ["canvas"] }
-windows-canvas = "0.100"
+```text
+begin a frame -> issue drawing commands -> finish the frame -> present it
 ```
 
-See the reactor canvas samples for a complete animated drawing loop.
+There is no retained scene tree. If a shape should still be visible in the next frame, draw it
+again. Keep application state - points, colors, text, images - in normal Rust data and turn that
+state into drawing commands.
 
-`ctx.width` and `ctx.height` give the surface size in DIPs. Use `ctx.device()` and
-`ctx.device_changed()` for cached resources. Recreate bitmaps and brushes when the device changes.
-
-For content that changes with its size rather than every frame - text, a chart, a diagram - use
-`canvas(draw)` instead. It manages the device, swap chain, resize, DPI, and device loss exactly like
-`animated_canvas`, but calls `draw` only on the first layout and when the surface resizes or the
-display scale changes. When the window is idle, no GPU work happens.
-
-Use `canvas` for content that changes only when its size or scale changes.
-
-Because `draw` runs only on resize, size-dependent resources such as a `TextLayout` fitted to the
-client area can be shaped once and cached in a `use_ref`, then rebuilt only when `device_changed`
-reports a resize or device loss. See the `text_layout` sample.
-
-When content changes with app state rather than size, drive repaints with
-`canvas_invalidated(&inv, draw)`. Keep drawing state in a `use_ref`, mutate it in an event handler,
-then call `inv.invalidate()` to schedule one repaint. Mutating a `use_ref` does not reconcile the
-tree. Get a stable invalidator from `cx.use_invalidator()`:
-
-Use `canvas_invalidated` when event handlers mutate drawing state between renders.
-
-The `invalidate` sample draws this way, and the `editor` and `hit_test` samples use the same pattern
-to repaint only in response to pointer input.
-
-## Getting started standalone
-
-With a [`windows-window`](windows-window.md) `Window`, create a `GpuDevice`. Then create a swap
-chain for the window. You drive the frame loop.
-
-For a raw handle from another source, `create_swap_chain_for_hwnd` is the `unsafe` escape hatch.
-
-The standalone canvas samples show swap-chain creation, drawing, presentation, and resize handling.
-
-On resize, call `chain.resize(width, height)`. Use `chain.set_dpi(..)` and
-`chain.set_composition_scale(..)` for sharp output. `chain.is_device_lost()` reports device loss.
-
-## Getting started with an on-demand surface
-
-`animated_canvas` presents a new frame each vsync. Use `CanvasImageSource` for static content. It
-redraws only when you call `draw`.
-
-Enable the reactor `canvas` feature. Create a `CanvasImageSource` from a device that you own.
-Display it with a reactor `Image` widget.
-
-`CanvasImageSource` draws on demand and exposes an image source for reactor's `Image` widget.
-
-`new(device, width, height, scale)` takes a size in DIPs. It uses the host DPI scale to allocate
-physical pixels. Drawing inside `draw` uses DIPs and origin `(0, 0)`.
-
-`draw` returns `Ok(false)` on device loss. Create a new `GpuDevice`, call `set_device`, and draw
-again.
-
-Get the `scale` from the reactor `Image`. `Image::on_mounted` returns an `ImageHandle`.
-`ImageHandle::on_rasterization_scale_changed` reports the host DPI scale. Rebuild the surface when
-the scale changes. See the `image_source` sample. For a full-window surface that resizes with the
-window, prefer `canvas`, which handles the device, swap chain, resize, and DPI for you.
-
-## Getting started with a composition surface
-
-Enable the `composition` feature to draw into a [`windows-composition`](windows-composition.md)
-`CompositionDrawingSurface`. The app owns the composition graph. The bridge only lends Direct2D
-drawing.
+The simplest host is Reactor. It creates the graphics device and swap chain, tracks size and display
+scale, and handles device recovery. Enable the feature in `Cargo.toml`:
 
 ```toml
-[dependencies]
-windows-canvas = { version = "0.100", features = ["composition"] }
-windows-composition = { version = "0.100", features = ["system"] }
+windows-canvas = { version = "0.100.0", features = ["reactor"] }
+windows-reactor = "0.100.0"
 ```
 
-The composition bridge creates a graphics device and drawing surface from an existing compositor.
+## Your first canvas
 
-`draw` runs inside the surface native `BeginDraw` and `EndDraw` bracket. It returns `Ok(false)` on
-device loss. Recreate the device, graphics device, and surface. Then draw again.
+`canvas` draws once when the surface is ready and again when its size or display scale changes:
 
-There is no implicit clear. Clear or draw over the full surface. Coordinates are pixels with origin
-`(0, 0)`. The backing-atlas offset is applied for you. This path is system-only. See the
-[`composition/canvas`](../../crates/samples/composition/canvas) sample.
+```rust,ignore
+use windows_canvas::*;
+use windows_reactor::App;
 
-## Drawing basics
+fn draw(ctx: &DrawContext) -> Result<()> {
+    ctx.clear(ColorF::DARK_SLATE_BLUE);
 
-These methods are on `DrawingSession` and `DrawContext`.
+    let brush = ctx.create_solid_brush(ColorF::CORNFLOWER_BLUE)?;
+    let center = Vector2::new(ctx.width / 2.0, ctx.height / 2.0);
+    let radius = ctx.width.min(ctx.height) * 0.3;
+    ctx.fill_ellipse(&Ellipse::circle(center, radius), &brush);
 
-- **Clear and fill:** `clear(ColorF)`, `fill_rect(&Rect, &paint)`,
-  `fill_rounded_rect(&RoundedRect, &paint)`, `fill_ellipse(&Ellipse, &paint)`,
-  `fill_path(&Path, &paint)`.
-- **Stroke:** `draw_rect`, `draw_ellipse`, `draw_line`, `draw_rounded_rect`, and `draw_path`. Each
-  has a `*_styled` variant that takes a `StrokeStyle`.
-- **Brushes:** `create_solid_brush(ColorF)`, `create_linear_gradient(start, end, &[GradientStop])`,
-  and `create_radial_gradient(center, rx, ry, &[GradientStop])`. Use `brush.set_color(..)` to update
-  a solid brush.
+    Ok(())
+}
 
-Colors are `ColorF`. Use `ColorF::rgb(r, g, b)`, `ColorF::new(r, g, b, a)`, `ColorF::from_rgb8(..)`,
-or `ColorF::from_rgba8(..)`. Constants include `WHITE`, `BLACK`, `RED`, `CORNFLOWER_BLUE`,
-`DARK_SLATE_BLUE`, and `TRANSPARENT`.
+fn main() -> Result<()> {
+    App::run(canvas(draw))
+}
+```
 
-## Geometry and paths
+The callback receives a `DrawContext`. Its `width` and `height` are the available size in
+device-independent pixels. It dereferences to `DrawingSession`, so drawing methods and resource
+creation are available directly on `ctx`.
 
-Use `Rect::new(left, top, right, bottom)` or `Rect::from_xywh(..)`. Use
-`Ellipse::new(center, rx, ry)` or `Ellipse::circle(center, r)`. Use `RoundedRect::new(rect, rx, ry)`
-or `RoundedRect::uniform(rect, r)`. Centers and points use `Vector2`, re-exported from
-`windows-numerics`.
+Clear the surface, or fully cover it, unless keeping pixels from the previous frame is intentional.
 
-Build freeform paths with `PathBuilder::new(&device)`. Start with `.begin(start)` for a filled
-figure, or `.begin_hollow(start)` for an open figure. Add segments with `line_to` and `bezier_to`.
-Finish with `close` or `end_open`. Then call `build()` to get a `Path`.
+## Draw shapes with brushes
 
-For a closed polygon, use `PathBuilder::new(&device)?.polygon(points)`.
+A brush supplies paint. Create it once within a frame and reuse it for as many operations as
+needed:
 
-Use `Path::fill_contains_point`, `Path::stroke_contains_point`, and `Path::compute_bounds` for
-geometry queries.
+```rust,ignore
+let brush = ctx.create_solid_brush(ColorF::CORNFLOWER_BLUE)?;
 
-Configure strokes with `StrokeStyleBuilder`. It sets `start_cap`, `end_cap`, `caps`, `line_join`,
-`miter_limit`, `dash_style`, and `dash_offset`. See `CapStyle`, `LineJoin`, and `DashStyle`.
+ctx.fill_rect(&Rect::from_xywh(20.0, 20.0, 160.0, 100.0), &brush);
+ctx.draw_ellipse(
+    &Ellipse::circle(Vector2::new(260.0, 100.0), 60.0),
+    &brush,
+    4.0,
+);
 
-## Text
+brush.set_color(ColorF::WHITE);
+ctx.draw_line(
+    Vector2::new(20.0, 160.0),
+    Vector2::new(320.0, 160.0),
+    &brush,
+    2.0,
+);
+```
 
-Create a `TextFormat`, then call `draw_text(text, &format, &Rect, &paint)`:
+`Rect`, `RoundedRect`, and `Ellipse` are lightweight geometry values. Use `fill_*` for a solid
+interior and `draw_*` for an outline. Gradient brushes use the same drawing methods.
 
-`TextFormat` controls font, alignment, wrapping, and paragraph alignment.
+## Apply a temporary transform
 
-`TextFormat::new_bold(..)` and `with_weight(family, size, FontWeight::BOLD)` set weight.
-`TextAlignment` and `ParagraphAlignment` control placement. `with_word_wrapping(..)` sets
-wrapping.
+`with_transform` applies translation, rotation, or scale only while its closure runs, then restores
+the previous transform:
 
-For repeated text, or when you need to measure or hit-test, build a `TextLayout`. It shapes the
-text once, then answers geometry queries and draws without re-shaping (unlike `draw_text`, which
-re-shapes every call):
+```rust,ignore
+let transform =
+    Matrix3x2::rotation_around(15.0, Vector2::new(ctx.width / 2.0, ctx.height / 2.0));
 
-`TextLayout` caches shaped text and provides metrics, hit testing, caret bounds, and drawing.
+ctx.with_transform(&transform, || {
+    ctx.fill_rect(
+        &Rect::from_xywh(ctx.width / 2.0 - 80.0, ctx.height / 2.0 - 40.0, 160.0, 80.0),
+        &brush,
+    );
+});
+```
 
-Use `set_max_size(..)` to reflow the layout when its box changes. `TextMetrics::bounds()` returns
-the inked text rectangle within the layout box.
+Scoped transforms make helper functions easier to combine because one drawing operation cannot
+leave a transform behind for the next one.
 
-## Transforms, bitmaps, and effects
+## Build a custom path
 
-- **Transforms:** Use `set_transform(&Matrix3x2)` and `transform()`. Use
-  `with_transform(&matrix, |s| { .. })` for scoped transforms. Matrix types come from
-  `windows-numerics`.
-- **Bitmaps:** Use `load_bitmap(path)` to decode an image file. Use
-  `create_bitmap(pixels, width, height)` to upload premultiplied BGRA pixels. Use
-  `create_bitmap_with_alpha` to select the `AlphaMode`. Then use
-  `draw_bitmap(&bitmap, &Rect, opacity)` or `draw_image(&bitmap)`.
-- **Off-screen targets:** Use `create_bitmap_target()` with `with_target(&bitmap, |s| { .. })`. Use
-  `GpuDevice::create_render_target` for a target with CPU readback. Use `create_shadow(&bitmap)` and
-  `draw_effect(&effect)` for drop shadows and effects.
+For a polygon, `PathBuilder::polygon` is the shortest route:
 
-## Samples
+```rust,ignore
+let points = [
+    Vector2::new(160.0, 40.0),
+    Vector2::new(280.0, 240.0),
+    Vector2::new(40.0, 120.0),
+    Vector2::new(280.0, 120.0),
+    Vector2::new(40.0, 240.0),
+];
 
-The
-[`crates/samples/canvas`](https://github.com/microsoft/windows-rs/tree/master/crates/samples/canvas)
-tree contains these samples:
+let star = PathBuilder::new(ctx.device())?.polygon(points)?;
+let brush = ctx.create_solid_brush(ColorF::new(1.0, 0.8, 0.0, 1.0))?;
+ctx.fill_path(&star, &brush);
+```
 
-- **`standalone`**: creates a device and swap chain for an HWND.
-- **`shared_device`**: shares one `GpuDevice` across many surfaces.
-- **`samples`**: runs focused drawing examples in a reactor window.
-- **`circles`**: animates circles and reuses brushes.
-- **`clock`**: draws an animated analog clock with transforms and shadows.
-- **`image_source`**: redraws a `CanvasImageSource` only when data changes.
-- **`chart`**: hosts an on-demand swap chain on a `SwapChainPanel`.
-- **`readback`**: renders off-screen and reads pixels back to the CPU.
-- **`hit_test`**: tests whether the pointer is inside a filled `Path`, repainting on demand.
-- **`editor`**: combines reactor pointer events with canvas geometry queries, repainting on demand.
-- **`text_layout`**: caches a `TextLayout` in a `use_ref`, re-shaping it only when the window
-  resizes.
+Use `begin`, `line_to`, and `bezier_to` when the path needs individual segments:
 
-The `samples` crate also has focused single-file examples under
-[`samples/examples`](../../crates/samples/canvas/samples/examples), including `invalidate`, which
-links clicked points with a line and repaints only when `Invalidator::invalidate` is called.
+```rust,ignore
+let curve = PathBuilder::new(ctx.device())?
+    .begin_hollow(Vector2::new(40.0, 160.0))
+    .bezier_to(
+        Vector2::new(120.0, 20.0),
+        Vector2::new(240.0, 300.0),
+        Vector2::new(320.0, 160.0),
+    )
+    .end_open()
+    .build()?;
+
+ctx.draw_path(&curve, &brush, 3.0);
+```
+
+Paths also support bounds and fill or stroke hit testing, which is useful for diagrams and editors.
+
+## Draw text
+
+For ordinary text, create a `TextFormat` and draw into a rectangle:
+
+```rust,ignore
+let format = TextFormat::new("Segoe UI", 32.0)?
+    .with_alignment(TextAlignment::Center)
+    .with_paragraph_alignment(ParagraphAlignment::Center);
+let brush = ctx.create_solid_brush(ColorF::WHITE)?;
+
+ctx.draw_text(
+    "Hello, Canvas!",
+    &format,
+    &Rect::new(0.0, 0.0, ctx.width, ctx.height),
+    &brush,
+);
+```
+
+Use `TextLayout` when text is drawn repeatedly or needs measurement, reflow, caret bounds, or hit
+testing. Cache the layout and rebuild it when its text, format, size, or device changes. The
+[`text_layout`](../../crates/samples/canvas/text_layout) sample shows that pattern.
+
+## Load and draw an image
+
+`load_bitmap` decodes an image file:
+
+```rust,ignore
+let bitmap = ctx.load_bitmap("assets/photo.png")?;
+let destination = Rect::from_xywh(20.0, 20.0, bitmap.width(), bitmap.height());
+ctx.draw_bitmap(&bitmap, &destination, 1.0);
+```
+
+For generated image data, `create_bitmap` accepts tightly packed premultiplied BGRA pixels:
+
+```rust,ignore
+let bitmap = ctx.create_bitmap(&pixels, width, height)?;
+ctx.draw_bitmap(
+    &bitmap,
+    &Rect::from_xywh(0.0, 0.0, width as f32, height as f32),
+    1.0,
+);
+```
+
+Bitmaps, brushes, paths, and text layouts depend on the graphics device. Creating them inside the
+draw callback is the easiest starting point. Cache expensive resources only when profiling shows
+the need, and rebuild cached resources when `ctx.device_changed()` is true.
+
+## Redraw when state changes
+
+Use `canvas` when content changes only because the surface was created or resized. Use
+`animated_canvas` for motion that needs every display frame:
+
+```rust,ignore
+animated_canvas(|ctx| {
+    draw_frame(ctx, elapsed_time())
+})
+```
+
+For input-driven content, use `canvas_invalidated`. Store an `Invalidator` with the component,
+change the drawing data in `update`, and request one new frame:
+
+```rust,ignore
+struct Sketch {
+    points: Rc<RefCell<Vec<Vector2>>>,
+    invalidator: Invalidator,
+}
+
+fn update(&mut self, point: Vector2, _context: &ComponentContext<Self>) {
+    self.points.borrow_mut().push(point);
+    self.invalidator.invalidate();
+}
+
+fn draw_points(ctx: &DrawContext, points: &[Vector2]) -> Result<()> {
+    ctx.clear(ColorF::BLACK);
+    let brush = ctx.create_solid_brush(ColorF::WHITE)?;
+    for &point in points {
+        ctx.fill_ellipse(&Ellipse::circle(point, 3.0), &brush);
+    }
+    Ok(())
+}
+
+fn view(&self, _input: &(), _context: &mut ViewContext<Self>) -> View {
+    let points = Rc::clone(&self.points);
+    canvas_invalidated(&self.invalidator, move |ctx| {
+        draw_points(ctx, &points.borrow())
+    })
+}
+```
+
+Invalidation keeps the app idle between changes. Do not use continuous animation for a chart,
+drawing, or diagram that changes only after input.
+
+## Drive a standalone swap chain
+
+Without Reactor, the application creates a `GpuDevice` and `SwapChain` and owns the frame loop. The
+essential sequence is:
+
+```rust,no_run
+use windows_canvas::*;
+
+fn draw_frame(chain: &mut SwapChain) -> Result<bool> {
+    let session = chain.begin_draw()?;
+    session.clear(ColorF::DARK_SLATE_BLUE);
+
+    let brush = session.create_solid_brush(ColorF::CORNFLOWER_BLUE)?;
+    session.fill_rect(&Rect::from_xywh(20.0, 20.0, 200.0, 120.0), &brush);
+
+    drop(session);
+    chain.present()
+}
+```
+
+The drawing session borrows the swap chain, so finish and drop it before `present`. A standalone
+host must also resize the swap chain, update display scale, schedule frames, and recreate the
+device, swap chain, and dependent resources when `present` returns `Ok(false)`. The
+[`standalone`](../../crates/samples/canvas/standalone) sample connects those pieces to
+`windows-window`.
+
+## What to read next
+
+| Sample | What it shows |
+| --- | --- |
+| [`examples`](../../crates/samples/canvas/samples/examples) | One drawing operation at a time |
+| [`invalidate`][canvas-invalidate] | Input-driven repainting |
+| [`clock`](../../crates/samples/canvas/clock) | Continuous animation |
+| [`chart`](../../crates/samples/canvas/chart) | A demand-driven chart |
+| [`hit_test`](../../crates/samples/canvas/hit_test) | Geometry hit testing |
+| [`image_source`](../../crates/samples/canvas/image_source) | An on-demand WinUI image |
+| [`readback`](../../crates/samples/canvas/readback) | Off-screen rendering and pixel readback |
+| [`composition`](../../crates/samples/composition/canvas) | Drawing into a Composition visual |
+
+[canvas-invalidate]: ../../crates/samples/canvas/samples/examples/invalidate.rs
+
+Start with the small examples. `CanvasImageSource`, off-screen targets, shared devices, and
+Composition surfaces solve specific hosting problems and are easier to learn after the normal draw
+callback feels familiar.
 
 ---
 
 ## Internal documentation
 
-The rest of this page covers how the crate is built and maintained. It is not needed to use
-`windows-canvas`.
+The remainder of this page describes how the crate is built and maintained. Applications do not
+need it to use Canvas.
 
-### How it's built
+### Architecture
 
-`src/bindings.rs` is generated by `tool_bindings` from `crates/tools/bindings/src/canvas.txt`. It
-contains minimal, flat bindings for Direct2D, Direct3D 11, DXGI, DirectWrite, and WIC. It also uses
-the reference `Windows.winmd` for WinRT numerics types.
+The safe wrappers are hand-written and include `GpuDevice`, `SwapChain`, `DrawingSession`,
+geometry, brushes, text, bitmaps, effects, and render targets.
 
-The safe wrappers are hand-written. They include `GpuDevice`, `SwapChain`, `DrawingSession`,
-geometry, text, bitmaps, brushes, effects, and render targets.
+`GpuDevice` owns the shared Direct3D, Direct2D, DXGI, DirectWrite, and WIC objects. A swap chain
+owns one D2D device context and is rendered on its owning thread. WARP allows tests and callers to
+render without a physical GPU.
 
-The reactor integration lives in [`windows-reactor`](windows-reactor.md). It is behind the reactor
-`canvas` feature. The optional `composition` feature connects this crate to
-[`windows-composition`](windows-composition.md).
+`device_lost.rs` classifies D2D and DXGI loss codes. Standalone callers perform recovery. The
+Reactor host rebuilds its device, swap chain, and cached state after loss.
 
-### Design
+The Reactor integration lives behind this crate's `reactor` feature. The dependency direction is
+`windows-canvas[reactor] -> windows-reactor`. Canvas owns rendering resources and receives only
+typed panel metrics, rendering notifications, and attachment completion through
+`ElementRef<SwapChainPanel>`.
 
-- **No WinRT layer:** The safe types wrap Direct2D, Direct3D, DXGI, DirectWrite, and WIC directly.
-- **Single-threaded rendering:** A `SwapChain` owns one D2D device context. Rendering happens on the
-  thread that owns the swap chain.
-- **Continuous rendering:** `animated_canvas` drives frames on the UI thread with
-  `CompositionTarget::Rendering`.
-- **Demand-driven rendering:** `canvas` repaints only on resize and DPI change; `canvas_invalidated`
-  adds an `Invalidator` for state-driven repaints. Both stay idle otherwise.
-- **On-demand image source:** `CanvasImageSource` draws into a WinUI `SurfaceImageSource` only when
-  requested. It uses a borrowed `DrawingSession`.
-- **Composition bridge:** `CanvasCompositionExt::draw` draws Direct2D content into a
-  `CompositionDrawingSurface`. It also uses a borrowed `DrawingSession`.
-- **Device-lost recovery:** `device_lost.rs` classifies DXGI and D2D loss codes. `EndDraw` and
-  `Present` set a flag. The next frame recreates the device and resources.
-- **WARP fallback:** `GpuDevice::new_or_warp()` tries hardware first. It falls back to the WARP
-  software rasterizer when no GPU is available.
-- **Shareable device:** `GpuDevice` is `Clone`. A clone shares the same Direct3D, Direct2D, DXGI,
-  and DirectWrite objects.
+Continuous mode uses WinUI's `CompositionTarget::Rendering`. Demand mode stays idle until layout,
+scale, or `Invalidator` requests a frame. Attachment attempts use generations so stale completion
+callbacks cannot ready a replacement surface. `Canvas::on_error` reports initialization,
+attachment, resize, drawing, presentation, and failed recovery through `IntegrationError`.
 
-### Reactor integration
+`CanvasImageSource` uses a borrowed drawing session over a WinUI `SurfaceImageSource`.
+`CanvasCompositionExt` uses a borrowed drawing session over
+`ICompositionDrawingSurfaceInterop`. Both pair every successful `BeginDraw` with `EndDraw`,
+including panic cleanup.
 
-The reactor harness lives in [`windows-reactor`](windows-reactor.md). It exports `animated_canvas`,
-`canvas`, `canvas_invalidated`, `Invalidator`, `CanvasImageSource`, `CanvasSwapChain`, and
-`DrawContext` under the reactor `canvas` feature.
+### Code generation
 
-The dependency direction is `windows-reactor[canvas]` to `windows-canvas`. Reactor owns the WinUI
-element harness. That includes `SwapChainPanel`, `SurfaceImageSource`, the render loop, resize, DPI,
-and unmount cleanup.
+`src/bindings.rs` is generated by `tool_bindings` from
+`crates/tools/bindings/src/canvas.txt`. It contains minimal flat bindings for Direct2D,
+Direct3D 11, DXGI, DirectWrite, and WIC, plus referenced WinRT numerics types.
 
-This crate exposes the drawing surface that the bridge needs. It includes `GpuDevice`, `SwapChain`,
-borrowed `DrawingSession` constructors, and the `ID2D1DeviceContext` interop type. This crate has no
-`windows-reactor` dependency.
-
-Input belongs to reactor. Geometry queries belong to canvas. Pointer events use DIPs. Apps map those
-DIPs into canvas space with their own transform.
+`src/reactor_bindings.rs` is generated by `tool_reactor` for the WinUI bridge. Generated files are
+committed and must not be edited by hand. After changing a binding filter or generator, run the
+corresponding tool and verify `cargo check -p windows-canvas --quiet`.
 
 ### Testing
 
-Tests render with the WARP software rasterizer. They need no GPU. The integration suite lives in the
-`test_canvas` crate. Run `cargo test -p test_canvas`.
+Canvas tests use the WARP software rasterizer and do not require a physical GPU. The integration
+suite is in `test_canvas`:
+
+```text
+cargo test -p test_canvas
+```
+
+Reactor integration behavior is also covered by Reactor's recording and live surface tests. The
+Composition Canvas sample covers the system composition bridge in a runnable window.

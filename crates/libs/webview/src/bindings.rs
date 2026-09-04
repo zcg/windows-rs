@@ -18,87 +18,19 @@ pub struct COREWEBVIEW2_COLOR {
     pub B: u8,
 }
 pub type COREWEBVIEW2_COOKIE_SAME_SITE_KIND = i32;
-pub const COREWEBVIEW2_COOKIE_SAME_SITE_KIND_LAX: COREWEBVIEW2_COOKIE_SAME_SITE_KIND = 1;
-pub const COREWEBVIEW2_COOKIE_SAME_SITE_KIND_NONE: COREWEBVIEW2_COOKIE_SAME_SITE_KIND = 0;
-pub const COREWEBVIEW2_COOKIE_SAME_SITE_KIND_STRICT: COREWEBVIEW2_COOKIE_SAME_SITE_KIND = 2;
 pub type COREWEBVIEW2_DOWNLOAD_INTERRUPT_REASON = i32;
 pub type COREWEBVIEW2_DOWNLOAD_STATE = i32;
 pub type COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND = i32;
-pub const COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_ALLOW: COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND = 1;
-pub const COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY: COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND = 0;
-pub const COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY_CORS: COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND =
-    2;
 pub type COREWEBVIEW2_KEY_EVENT_KIND = i32;
-pub const COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN: COREWEBVIEW2_KEY_EVENT_KIND = 0;
-pub const COREWEBVIEW2_KEY_EVENT_KIND_KEY_UP: COREWEBVIEW2_KEY_EVENT_KIND = 1;
-pub const COREWEBVIEW2_KEY_EVENT_KIND_SYSTEM_KEY_DOWN: COREWEBVIEW2_KEY_EVENT_KIND = 2;
-pub const COREWEBVIEW2_KEY_EVENT_KIND_SYSTEM_KEY_UP: COREWEBVIEW2_KEY_EVENT_KIND = 3;
 pub type COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL = i32;
-pub const COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW: COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL = 1;
-pub const COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL: COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL = 0;
 pub type COREWEBVIEW2_MOVE_FOCUS_REASON = i32;
-pub const COREWEBVIEW2_MOVE_FOCUS_REASON_NEXT: COREWEBVIEW2_MOVE_FOCUS_REASON = 1;
-pub const COREWEBVIEW2_MOVE_FOCUS_REASON_PREVIOUS: COREWEBVIEW2_MOVE_FOCUS_REASON = 2;
-pub const COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC: COREWEBVIEW2_MOVE_FOCUS_REASON = 0;
 pub type COREWEBVIEW2_PERMISSION_KIND = i32;
 pub type COREWEBVIEW2_PERMISSION_STATE = i32;
 pub type COREWEBVIEW2_PREFERRED_COLOR_SCHEME = i32;
-pub const COREWEBVIEW2_PREFERRED_COLOR_SCHEME_AUTO: COREWEBVIEW2_PREFERRED_COLOR_SCHEME = 0;
-pub const COREWEBVIEW2_PREFERRED_COLOR_SCHEME_DARK: COREWEBVIEW2_PREFERRED_COLOR_SCHEME = 2;
-pub const COREWEBVIEW2_PREFERRED_COLOR_SCHEME_LIGHT: COREWEBVIEW2_PREFERRED_COLOR_SCHEME = 1;
 pub type COREWEBVIEW2_PROCESS_FAILED_KIND = i32;
-pub const COREWEBVIEW2_PROCESS_FAILED_KIND_BROWSER_PROCESS_EXITED:
-    COREWEBVIEW2_PROCESS_FAILED_KIND = 0;
-pub const COREWEBVIEW2_PROCESS_FAILED_KIND_FRAME_RENDER_PROCESS_EXITED:
-    COREWEBVIEW2_PROCESS_FAILED_KIND = 3;
-pub const COREWEBVIEW2_PROCESS_FAILED_KIND_GPU_PROCESS_EXITED: COREWEBVIEW2_PROCESS_FAILED_KIND = 6;
-pub const COREWEBVIEW2_PROCESS_FAILED_KIND_PPAPI_BROKER_PROCESS_EXITED:
-    COREWEBVIEW2_PROCESS_FAILED_KIND = 8;
-pub const COREWEBVIEW2_PROCESS_FAILED_KIND_PPAPI_PLUGIN_PROCESS_EXITED:
-    COREWEBVIEW2_PROCESS_FAILED_KIND = 7;
-pub const COREWEBVIEW2_PROCESS_FAILED_KIND_RENDER_PROCESS_EXITED: COREWEBVIEW2_PROCESS_FAILED_KIND =
-    1;
-pub const COREWEBVIEW2_PROCESS_FAILED_KIND_RENDER_PROCESS_UNRESPONSIVE:
-    COREWEBVIEW2_PROCESS_FAILED_KIND = 2;
-pub const COREWEBVIEW2_PROCESS_FAILED_KIND_SANDBOX_HELPER_PROCESS_EXITED:
-    COREWEBVIEW2_PROCESS_FAILED_KIND = 5;
-pub const COREWEBVIEW2_PROCESS_FAILED_KIND_UNKNOWN_PROCESS_EXITED:
-    COREWEBVIEW2_PROCESS_FAILED_KIND = 9;
-pub const COREWEBVIEW2_PROCESS_FAILED_KIND_UTILITY_PROCESS_EXITED:
-    COREWEBVIEW2_PROCESS_FAILED_KIND = 4;
 pub type COREWEBVIEW2_SCROLLBAR_STYLE = i32;
-pub const COREWEBVIEW2_SCROLLBAR_STYLE_DEFAULT: COREWEBVIEW2_SCROLLBAR_STYLE = 0;
-pub const COREWEBVIEW2_SCROLLBAR_STYLE_FLUENT_OVERLAY: COREWEBVIEW2_SCROLLBAR_STYLE = 1;
 pub type COREWEBVIEW2_WEB_RESOURCE_CONTEXT = i32;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 0;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_CSP_VIOLATION_REPORT:
-    COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 15;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_DOCUMENT: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 1;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_EVENT_SOURCE: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 10;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_FETCH: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 8;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_FONT: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 5;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_IMAGE: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 3;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_MANIFEST: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 12;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_MEDIA: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 4;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_OTHER: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 16;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_PING: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 14;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_SCRIPT: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 6;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_SIGNED_EXCHANGE: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 13;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_STYLESHEET: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 2;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_TEXT_TRACK: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 9;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_WEBSOCKET: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 11;
-pub const COREWEBVIEW2_WEB_RESOURCE_CONTEXT_XML_HTTP_REQUEST: COREWEBVIEW2_WEB_RESOURCE_CONTEXT = 7;
 pub type COREWEBVIEW2_WEB_RESOURCE_REQUEST_SOURCE_KINDS = u32;
-pub const COREWEBVIEW2_WEB_RESOURCE_REQUEST_SOURCE_KINDS_ALL:
-    COREWEBVIEW2_WEB_RESOURCE_REQUEST_SOURCE_KINDS = 4294967295;
-pub const COREWEBVIEW2_WEB_RESOURCE_REQUEST_SOURCE_KINDS_DOCUMENT:
-    COREWEBVIEW2_WEB_RESOURCE_REQUEST_SOURCE_KINDS = 1;
-pub const COREWEBVIEW2_WEB_RESOURCE_REQUEST_SOURCE_KINDS_NONE:
-    COREWEBVIEW2_WEB_RESOURCE_REQUEST_SOURCE_KINDS = 0;
-pub const COREWEBVIEW2_WEB_RESOURCE_REQUEST_SOURCE_KINDS_SERVICE_WORKER:
-    COREWEBVIEW2_WEB_RESOURCE_REQUEST_SOURCE_KINDS = 4;
-pub const COREWEBVIEW2_WEB_RESOURCE_REQUEST_SOURCE_KINDS_SHARED_WORKER:
-    COREWEBVIEW2_WEB_RESOURCE_REQUEST_SOURCE_KINDS = 2;
 pub const E_OUTOFMEMORY: windows_core::HRESULT = windows_core::HRESULT(0x8007000E_u32 as _);
 pub type HWND = *mut core::ffi::c_void;
 windows_core::imp::define_interface!(
@@ -115,7 +47,7 @@ impl ICoreWebView2 {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
     pub(crate) unsafe fn Source(&self) -> windows_core::Result<LPWSTR> {
@@ -419,7 +351,7 @@ impl ICoreWebView2 {
                 eventname.param().abi(),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
     pub(crate) unsafe fn Stop(&self) -> windows_core::HRESULT {
@@ -1476,7 +1408,7 @@ impl ICoreWebView2Controller {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
 }
@@ -2029,7 +1961,7 @@ impl ICoreWebView2CookieList {
                 index,
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
 }
@@ -2073,7 +2005,7 @@ impl ICoreWebView2CookieManager {
                 path.param().abi(),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
     pub(crate) unsafe fn GetCookies<P0, P1>(&self, uri: P0, handler: P1) -> windows_core::HRESULT
@@ -2743,7 +2675,7 @@ impl ICoreWebView2DownloadStartingEventArgs {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
     pub(crate) unsafe fn Cancel(&self) -> windows_core::Result<windows_core::BOOL> {
@@ -2810,7 +2742,7 @@ impl ICoreWebView2DownloadStartingEventArgs {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
 }
@@ -2952,7 +2884,7 @@ impl ICoreWebView2Environment {
                 headers.param().abi(),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
 }
@@ -3010,7 +2942,7 @@ impl ICoreWebView2Environment10 {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
     pub(crate) unsafe fn CreateCoreWebView2ControllerWithOptions<P1, P2>(
@@ -3090,7 +3022,7 @@ impl ICoreWebView2Environment2 {
                 headers.param().abi(),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
 }
@@ -3911,7 +3843,7 @@ impl ICoreWebView2HttpRequestHeaders {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
 }
@@ -3942,7 +3874,7 @@ impl ICoreWebView2Interop2 {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
 }
@@ -4388,7 +4320,7 @@ impl ICoreWebView2NewWindowRequestedEventArgs {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
 }
@@ -4549,7 +4481,7 @@ impl ICoreWebView2PermissionRequestedEventArgs {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
 }
@@ -5748,7 +5680,7 @@ impl ICoreWebView2WebResourceRequest {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
 }
@@ -5785,7 +5717,7 @@ impl ICoreWebView2WebResourceRequestedEventArgs {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
     pub(crate) unsafe fn SetResponse<P0>(&self, response: P0) -> windows_core::HRESULT
@@ -6080,7 +6012,7 @@ impl ICoreWebView2_13 {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
 }
@@ -6379,7 +6311,7 @@ impl ICoreWebView2_2 {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
     pub(crate) unsafe fn Environment(&self) -> windows_core::Result<ICoreWebView2Environment> {
@@ -6389,7 +6321,7 @@ impl ICoreWebView2_2 {
                 windows_core::Interface::as_raw(self),
                 &mut result__,
             )
-            .and_then(|| windows_core::Type::from_abi(result__))
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
         }
     }
 }
