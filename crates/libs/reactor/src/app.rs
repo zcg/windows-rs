@@ -128,6 +128,17 @@ pub(crate) fn register_host(host: ReactorHost) -> Result<WindowHandle> {
     }
 }
 
+/// CRT `exit`：跑完 atexit / _onexit 处理器后再终止进程。
+///
+/// **不能用 `std::process::exit`**：它在 Windows 上直接 `ExitProcess`，跳过整个
+/// atexit 队列。LLVM PGO 的落盘（`__llvm_profile_write_file`）就注册在 atexit 上，
+/// 于是插桩版跑完整轮、退出后 profraw 却是个截断空壳（实测 13MB 但
+/// `llvm-profdata merge` 报 truncated profile data）。CRT `exit` 同样不会去等
+/// 其他线程（关窗不会变卡死），差别只在收尾时把 atexit 队列跑完。
+unsafe extern "C" {
+    fn exit(code: i32);
+}
+
 /// Drop the host and terminate once the last window closes.
 fn on_window_closed(key: u64) {
     // 显式卸载组件树（cleanup：播放器 stop、保存进度等）——不依赖 drop 链，
@@ -147,7 +158,8 @@ fn on_window_closed(key: u64) {
     drop(removed);
     if empty {
         run_exit_callback();
-        std::process::exit(0);
+        // 走 CRT exit 以运行 atexit（PGO profile 落盘等），见文件内注释。
+        unsafe { exit(0) };
     }
 }
 

@@ -78,15 +78,14 @@ fn reconcile_positional_live<B: Backend + 'static>(
     old_live: &LiveChildrenRef<'_>,
     new_live: &LiveChildrenRef<'_>,
 ) {
-    let old_len = old_live.len();
+    let declared_old = old_live.len();
+    let logical_len = reconciler.tree.logical_children(parent).len();
+    // 播放窗 teardown 等场景下，父节点可能被 register/remove_node 重置（镜像被清空），
+    // 而延迟调和仍带着上一帧的 Element 子节点：镜像 0 vs 声明 N。把「实际已挂载镜像
+    // 长度」当作权威上界去钳制循环索引，避免越界 panic（原 debug_assert 在 dev 构建会崩）。
+    let old_len = declared_old.min(logical_len);
     let new_len = new_live.len();
     let common = old_len.min(new_len);
-
-    debug_assert_eq!(
-        reconciler.tree.logical_children(parent).len(),
-        old_len,
-        "logical child mirror disagrees with old child list"
-    );
 
     for i in 0..common {
         let old_el = old_live.get(i).unwrap();
@@ -137,13 +136,11 @@ fn reconcile_keyed_live<B: Backend + 'static>(
     old: &LiveChildrenRef<'_>,
     new: &LiveChildrenRef<'_>,
 ) {
-    let old_len = old.len();
+    let declared_old = old.len();
+    let logical_len = reconciler.tree.logical_children(parent).len();
+    // 同上：teardown 时镜像可能被清空而延迟调和仍带旧 Element 子节点，钳制索引避免越界。
+    let old_len = declared_old.min(logical_len);
     let new_len = new.len();
-    debug_assert_eq!(
-        reconciler.tree.logical_children(parent).len(),
-        old_len,
-        "logical child mirror disagrees with old keyed child list"
-    );
 
     let mut prefix = 0;
     while prefix < old_len

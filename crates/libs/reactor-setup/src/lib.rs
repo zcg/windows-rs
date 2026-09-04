@@ -54,6 +54,11 @@ pub fn as_self_contained() {
     let extract = ensure_msix_extracted(&runtime);
     copy_runtime_to(&extract, &target_dir_from_out(&out_dir));
     deploy_webview2(&temp_dir, &target_dir_from_out(&out_dir));
+    // MSIX 里不含 bootstrap DLL（它是独立的引导可再发行组件），但 reactor 的
+    // bindings.rs 对 `MddBootstrapInitialize2` 用 windows-core `link!` 静态导入
+    // —— exe 导入表里有 microsoft.windowsappruntime.bootstrap.dll，缺了它
+    // 加载器直接弹「找不到 DLL」拒绝启动，与是否调用 bootstrap() 无关。
+    copy_bootstrap_to(&target_dir_from_out(&out_dir));
 
     let manifest_path = out_dir.join("app.manifest");
     fs::write(&manifest_path, APP_MANIFEST).unwrap_or_else(|e| {
