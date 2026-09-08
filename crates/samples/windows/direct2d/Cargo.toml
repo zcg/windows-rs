@@ -1,5 +1,5 @@
 [package]
-name = "windows_direct2d"
+name = "windows-direct2d"
 version = "0.0.0"
 edition = "2024"
 publish = false
@@ -20,13 +20,16 @@ features = [
     "profileapi",
     "strmif",
     "sysinfoapi",
-    "uianimation",
+
     "windef",
     "winerror",
     "wingdi",
     "winuser",
     "wuapi",
 ]
+
+[dependencies.windows-animation]
+workspace = true
 
 [dependencies.windows-numerics]
 workspace = true

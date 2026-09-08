@@ -2196,6 +2196,13 @@ impl IntoUnitCallback for Callback<()> {
 /// A key supported by Reactor keyboard accelerators.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum AcceleratorKey {
+    Left,
+    Up,
+    Right,
+    Down,
+    Space,
+    N,
+    P,
     R,
     NumberPad0,
     NumberPad1,

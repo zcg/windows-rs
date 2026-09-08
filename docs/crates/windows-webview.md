@@ -13,9 +13,10 @@
 
 Use `windows-webview` when a Windows desktop application needs to host web content, exchange
 messages with JavaScript, or use browser facilities such as profiles, cookies, downloads, and the
-Chrome DevTools Protocol. The default API hosts WebView2 in an `HWND`. Enable the `reactor` feature
-to place the WinUI XAML WebView2 control in a
-[`windows-reactor`](windows-reactor.md) view.
+Chrome DevTools Protocol. The default `system` feature hosts WebView2 through `windows-window`.
+Disable default features and enable `reactor` to place the WinUI XAML WebView2 control in a
+[`windows-reactor`](windows-reactor.md) view. The features are additive when an application uses
+both host types.
 
 The crate wraps a selected WebView2 surface rather than exposing the complete SDK. Use raw WebView2
 bindings when an application needs APIs that are not represented here.
@@ -242,7 +243,7 @@ prepare expensive content outside it.
 Enable the `reactor` feature when the browser should participate in a Reactor layout:
 
 ```toml
-windows-webview = { version = "0.100.0", features = ["reactor"] }
+windows-webview = { version = "0.100.0", default-features = false, features = ["reactor"] }
 ```
 
 `webview` returns a normal Reactor `View` and sends the initialized browser through a callback:
@@ -308,9 +309,13 @@ independent workflows that can wait until the basic host lifecycle is familiar.
 
 This section is for contributors to `windows-webview`.
 
+The `system` feature enables the typed `windows-window` controller helpers. The `reactor` feature
+depends on `windows-reactor` and bridges its WinUI `WebView2` control to the shared browser API.
+Raw HWND controller methods remain available without either host feature.
+
 ### Binding generation
 
-WebView2 ships C/C++ headers rather than Windows metadata. `tool_webview` builds the committed
+WebView2 ships C/C++ headers rather than Windows metadata. `tool-webview` builds the committed
 bindings in three stages:
 
 | Stage | Implementation | Output |
@@ -323,7 +328,7 @@ The tool downloads the pinned `Microsoft.Web.WebView2` NuGet package. It parses 
 `WebView2Interop.h` as separate inputs because the collector emits declarations owned by each
 input, then merges both translation units. It uses `Windows.Win32.winmd` for referenced Win32
 types and targets `x86_64-pc-windows-msvc` with Microsoft extensions. Regenerate with
-`cargo run -p tool_webview`; never edit `src/bindings.rs`.
+`cargo run -p tool-webview`; never edit `src/bindings.rs`.
 
 Bindings use `--flat --minimal` and the filter in `crates/tools/webview/src/webview.txt`. Filter
 method names are raw metadata names such as `put_Bounds` and `get_CoreWebView2`, not projected

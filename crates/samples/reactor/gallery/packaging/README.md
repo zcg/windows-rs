@@ -1,6 +1,6 @@
 # Packaging Reactor WinUI Gallery (MSIX)
 
-The gallery normally runs unpackaged via `cargo run -p sample_reactor_gallery`
+The gallery normally runs unpackaged via `cargo run -p sample-reactor-gallery`
 (self-contained Windows App Runtime). To get an installed, identity-bearing
 app with per-app privacy entries, package it as an MSIX.
 
@@ -27,7 +27,7 @@ $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Roo
 $store.Open('ReadWrite'); $store.Add($cert); $store.Close()
 ```
 
-Then run `cargo run -p sample_reactor_gallery`; the first launch registers and
+Then run `cargo run -p sample-reactor-gallery`; the first launch registers and
 relaunches, and the badge buttons work.
 
 ## Why camera access needs packaging (or the desktop-app switch)
@@ -53,6 +53,6 @@ relaunches, and the badge buttons work.
 4. Run the gallery, then check Settings > Privacy & security > Camera for
    the app entry.
 
-`Executable` must match the built binary name (`sample_reactor_gallery.exe`);
+`Executable` must match the built binary name (`sample-reactor-gallery.exe`);
 the Assets folder needs `StoreLogo.png`, `Square150x150Logo.png`,
 `Square44x44Logo.png`.

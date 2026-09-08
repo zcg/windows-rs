@@ -22,7 +22,7 @@ New-Png (Join-Path $staging 'Assets\Square44x44Logo.png') 44 44
 New-Png (Join-Path $staging 'Assets\Square150x150Logo.png') 150 150
 
 Copy-Item (Join-Path $PSScriptRoot 'Package.appxmanifest') (Join-Path $staging 'AppxManifest.xml')
-Copy-Item (Join-Path $TargetDir 'sample_reactor_gallery.exe') $staging
+Copy-Item (Join-Path $TargetDir 'sample-reactor-gallery.exe') $staging
 Get-ChildItem $TargetDir -Filter '*.dll' | Copy-Item -Destination $staging
 Get-ChildItem $TargetDir -Filter '*.pri' | Copy-Item -Destination $staging
 

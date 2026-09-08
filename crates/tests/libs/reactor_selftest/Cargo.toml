@@ -1,5 +1,5 @@
 [package]
-name = "test_reactor_selftest"
+name = "test-reactor-selftest"
 version = "0.0.0"
 edition = "2024"
 publish = false
@@ -8,7 +8,7 @@ publish = false
 self-contained = []
 
 [dependencies]
-windows-canvas = { workspace = true, features = ["reactor"] }
+windows-canvas = { workspace = true, features = ["composition", "reactor"] }
 windows-composition = { workspace = true, features = ["reactor"] }
 windows-collections = { workspace = true }
 windows-core = { workspace = true }

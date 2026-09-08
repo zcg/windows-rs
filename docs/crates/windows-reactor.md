@@ -315,6 +315,22 @@ are inserted, removed, or reordered.
 For very large collections, `ItemsRepeater` and `VirtualSource` add virtualization. Start with
 `keyed_children`; move to virtualization only when the list is large enough to need it.
 
+## Schedule UI work
+
+Use `set_timeout` to send a component message after a delay:
+
+```rust,ignore
+self.timer = Some(
+    context
+        .set_timeout(Duration::from_millis(500), Message::Tick)
+        .unwrap(),
+);
+```
+
+The timer runs on the UI dispatcher, so its message does not need to implement `Send` and waiting
+does not occupy a thread-pool worker. Store the returned `ComponentTimer`; dropping or cancelling
+it prevents delivery.
+
 ## Move slow work off the UI thread
 
 Rendering, component updates, and native controls live on the UI thread. Use
@@ -356,6 +372,7 @@ problems:
 | API | Use it for |
 | --- | --- |
 | `use_effect` | Starting and cleaning up an external subscription |
+| `use_effect_guard` | Owning a subscription or revoker that cleans itself up when dropped |
 | `Context<T>` | Sharing app-wide data such as a theme with distant descendants |
 | `ElementRef<T>` | Focus, scroll-offset observation, or another operation that cannot be expressed as state |
 | `open_window` | Opening an independent secondary window |
@@ -511,8 +528,8 @@ Generated Rust files are committed and must not be edited by hand. After changin
 metadata inputs, filters, or generator, run:
 
 ```text
-cargo run -p tool_reactor --quiet
-cargo run -p tool_reactor --quiet
+cargo run -p tool-reactor --quiet
+cargo run -p tool-reactor --quiet
 cargo check -p windows-reactor --quiet
 ```
 
@@ -527,11 +544,11 @@ feature removes that allowance so the live surface build checks all generated te
 | --- | --- |
 | Internal deterministic tests | `cargo test -p windows-reactor` |
 | External API tests | `cargo test -p test_reactor` |
-| Generator tests | `cargo test -p tool_reactor` |
-| Live handwritten fixtures | `cargo run -p test_reactor_selftest -- --headless` |
-| Generated WinUI surface | `cargo run -p test_reactor_surface -- --headless` |
-| Planner benchmarks | `cargo run -p test_reactor_bench --release` |
-| Live grid benchmark | `cargo run -p test_reactor_bench --bin reactor-live-grid --release` |
+| Generator tests | `cargo test -p tool-reactor` |
+| Live handwritten fixtures | `cargo run -p test-reactor-selftest -- --headless` |
+| Generated WinUI surface | `cargo run -p test-reactor-surface -- --headless` |
+| Planner benchmarks | `cargo run -p test-reactor-bench --release` |
+| Live grid benchmark | `cargo run -p test-reactor-bench --bin reactor-live-grid --release` |
 
 The generated surface test covers projected controls, properties, events, content, collections,
 slots, attachments, virtual items, and TreeView nodes. Handwritten self-tests own imperative

@@ -21,7 +21,7 @@
     <Resource Language="en-US" />
   </Resources>
   <Applications>
-    <Application Id="App" Executable="sample_reactor_gallery.exe" EntryPoint="Windows.FullTrustApplication">
+    <Application Id="App" Executable="sample-reactor-gallery.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
           DisplayName="Reactor WinUI Gallery"
           Square150x150Logo="Assets\Square150x150Logo.png"
