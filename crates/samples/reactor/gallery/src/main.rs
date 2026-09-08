@@ -11,22 +11,18 @@ mod controls;
     clippy::too_many_arguments
 )]
 mod notifications_bindings;
-mod packaging;
 mod pages;
 mod registry;
 mod router;
 mod shell;
 
+mod taskbar_badge;
 #[cfg(test)]
 mod tests;
 
 fn main() {
-    // The taskbar badge (BadgeNotificationManager) requires a packaged app
-    // identity. In development the gallery runs unpackaged, so register the
-    // build output in place (no MSIX install) when the process has no package
-    // identity, then relaunch so the new process is packaged.
-    if packaging::ensure_packaged() {
-        return;
-    }
+    // The taskbar badge uses ITaskbarList3::SetOverlayIcon (taskbar_badge),
+    // which needs no package identity, so the gallery runs unpackaged and
+    // never registers a package.
     windows_reactor::App::run_component::<shell::Gallery>(()).unwrap();
 }

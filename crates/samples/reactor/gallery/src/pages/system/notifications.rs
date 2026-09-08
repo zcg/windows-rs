@@ -59,31 +59,22 @@ fn send_toast(title: &str, body: &str) -> Result<(), windows_core::Error> {
     manager.Show(&notification)
 }
 
-/// Sets the taskbar badge through the Windows App SDK badge manager.
-///
-/// `Number` shows the count as the numeric badge; `Dot` shows the attention
-/// glyph. The badge APIs require a packaged app identity: the gallery
-/// self-registers at startup (`packaging::ensure_packaged`) so this succeeds
-/// in development without an MSIX install.
+/// Sets the taskbar badge through `ITaskbarList3::SetOverlayIcon`
+/// (`crate::taskbar_badge`), which needs no package identity: the gallery
+/// shows badges unpackaged, without registering anything.
 fn set_badge(mode: BadgeMode, count: u32) -> windows::core::Result<()> {
-    use crate::notifications_bindings::{BadgeNotificationGlyph, BadgeNotificationManager};
+    use crate::taskbar_badge::{Badge, set_badge as apply_badge};
 
-    let manager = BadgeNotificationManager::Current()?;
-    match mode {
-        BadgeMode::Dot => {
-            manager.SetBadgeAsGlyph(BadgeNotificationGlyph::Attention)?;
-        }
-        BadgeMode::Number => {
-            manager.SetBadgeAsCount(count)?;
-        }
-    }
-    Ok(())
+    let badge = match mode {
+        BadgeMode::Dot => Badge::Dot,
+        BadgeMode::Number => Badge::Number(count),
+    };
+    apply_badge(badge)
 }
 
 /// Removes the current taskbar badge.
 fn clear_badge() -> windows::core::Result<()> {
-    use crate::notifications_bindings::BadgeNotificationManager;
-    BadgeNotificationManager::Current()?.ClearBadge()
+    crate::taskbar_badge::set_badge(crate::taskbar_badge::Badge::Clear)
 }
 
 impl Component for NotificationsPage {
@@ -179,9 +170,14 @@ impl Component for NotificationsPage {
                                         .on_click(context.message(Message::Clear))
                                         .content("Clear"),
                                 )),
+                            TextBlock::new()
+                                .text(
+                                    "Overlay badge via ITaskbarList3, no package identity needed.",
+                                )
+                                .opacity(0.6),
                             TextBlock::new().text(self.status.clone()).opacity(0.6),
                         )),
-                        "BadgeNotificationManager::Current()?.SetBadgeAsCount(5)",
+                        "taskbar_badge::set_badge(Badge::Number(5))",
                     ),
                 ),
             ],

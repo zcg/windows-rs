@@ -4,17 +4,27 @@ The gallery normally runs unpackaged via `cargo run -p sample-reactor-gallery`
 (self-contained Windows App Runtime). To get an installed, identity-bearing
 app with per-app privacy entries, package it as an MSIX.
 
-## Development identity (no MSIX)
+## Taskbar badge without package identity
 
-The taskbar badge (`Microsoft.Windows.BadgeNotifications`) requires a packaged
-app identity. In development the gallery self-registers a sparse package from
-its build output at startup:
+The taskbar badge uses `ITaskbarList3::SetOverlayIcon` (`src/taskbar_badge.rs`),
+which needs no packaged app identity: the gallery runs unpackaged and never
+registers a package. Both the count and the dot badge are drawn by the gallery,
+so the packaged badge manager (`Microsoft.Windows.BadgeNotifications`) is not
+used.
 
-1. `packaging.rs` copies `Package.appxmanifest` to `target/debug/AppxManifest.xml`
-   (next to the executable, matching its `Executable` name).
+The `Package.appxmanifest` and `build-msix.ps1` in this folder remain as the
+optional MSIX packaging path for an identity-bearing install (per-app privacy
+entries, Store distribution). They are not required for the badge.
+
+## Development identity (not required for badges)
+
+The package registration flow was removed from startup; `src/packaging.rs`
+remains as a reference implementation. To register the build output in place:
+
+1. Copy `Package.appxmanifest` to `target/debug/AppxManifest.xml` (next to the
+   executable, matching its `Executable` name).
 2. `Add-AppxPackage -Register <manifest>` gives the in-place process an
    identity without installing or copying anything.
-3. The app relaunches itself; the new process is packaged.
 
 The manifest `Publisher` must match a trusted code-signing cert on the machine.
 Create one once and trust it (`CN=ReactorGalleryDev` is the default):
@@ -27,8 +37,6 @@ $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Roo
 $store.Open('ReadWrite'); $store.Add($cert); $store.Close()
 ```
 
-Then run `cargo run -p sample-reactor-gallery`; the first launch registers and
-relaunches, and the badge buttons work.
 
 ## Why camera access needs packaging (or the desktop-app switch)
 
