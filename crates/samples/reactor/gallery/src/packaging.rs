@@ -1,16 +1,20 @@
 //! Development-time package identity for the gallery.
 //!
-//! The taskbar badge API (`Microsoft.Windows.BadgeNotifications`) requires a
-//! packaged app identity. Registering an MSIX every iteration is heavy, so the
-//! gallery uses `Add-AppxPackage -Register` on the manifest in the build
-//! output directory. The manifest sits next to the executable (same relative
-//! name as `Executable`), so the in-place files keep working with a package
-//! identity and no MSIX install is involved.
+//! The system badge API (`Windows.UI.Notifications.BadgeUpdateManager`)
+//! requires a packaged app identity. Registering an MSIX every iteration is
+//! heavy, so the gallery uses `Add-AppxPackage -Register` on the manifest in
+//! the build output directory. The manifest sits next to the executable (same
+//! relative name as `Executable`), so the in-place files keep working with a
+//! package identity and no MSIX install is involved.
 //!
 //! Registration is idempotent: it fails quietly when the package is already
 //! present, and the gallery keeps running unpackaged when the system cannot
 //! register it (for example, in CI). A packaged process resolves its own
 //! package full name; an unpackaged one does not.
+//!
+//! The relaunch goes through the shell (`shell:AppsFolder\<PFN>!App`).
+//! Starting the executable directly does not grant identity, so doing that
+//! would loop forever: register, relaunch unpackaged, register again.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -18,14 +22,14 @@ use std::process::Command;
 const MANIFEST: &str = "packaging/Package.appxmanifest";
 
 /// Returns `true` when the process was started unpackaged and registration
-/// produced a new process (which may or may not be packaged: the caller should
-/// not treat the return value as a promise of identity).
+/// launched a packaged replacement (which may or may not be packaged: the
+/// caller should not treat the return value as a promise of identity).
 pub fn ensure_packaged() -> bool {
     if has_package_identity() {
         return false;
     }
     match register_in_place() {
-        Ok(()) => relaunch(),
+        Ok((family, app_id)) => activate(&family, &app_id),
         Err(error) => {
             eprintln!("windows-reactor gallery: package registration skipped: {error}");
             false
@@ -51,8 +55,9 @@ fn has_package_identity() -> bool {
     }
 }
 
-/// Registers the build output in place with a package identity.
-fn register_in_place() -> std::io::Result<()> {
+/// Registers the build output in place with a package identity and returns
+/// the package family name and application id needed to activate it.
+fn register_in_place() -> std::io::Result<(String, String)> {
     let root = workspace_root();
     let manifest = root.join(MANIFEST);
     if !manifest.is_file() {
@@ -61,6 +66,9 @@ fn register_in_place() -> std::io::Result<()> {
             format!("missing manifest at {}", manifest.display()),
         ));
     }
+    let text = std::fs::read_to_string(&manifest)?;
+    let name = attribute(&text, "<Identity", "Name=")?;
+    let app_id = attribute(&text, "<Application", "Id=")?;
     // `Add-AppxPackage -Register` registers a loose-layout package from the
     // manifest's directory: the AppxManifest.xml must sit next to the
     // executable, and its `Executable` attribute names that executable.
@@ -68,37 +76,63 @@ fn register_in_place() -> std::io::Result<()> {
     let output = build_output_dir();
     let staged = output.join("AppxManifest.xml");
     std::fs::copy(&manifest, &staged)?;
+    let script = format!(
+        "Add-AppxPackage -Register \"{}\"; (Get-AppxPackage -Name '{}').PackageFamilyName",
+        staged.display(),
+        name
+    );
     let output_result = Command::new("powershell")
-        .args([
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            &format!("Add-AppxPackage -Register \"{}\"", staged.display()),
-        ])
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
         .output()?;
-    if output_result.status.success() {
-        return Ok(());
+    if !output_result.status.success() {
+        return Err(std::io::Error::other(
+            String::from_utf8_lossy(&output_result.stderr)
+                .trim()
+                .to_string(),
+        ));
     }
-    Err(std::io::Error::other(
-        String::from_utf8_lossy(&output_result.stderr)
-            .trim()
-            .to_string(),
-    ))
+    let family = String::from_utf8_lossy(&output_result.stdout).trim().to_string();
+    if family.is_empty() {
+        return Err(std::io::Error::other(
+            "registration succeeded but the package family name is empty",
+        ));
+    }
+    Ok((family, app_id))
 }
 
-/// Relaunches the gallery so the new process can pick up the package identity.
-fn relaunch() -> bool {
+/// Launches the registered application through the shell so AppModel assigns
+/// it the package identity.
+fn activate(family: &str, app_id: &str) -> bool {
     // The deployment queue commits the registration asynchronously; give it a
     // moment so the relaunched process observes the identity.
     std::thread::sleep(std::time::Duration::from_millis(500));
-    let exe = std::env::current_exe().expect("current exe path");
-    match Command::new(&exe).spawn() {
+    let target = format!("shell:AppsFolder\\{family}!{app_id}");
+    match Command::new("explorer.exe").arg(&target).spawn() {
         Ok(_) => true,
         Err(error) => {
-            eprintln!("windows-reactor gallery: relaunch failed: {error}");
+            eprintln!("windows-reactor gallery: activation failed: {error}");
             false
         }
     }
+}
+
+/// Reads `key="value"` from the first occurrence of `element`.
+fn attribute(text: &str, element: &str, key: &str) -> std::io::Result<String> {
+    let missing = |what: &str| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("manifest has no {what}"),
+        )
+    };
+    let start = text.find(element).ok_or_else(|| missing(element))?;
+    let rest = &text[start..];
+    let key_start = rest.find(key).ok_or_else(|| missing(key))?;
+    let after = &rest[key_start + key.len()..];
+    let quote_start = after.find('"').ok_or_else(|| missing(key))? + 1;
+    let quote_end = after[quote_start..]
+        .find('"')
+        .ok_or_else(|| missing(key))?;
+    Ok(after[quote_start..quote_start + quote_end].to_string())
 }
 
 /// The directory containing the built executable, resolved from the current
@@ -164,5 +198,14 @@ mod tests {
         let manifest = root.join(MANIFEST);
         let text = std::fs::read_to_string(manifest).expect("read manifest");
         assert!(text.contains("Publisher="));
+    }
+
+    #[test]
+    fn identity_and_application_attributes_are_readable() {
+        let root = workspace_root();
+        let manifest = root.join(MANIFEST);
+        let text = std::fs::read_to_string(manifest).expect("read manifest");
+        assert_eq!(attribute(&text, "<Identity", "Name=").unwrap(), "ReactorWinUIGallery");
+        assert_eq!(attribute(&text, "<Application", "Id=").unwrap(), "App");
     }
 }

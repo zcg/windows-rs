@@ -21,11 +21,7 @@ features = [
     "Storage_Streams",
     "UI_Notifications",
     "UI_StartScreen",
-    "combaseapi",
-    "processthreadsapi",
     "shobjidl_core",
-    "windef",
-    "wingdi",
     "winuser",
 ]
 

@@ -11,18 +11,22 @@ mod controls;
     clippy::too_many_arguments
 )]
 mod notifications_bindings;
+mod packaging;
 mod pages;
 mod registry;
 mod router;
 mod shell;
 
-mod taskbar_badge;
 #[cfg(test)]
 mod tests;
 
 fn main() {
-    // The taskbar badge uses ITaskbarList3::SetOverlayIcon (taskbar_badge),
-    // which needs no package identity, so the gallery runs unpackaged and
-    // never registers a package.
+    // The system badge API (Windows.UI.Notifications.BadgeUpdateManager)
+    // requires package identity. On first launch the gallery registers its
+    // build output in place and relaunches through the package, so the new
+    // process is packaged without installing an MSIX.
+    if packaging::ensure_packaged() {
+        return;
+    }
     windows_reactor::App::run_component::<shell::Gallery>(()).unwrap();
 }
