@@ -45,11 +45,11 @@ pub struct StructuralSurface {
 pub struct ExtensionSurface {
     pub name: &'static str,
 }
-pub(crate) const PROJECTED_CONTROL_COUNT: usize = 79usize;
-pub(crate) const PROJECTED_PROPERTY_COUNT: usize = 230usize;
-pub(crate) const PROJECTED_EVENT_COUNT: usize = 63usize;
+pub(crate) const PROJECTED_CONTROL_COUNT: usize = 90usize;
+pub(crate) const PROJECTED_PROPERTY_COUNT: usize = 258usize;
+pub(crate) const PROJECTED_EVENT_COUNT: usize = 72usize;
 pub(crate) const CAPABILITY_PROPERTY_COUNT: usize = 27usize;
-pub(crate) const STRUCTURAL_COUNT: usize = 64usize;
+pub(crate) const STRUCTURAL_COUNT: usize = 72usize;
 pub(crate) const EXTENSION_COUNT: usize = 5;
 fn construct_text_block(_stage: usize) -> View {
     Grid::new().children((TextBlock::new(),))
@@ -222,6 +222,9 @@ fn construct_app_bar_button(_stage: usize) -> View {
 fn construct_app_bar_separator(_stage: usize) -> View {
     Grid::new().children((AppBarSeparator::new(),))
 }
+fn construct_app_bar_toggle_button(_stage: usize) -> View {
+    Grid::new().children((AppBarToggleButton::new(),))
+}
 fn construct_menu_bar(_stage: usize) -> View {
     Grid::new().children((MenuBar::new(),))
 }
@@ -290,6 +293,36 @@ fn construct_web_view2(_stage: usize) -> View {
 fn construct_swap_chain_panel(_stage: usize) -> View {
     Grid::new().children((SwapChainPanel::new(),))
 }
+fn construct_pips_pager(_stage: usize) -> View {
+    Grid::new().children((PipsPager::new(),))
+}
+fn construct_toggle_split_button(_stage: usize) -> View {
+    Grid::new().children((ToggleSplitButton::new(),))
+}
+fn construct_items_view(_stage: usize) -> View {
+    Grid::new().children((ItemsView::new(),))
+}
+fn construct_media_player_element(_stage: usize) -> View {
+    Grid::new().children((MediaPlayerElement::new(),))
+}
+fn construct_semantic_zoom(_stage: usize) -> View {
+    Grid::new().children((SemanticZoom::new(),))
+}
+fn construct_parallax_view(_stage: usize) -> View {
+    Grid::new().children((ParallaxView::new(),))
+}
+fn construct_annotated_scroll_bar(_stage: usize) -> View {
+    Grid::new().children((AnnotatedScrollBar::new(),))
+}
+fn construct_map_control(_stage: usize) -> View {
+    Grid::new().children((MapControl::new(),))
+}
+fn construct_swipe_control(_stage: usize) -> View {
+    Grid::new().children((SwipeControl::new(),))
+}
+fn construct_refresh_container(_stage: usize) -> View {
+    Grid::new().children((RefreshContainer::new(),))
+}
 fn property_text_block_text(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((TextBlock::new(),)),
@@ -319,6 +352,14 @@ fn property_text_block_font_weight(stage: usize) -> View {
         0 | 3 => Grid::new().children((TextBlock::new(),)),
         1 => Grid::new().children((TextBlock::new().font_weight(FontWeight::NORMAL),)),
         2 => Grid::new().children((TextBlock::new().font_weight(FontWeight::BOLD),)),
+        _ => unreachable!(),
+    }
+}
+fn property_text_block_font_family(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((TextBlock::new(),)),
+        1 => Grid::new().children((TextBlock::new().font_family("surface a"),)),
+        2 => Grid::new().children((TextBlock::new().font_family("surface b"),)),
         _ => unreachable!(),
     }
 }
@@ -588,6 +629,14 @@ fn property_variable_sized_wrap_grid_item_height(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_variable_sized_wrap_grid_maximum_rows_or_columns(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((VariableSizedWrapGrid::new(),)),
+        1 => Grid::new().children((VariableSizedWrapGrid::new().maximum_rows_or_columns(1),)),
+        2 => Grid::new().children((VariableSizedWrapGrid::new().maximum_rows_or_columns(2),)),
+        _ => unreachable!(),
+    }
+}
 fn property_variable_sized_wrap_grid_orientation(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((VariableSizedWrapGrid::new(),)),
@@ -849,6 +898,14 @@ fn property_slider_orientation(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_slider_is_thumb_tool_tip_enabled(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Slider::new(),)),
+        1 => Grid::new().children((Slider::new().is_thumb_tool_tip_enabled(true),)),
+        2 => Grid::new().children((Slider::new().is_thumb_tool_tip_enabled(false),)),
+        _ => unreachable!(),
+    }
+}
 fn property_navigation_view_is_enabled(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((NavigationView::new(),)),
@@ -925,6 +982,14 @@ fn property_navigation_view_is_pane_open(stage: usize) -> View {
         0 | 3 => Grid::new().children((NavigationView::new(),)),
         1 => Grid::new().children((NavigationView::new().is_pane_open(true),)),
         2 => Grid::new().children((NavigationView::new().is_pane_open(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_navigation_view_font_family(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((NavigationView::new(),)),
+        1 => Grid::new().children((NavigationView::new().font_family("surface a"),)),
+        2 => Grid::new().children((NavigationView::new().font_family("surface b"),)),
         _ => unreachable!(),
     }
 }
@@ -1268,6 +1333,14 @@ fn property_image_source(stage: usize) -> View {
         2 => Grid::new().children((Image::new()
             .source("ms-appx:///Files/surface-b.png")
             .unwrap(),)),
+        _ => unreachable!(),
+    }
+}
+fn property_image_decode_width(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Image::new(),)),
+        1 => Grid::new().children((Image::new().decode_width(1),)),
+        2 => Grid::new().children((Image::new().decode_width(2),)),
         _ => unreachable!(),
     }
 }
@@ -1777,6 +1850,30 @@ fn property_app_bar_button_is_enabled(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_app_bar_toggle_button_label(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((AppBarToggleButton::new(),)),
+        1 => Grid::new().children((AppBarToggleButton::new().label("surface a"),)),
+        2 => Grid::new().children((AppBarToggleButton::new().label("surface b"),)),
+        _ => unreachable!(),
+    }
+}
+fn property_app_bar_toggle_button_is_checked(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((AppBarToggleButton::new(),)),
+        1 => Grid::new().children((AppBarToggleButton::new().is_checked(true),)),
+        2 => Grid::new().children((AppBarToggleButton::new().is_checked(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_app_bar_toggle_button_is_enabled(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((AppBarToggleButton::new(),)),
+        1 => Grid::new().children((AppBarToggleButton::new().is_enabled(true),)),
+        2 => Grid::new().children((AppBarToggleButton::new().is_enabled(false),)),
+        _ => unreachable!(),
+    }
+}
 fn property_menu_bar_item_title(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((MenuBarItem::new(),)),
@@ -2157,6 +2254,14 @@ fn property_rich_text_block_font_size(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_rich_text_block_font_family(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((RichTextBlock::new(),)),
+        1 => Grid::new().children((RichTextBlock::new().font_family("surface a"),)),
+        2 => Grid::new().children((RichTextBlock::new().font_family("surface b"),)),
+        _ => unreachable!(),
+    }
+}
 fn property_rich_text_block_is_text_selection_enabled(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((RichTextBlock::new(),)),
@@ -2178,6 +2283,170 @@ fn property_viewbox_stretch(stage: usize) -> View {
         0 | 3 => Grid::new().children((Viewbox::new(),)),
         1 => Grid::new().children((Viewbox::new().stretch(Stretch::None),)),
         2 => Grid::new().children((Viewbox::new().stretch(Stretch::Fill),)),
+        _ => unreachable!(),
+    }
+}
+fn property_pips_pager_number_of_pages(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((PipsPager::new(),)),
+        1 => Grid::new().children((PipsPager::new().number_of_pages(1),)),
+        2 => Grid::new().children((PipsPager::new().number_of_pages(2),)),
+        _ => unreachable!(),
+    }
+}
+fn property_pips_pager_selected_page_index(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((PipsPager::new(),)),
+        1 => Grid::new().children((PipsPager::new().selected_page_index(1),)),
+        2 => Grid::new().children((PipsPager::new().selected_page_index(2),)),
+        _ => unreachable!(),
+    }
+}
+fn property_pips_pager_max_visible_pips(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((PipsPager::new(),)),
+        1 => Grid::new().children((PipsPager::new().max_visible_pips(1),)),
+        2 => Grid::new().children((PipsPager::new().max_visible_pips(2),)),
+        _ => unreachable!(),
+    }
+}
+fn property_toggle_split_button_is_checked(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ToggleSplitButton::new(),)),
+        1 => Grid::new().children((ToggleSplitButton::new().is_checked(true),)),
+        2 => Grid::new().children((ToggleSplitButton::new().is_checked(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_toggle_split_button_is_enabled(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ToggleSplitButton::new(),)),
+        1 => Grid::new().children((ToggleSplitButton::new().is_enabled(true),)),
+        2 => Grid::new().children((ToggleSplitButton::new().is_enabled(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_items_view_items_source(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ItemsView::new(),)),
+        1 => Grid::new().children((ItemsView::new().items_source(["surface a", "surface b"]),)),
+        2 => Grid::new().children((ItemsView::new().items_source(["surface c", "surface d"]),)),
+        _ => unreachable!(),
+    }
+}
+fn property_items_view_layout(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ItemsView::new(),)),
+        1 => Grid::new().children((ItemsView::new().layout(ItemsViewLayout::Stack),)),
+        2 => Grid::new().children((ItemsView::new().layout(ItemsViewLayout::Grid),)),
+        _ => unreachable!(),
+    }
+}
+fn property_items_view_selection_mode(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ItemsView::new(),)),
+        1 => Grid::new().children((ItemsView::new().selection_mode(ItemsViewSelectionMode::None),)),
+        2 => {
+            Grid::new().children((ItemsView::new().selection_mode(ItemsViewSelectionMode::Single),))
+        }
+        _ => unreachable!(),
+    }
+}
+fn property_media_player_element_source(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((MediaPlayerElement::new(),)),
+        1 => Grid::new().children((MediaPlayerElement::new()
+            .source("https://example.com/a.mp4")
+            .unwrap(),)),
+        2 => Grid::new().children((MediaPlayerElement::new()
+            .source("https://example.com/b.mp4")
+            .unwrap(),)),
+        _ => unreachable!(),
+    }
+}
+fn property_media_player_element_are_transport_controls_enabled(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((MediaPlayerElement::new(),)),
+        1 => {
+            Grid::new().children((MediaPlayerElement::new().are_transport_controls_enabled(true),))
+        }
+        2 => {
+            Grid::new().children((MediaPlayerElement::new().are_transport_controls_enabled(false),))
+        }
+        _ => unreachable!(),
+    }
+}
+fn property_media_player_element_auto_play(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((MediaPlayerElement::new(),)),
+        1 => Grid::new().children((MediaPlayerElement::new().auto_play(true),)),
+        2 => Grid::new().children((MediaPlayerElement::new().auto_play(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_semantic_zoom_is_zoomed_in_view_active(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((SemanticZoom::new(),)),
+        1 => Grid::new().children((SemanticZoom::new().is_zoomed_in_view_active(true),)),
+        2 => Grid::new().children((SemanticZoom::new().is_zoomed_in_view_active(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_parallax_view_horizontal_shift(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ParallaxView::new(),)),
+        1 => Grid::new().children((ParallaxView::new().horizontal_shift(1.0),)),
+        2 => Grid::new().children((ParallaxView::new().horizontal_shift(2.0),)),
+        _ => unreachable!(),
+    }
+}
+fn property_annotated_scroll_bar_small_change(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((AnnotatedScrollBar::new(),)),
+        1 => Grid::new().children((AnnotatedScrollBar::new().small_change(1.0),)),
+        2 => Grid::new().children((AnnotatedScrollBar::new().small_change(2.0),)),
+        _ => unreachable!(),
+    }
+}
+fn property_map_control_center(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((MapControl::new(),)),
+        1 => Grid::new().children((MapControl::new().center(-30.034647, -51.217659),)),
+        2 => Grid::new().children((MapControl::new().center(47.6062, -122.3321),)),
+        _ => unreachable!(),
+    }
+}
+fn property_map_control_zoom_level(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((MapControl::new(),)),
+        1 => Grid::new().children((MapControl::new().zoom_level(1.0),)),
+        2 => Grid::new().children((MapControl::new().zoom_level(2.0),)),
+        _ => unreachable!(),
+    }
+}
+fn property_map_control_map_service_token(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((MapControl::new(),)),
+        1 => Grid::new().children((MapControl::new().map_service_token("surface a"),)),
+        2 => Grid::new().children((MapControl::new().map_service_token("surface b"),)),
+        _ => unreachable!(),
+    }
+}
+fn property_map_control_interactive_controls_visible(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((MapControl::new(),)),
+        1 => Grid::new().children((MapControl::new().interactive_controls_visible(true),)),
+        2 => Grid::new().children((MapControl::new().interactive_controls_visible(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_refresh_container_pull_direction(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((RefreshContainer::new(),)),
+        1 => Grid::new()
+            .children((RefreshContainer::new().pull_direction(RefreshPullDirection::LeftToRight),)),
+        2 => Grid::new()
+            .children((RefreshContainer::new().pull_direction(RefreshPullDirection::TopToBottom),)),
         _ => unreachable!(),
     }
 }
@@ -2380,6 +2649,18 @@ fn event_border_on_pointer_released(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn event_border_on_pointer_wheel_changed(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Border::new(),)),
+        1 => Grid::new().children((Border::new().on_pointer_wheel_changed(move |_| {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((Border::new().on_pointer_wheel_changed(move |_| {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
 fn event_border_on_pointer_capture_lost(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((Border::new(),)),
@@ -2483,6 +2764,18 @@ fn event_slider_on_value_changed(stage: usize) -> View {
             let _ = 0u8;
         }),)),
         2 => Grid::new().children((Slider::new().on_value_changed(move |_| {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn event_slider_on_size_changed(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Slider::new(),)),
+        1 => Grid::new().children((Slider::new().on_size_changed(move || {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((Slider::new().on_size_changed(move || {
             let _ = 1u8;
         }),)),
         _ => unreachable!(),
@@ -2603,6 +2896,18 @@ fn event_info_bar_on_closed(stage: usize) -> View {
             let _ = 0u8;
         }),)),
         2 => Grid::new().children((InfoBar::new().on_closed(move || {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn event_scroll_viewer_on_view_changed(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ScrollViewer::new(),)),
+        1 => Grid::new().children((ScrollViewer::new().on_view_changed(move || {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((ScrollViewer::new().on_view_changed(move || {
             let _ = 1u8;
         }),)),
         _ => unreachable!(),
@@ -2812,6 +3117,18 @@ fn event_app_bar_button_on_click(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn event_app_bar_toggle_button_on_click(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((AppBarToggleButton::new(),)),
+        1 => Grid::new().children((AppBarToggleButton::new().on_click(move || {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((AppBarToggleButton::new().on_click(move || {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
 fn event_split_button_on_click(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((SplitButton::new(),)),
@@ -2963,6 +3280,66 @@ fn event_rich_edit_box_on_text_changed(stage: usize) -> View {
             let _ = 0u8;
         }),)),
         2 => Grid::new().children((RichEditBox::new().on_text_changed(move |_| {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn event_pips_pager_on_selected_index_changed(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((PipsPager::new(),)),
+        1 => Grid::new().children((PipsPager::new().on_selected_index_changed(move |_| {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((PipsPager::new().on_selected_index_changed(move |_| {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn event_toggle_split_button_on_click(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ToggleSplitButton::new(),)),
+        1 => Grid::new().children((ToggleSplitButton::new().on_click(move || {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((ToggleSplitButton::new().on_click(move || {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn event_toggle_split_button_on_is_checked_changed(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ToggleSplitButton::new(),)),
+        1 => Grid::new().children((ToggleSplitButton::new().on_is_checked_changed(move |_| {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((ToggleSplitButton::new().on_is_checked_changed(move |_| {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn event_items_view_on_item_invoked(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ItemsView::new(),)),
+        1 => Grid::new().children((ItemsView::new().on_item_invoked(move |_| {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((ItemsView::new().on_item_invoked(move |_| {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn event_refresh_container_on_refresh_requested(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((RefreshContainer::new(),)),
+        1 => Grid::new().children((RefreshContainer::new().on_refresh_requested(move || {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((RefreshContainer::new().on_refresh_requested(move || {
             let _ = 1u8;
         }),)),
         _ => unreachable!(),
@@ -3877,6 +4254,24 @@ fn structural_app_bar_button_slot_icon(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn structural_app_bar_toggle_button_slot_icon(stage: usize) -> View {
+    match stage {
+        0 | 3 => (AppBarToggleButton::new()
+            .slots(std::iter::empty::<SlotView<AppBarToggleButtonSlot>>()))
+        .into(),
+        1 => (AppBarToggleButton::new().slot(
+            AppBarToggleButtonSlot::Icon,
+            SymbolIcon::new().symbol(Symbol::Add),
+        ))
+        .into(),
+        2 => (AppBarToggleButton::new().slot(
+            AppBarToggleButtonSlot::Icon,
+            SymbolIcon::new().symbol(Symbol::Accept),
+        ))
+        .into(),
+        _ => unreachable!(),
+    }
+}
 fn structural_menu_bar_slot_items(stage: usize) -> View {
     match stage {
         0 | 3 => (MenuBar::new().slots(std::iter::empty::<SlotView<MenuBarSlot>>())).into(),
@@ -4048,6 +4443,88 @@ fn structural_viewbox_slot_child(stage: usize) -> View {
         0 | 3 => (Viewbox::new().slots(std::iter::empty::<SlotView<ViewboxSlot>>())).into(),
         1 => (Viewbox::new().slot(ViewboxSlot::Child, TextBlock::new().text("surface a"))).into(),
         2 => (Viewbox::new().slot(ViewboxSlot::Child, TextBlock::new().text("surface b"))).into(),
+        _ => unreachable!(),
+    }
+}
+fn structural_toggle_split_button_content(stage: usize) -> View {
+    match stage {
+        0 | 3 => (ToggleSplitButton::new()).into(),
+        1 => (ToggleSplitButton::new().content(TextBlock::new().text("surface a"))).into(),
+        2 => (ToggleSplitButton::new().content(TextBlock::new().text("surface b"))).into(),
+        _ => unreachable!(),
+    }
+}
+fn structural_semantic_zoom_slot_zoomed_in_view(stage: usize) -> View {
+    match stage {
+        0 | 3 => {
+            (SemanticZoom::new().slots(std::iter::empty::<SlotView<SemanticZoomSlot>>())).into()
+        }
+        1 => (SemanticZoom::new().slot(SemanticZoomSlot::ZoomedInView, ListView::new())).into(),
+        2 => (SemanticZoom::new().slot(SemanticZoomSlot::ZoomedInView, ListView::new())).into(),
+        _ => unreachable!(),
+    }
+}
+fn structural_semantic_zoom_slot_zoomed_out_view(stage: usize) -> View {
+    match stage {
+        0 | 3 => {
+            (SemanticZoom::new().slots(std::iter::empty::<SlotView<SemanticZoomSlot>>())).into()
+        }
+        1 => (SemanticZoom::new().slot(SemanticZoomSlot::ZoomedOutView, ListView::new())).into(),
+        2 => (SemanticZoom::new().slot(SemanticZoomSlot::ZoomedOutView, ListView::new())).into(),
+        _ => unreachable!(),
+    }
+}
+fn structural_parallax_view_slot_source(stage: usize) -> View {
+    match stage {
+        0 | 3 => {
+            (ParallaxView::new().slots(std::iter::empty::<SlotView<ParallaxViewSlot>>())).into()
+        }
+        1 => (ParallaxView::new()
+            .slot(ParallaxViewSlot::Source, TextBlock::new().text("surface a")))
+        .into(),
+        2 => (ParallaxView::new()
+            .slot(ParallaxViewSlot::Source, TextBlock::new().text("surface b")))
+        .into(),
+        _ => unreachable!(),
+    }
+}
+fn structural_parallax_view_slot_child(stage: usize) -> View {
+    match stage {
+        0 | 3 => {
+            (ParallaxView::new().slots(std::iter::empty::<SlotView<ParallaxViewSlot>>())).into()
+        }
+        1 => (ParallaxView::new()
+            .slot(ParallaxViewSlot::Child, TextBlock::new().text("surface a")))
+        .into(),
+        2 => (ParallaxView::new()
+            .slot(ParallaxViewSlot::Child, TextBlock::new().text("surface b")))
+        .into(),
+        _ => unreachable!(),
+    }
+}
+fn structural_swipe_control_slot_content(stage: usize) -> View {
+    match stage {
+        0 | 3 => {
+            (SwipeControl::new().slots(std::iter::empty::<SlotView<SwipeControlSlot>>())).into()
+        }
+        1 => (SwipeControl::new().slot(
+            SwipeControlSlot::Content,
+            TextBlock::new().text("surface a"),
+        ))
+        .into(),
+        2 => (SwipeControl::new().slot(
+            SwipeControlSlot::Content,
+            TextBlock::new().text("surface b"),
+        ))
+        .into(),
+        _ => unreachable!(),
+    }
+}
+fn structural_refresh_container_content(stage: usize) -> View {
+    match stage {
+        0 | 3 => (RefreshContainer::new()).into(),
+        1 => (RefreshContainer::new().content(TextBlock::new().text("surface a"))).into(),
+        2 => (RefreshContainer::new().content(TextBlock::new().text("surface b"))).into(),
         _ => unreachable!(),
     }
 }
@@ -4429,6 +4906,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: property_text_block_font_weight,
     },
     SurfaceCase {
+        name: "property.TextBlock.FontFamily",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_text_block_font_family,
+    },
+    SurfaceCase {
         name: "property.TextBlock.IsTextSelectionEnabled",
         kind: SurfaceKind::Property,
         stages: 4,
@@ -4744,6 +5228,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: event_border_on_pointer_released,
     },
     SurfaceCase {
+        name: "event.Border.PointerWheelChanged",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_border_on_pointer_wheel_changed,
+    },
+    SurfaceCase {
         name: "event.Border.PointerCaptureLost",
         kind: SurfaceKind::Event,
         stages: 4,
@@ -4826,6 +5317,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: None,
         build: property_variable_sized_wrap_grid_item_height,
+    },
+    SurfaceCase {
+        name: "property.VariableSizedWrapGrid.MaximumRowsOrColumns",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_variable_sized_wrap_grid_maximum_rows_or_columns,
     },
     SurfaceCase {
         name: "property.VariableSizedWrapGrid.Orientation",
@@ -5164,6 +5662,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: property_slider_orientation,
     },
     SurfaceCase {
+        name: "property.Slider.IsThumbToolTipEnabled",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_slider_is_thumb_tool_tip_enabled,
+    },
+    SurfaceCase {
         name: "structural.Slider.Slot.Header",
         kind: SurfaceKind::Structural,
         stages: 4,
@@ -5176,6 +5681,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: Some(0usize),
         build: event_slider_on_value_changed,
+    },
+    SurfaceCase {
+        name: "event.Slider.SizeChanged",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_slider_on_size_changed,
     },
     SurfaceCase {
         name: "control.NavigationView.construct",
@@ -5246,6 +5758,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: None,
         build: property_navigation_view_is_pane_open,
+    },
+    SurfaceCase {
+        name: "property.NavigationView.FontFamily",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_navigation_view_font_family,
     },
     SurfaceCase {
         name: "structural.NavigationView.Slot.Content",
@@ -5801,6 +6320,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: structural_scroll_viewer_content,
     },
     SurfaceCase {
+        name: "event.ScrollViewer.ViewChanged",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_scroll_viewer_on_view_changed,
+    },
+    SurfaceCase {
         name: "control.ScrollView.construct",
         kind: SurfaceKind::Control,
         stages: 1,
@@ -5841,6 +6367,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: None,
         build: property_image_source,
+    },
+    SurfaceCase {
+        name: "property.Image.DecodeWidth",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_image_decode_width,
     },
     SurfaceCase {
         name: "property.Image.Stretch",
@@ -6690,6 +7223,48 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: construct_app_bar_separator,
     },
     SurfaceCase {
+        name: "control.AppBarToggleButton.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_app_bar_toggle_button,
+    },
+    SurfaceCase {
+        name: "property.AppBarToggleButton.Label",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_app_bar_toggle_button_label,
+    },
+    SurfaceCase {
+        name: "property.AppBarToggleButton.IsChecked",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_app_bar_toggle_button_is_checked,
+    },
+    SurfaceCase {
+        name: "property.AppBarToggleButton.IsEnabled",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_app_bar_toggle_button_is_enabled,
+    },
+    SurfaceCase {
+        name: "structural.AppBarToggleButton.Slot.Icon",
+        kind: SurfaceKind::Structural,
+        stages: 4,
+        subscription_delta: None,
+        build: structural_app_bar_toggle_button_slot_icon,
+    },
+    SurfaceCase {
+        name: "event.AppBarToggleButton.Click",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_app_bar_toggle_button_on_click,
+    },
+    SurfaceCase {
         name: "control.MenuBar.construct",
         kind: SurfaceKind::Control,
         stages: 1,
@@ -7327,6 +7902,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: property_rich_text_block_font_size,
     },
     SurfaceCase {
+        name: "property.RichTextBlock.FontFamily",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_rich_text_block_font_family,
+    },
+    SurfaceCase {
         name: "property.RichTextBlock.IsTextSelectionEnabled",
         kind: SurfaceKind::Property,
         stages: 4,
@@ -7374,6 +7956,293 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 1,
         subscription_delta: None,
         build: construct_swap_chain_panel,
+    },
+    SurfaceCase {
+        name: "control.PipsPager.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_pips_pager,
+    },
+    SurfaceCase {
+        name: "property.PipsPager.NumberOfPages",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_pips_pager_number_of_pages,
+    },
+    SurfaceCase {
+        name: "property.PipsPager.SelectedPageIndex",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_pips_pager_selected_page_index,
+    },
+    SurfaceCase {
+        name: "property.PipsPager.MaxVisiblePips",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_pips_pager_max_visible_pips,
+    },
+    SurfaceCase {
+        name: "event.PipsPager.SelectedIndexChanged",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_pips_pager_on_selected_index_changed,
+    },
+    SurfaceCase {
+        name: "control.ToggleSplitButton.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_toggle_split_button,
+    },
+    SurfaceCase {
+        name: "property.ToggleSplitButton.IsChecked",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_toggle_split_button_is_checked,
+    },
+    SurfaceCase {
+        name: "property.ToggleSplitButton.IsEnabled",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_toggle_split_button_is_enabled,
+    },
+    SurfaceCase {
+        name: "structural.ToggleSplitButton.Content",
+        kind: SurfaceKind::Structural,
+        stages: 4,
+        subscription_delta: None,
+        build: structural_toggle_split_button_content,
+    },
+    SurfaceCase {
+        name: "event.ToggleSplitButton.Click",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_toggle_split_button_on_click,
+    },
+    SurfaceCase {
+        name: "event.ToggleSplitButton.IsCheckedChanged",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_toggle_split_button_on_is_checked_changed,
+    },
+    SurfaceCase {
+        name: "control.ItemsView.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_items_view,
+    },
+    SurfaceCase {
+        name: "property.ItemsView.ItemsSource",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_items_view_items_source,
+    },
+    SurfaceCase {
+        name: "property.ItemsView.Layout",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_items_view_layout,
+    },
+    SurfaceCase {
+        name: "property.ItemsView.SelectionMode",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_items_view_selection_mode,
+    },
+    SurfaceCase {
+        name: "event.ItemsView.ItemInvoked",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_items_view_on_item_invoked,
+    },
+    SurfaceCase {
+        name: "control.MediaPlayerElement.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_media_player_element,
+    },
+    SurfaceCase {
+        name: "property.MediaPlayerElement.Source",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_media_player_element_source,
+    },
+    SurfaceCase {
+        name: "property.MediaPlayerElement.AreTransportControlsEnabled",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_media_player_element_are_transport_controls_enabled,
+    },
+    SurfaceCase {
+        name: "property.MediaPlayerElement.AutoPlay",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_media_player_element_auto_play,
+    },
+    SurfaceCase {
+        name: "control.SemanticZoom.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_semantic_zoom,
+    },
+    SurfaceCase {
+        name: "property.SemanticZoom.IsZoomedInViewActive",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_semantic_zoom_is_zoomed_in_view_active,
+    },
+    SurfaceCase {
+        name: "structural.SemanticZoom.Slot.ZoomedInView",
+        kind: SurfaceKind::Structural,
+        stages: 4,
+        subscription_delta: None,
+        build: structural_semantic_zoom_slot_zoomed_in_view,
+    },
+    SurfaceCase {
+        name: "structural.SemanticZoom.Slot.ZoomedOutView",
+        kind: SurfaceKind::Structural,
+        stages: 4,
+        subscription_delta: None,
+        build: structural_semantic_zoom_slot_zoomed_out_view,
+    },
+    SurfaceCase {
+        name: "control.ParallaxView.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_parallax_view,
+    },
+    SurfaceCase {
+        name: "property.ParallaxView.HorizontalShift",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_parallax_view_horizontal_shift,
+    },
+    SurfaceCase {
+        name: "structural.ParallaxView.Slot.Source",
+        kind: SurfaceKind::Structural,
+        stages: 4,
+        subscription_delta: None,
+        build: structural_parallax_view_slot_source,
+    },
+    SurfaceCase {
+        name: "structural.ParallaxView.Slot.Child",
+        kind: SurfaceKind::Structural,
+        stages: 4,
+        subscription_delta: None,
+        build: structural_parallax_view_slot_child,
+    },
+    SurfaceCase {
+        name: "control.AnnotatedScrollBar.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_annotated_scroll_bar,
+    },
+    SurfaceCase {
+        name: "property.AnnotatedScrollBar.SmallChange",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_annotated_scroll_bar_small_change,
+    },
+    SurfaceCase {
+        name: "control.MapControl.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_map_control,
+    },
+    SurfaceCase {
+        name: "property.MapControl.Center",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_map_control_center,
+    },
+    SurfaceCase {
+        name: "property.MapControl.ZoomLevel",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_map_control_zoom_level,
+    },
+    SurfaceCase {
+        name: "property.MapControl.MapServiceToken",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_map_control_map_service_token,
+    },
+    SurfaceCase {
+        name: "property.MapControl.InteractiveControlsVisible",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_map_control_interactive_controls_visible,
+    },
+    SurfaceCase {
+        name: "control.SwipeControl.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_swipe_control,
+    },
+    SurfaceCase {
+        name: "structural.SwipeControl.Slot.Content",
+        kind: SurfaceKind::Structural,
+        stages: 4,
+        subscription_delta: None,
+        build: structural_swipe_control_slot_content,
+    },
+    SurfaceCase {
+        name: "control.RefreshContainer.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_refresh_container,
+    },
+    SurfaceCase {
+        name: "property.RefreshContainer.PullDirection",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_refresh_container_pull_direction,
+    },
+    SurfaceCase {
+        name: "structural.RefreshContainer.Content",
+        kind: SurfaceKind::Structural,
+        stages: 4,
+        subscription_delta: None,
+        build: structural_refresh_container_content,
+    },
+    SurfaceCase {
+        name: "event.RefreshContainer.RefreshRequested",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_refresh_container_on_refresh_requested,
     },
     SurfaceCase {
         name: "control.TitleBar.construct",
@@ -7479,6 +8348,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         property: "FontWeight",
         value: "FontWeight",
         adapter: "FontWeight",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "TextBlock",
+        property: "FontFamily",
+        value: "Str",
+        adapter: "FontFamily",
         validation: None,
         clearable: true,
         theme_style: false,
@@ -7750,6 +8628,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         value: "F64",
         adapter: "direct",
         validation: Some("FinitePositive"),
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "VariableSizedWrapGrid",
+        property: "MaximumRowsOrColumns",
+        value: "I32",
+        adapter: "direct",
+        validation: None,
         clearable: true,
         theme_style: false,
     },
@@ -8033,6 +8920,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         theme_style: false,
     },
     PropertySurface {
+        control: "Slider",
+        property: "IsThumbToolTipEnabled",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
         control: "TitleBar",
         property: "Title",
         value: "Str",
@@ -8154,6 +9050,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         property: "IsPaneOpen",
         value: "Bool",
         adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "NavigationView",
+        property: "FontFamily",
+        value: "Str",
+        adapter: "FontFamily",
         validation: None,
         clearable: true,
         theme_style: false,
@@ -8514,6 +9419,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         property: "Source",
         value: "ImageValue",
         adapter: "ImageUri",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "Image",
+        property: "DecodeWidth",
+        value: "I32",
+        adapter: "ImageDecodeWidth",
         validation: None,
         clearable: true,
         theme_style: false,
@@ -9077,6 +9991,33 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         theme_style: false,
     },
     PropertySurface {
+        control: "AppBarToggleButton",
+        property: "Label",
+        value: "Str",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "AppBarToggleButton",
+        property: "IsChecked",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "AppBarToggleButton",
+        property: "IsEnabled",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
         control: "MenuBarItem",
         property: "Title",
         value: "Str",
@@ -9492,6 +10433,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
     },
     PropertySurface {
         control: "RichTextBlock",
+        property: "FontFamily",
+        value: "Str",
+        adapter: "FontFamily",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "RichTextBlock",
         property: "IsTextSelectionEnabled",
         value: "Bool",
         adapter: "direct",
@@ -9512,6 +10462,177 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         control: "Viewbox",
         property: "Stretch",
         value: "Stretch",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "PipsPager",
+        property: "NumberOfPages",
+        value: "I32",
+        adapter: "direct",
+        validation: Some("NonNegative"),
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "PipsPager",
+        property: "SelectedPageIndex",
+        value: "I32",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "PipsPager",
+        property: "MaxVisiblePips",
+        value: "I32",
+        adapter: "direct",
+        validation: Some("NonNegative"),
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "ToggleSplitButton",
+        property: "IsChecked",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "ToggleSplitButton",
+        property: "IsEnabled",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "ItemsView",
+        property: "ItemsSource",
+        value: "StrList",
+        adapter: "InspectableStringList",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "ItemsView",
+        property: "Layout",
+        value: "ItemsViewLayout",
+        adapter: "ItemsViewLayout",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "ItemsView",
+        property: "SelectionMode",
+        value: "ItemsViewSelectionMode",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "MediaPlayerElement",
+        property: "Source",
+        value: "Str",
+        adapter: "MediaSource",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "MediaPlayerElement",
+        property: "AreTransportControlsEnabled",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "MediaPlayerElement",
+        property: "AutoPlay",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "SemanticZoom",
+        property: "IsZoomedInViewActive",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "ParallaxView",
+        property: "HorizontalShift",
+        value: "F64",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "AnnotatedScrollBar",
+        property: "SmallChange",
+        value: "F64",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "MapControl",
+        property: "Center",
+        value: "Str",
+        adapter: "MapCenter",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "MapControl",
+        property: "ZoomLevel",
+        value: "F64",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "MapControl",
+        property: "MapServiceToken",
+        value: "Str",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "MapControl",
+        property: "InteractiveControlsVisible",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "RefreshContainer",
+        property: "PullDirection",
+        value: "RefreshPullDirection",
         adapter: "direct",
         validation: None,
         clearable: true,
@@ -9629,6 +10750,15 @@ pub static PROJECTED_EVENTS: &[EventSurface] = &[
     },
     EventSurface {
         control: "Border",
+        event: "PointerWheelChanged",
+        payload: "PointerEventInfo",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
+        control: "Border",
         event: "PointerCaptureLost",
         payload: "Unit",
         conversion: "Identity",
@@ -9706,6 +10836,15 @@ pub static PROJECTED_EVENTS: &[EventSurface] = &[
         conversion: "Identity",
         subscription: "always",
         delivery: "live:Events_NativePayloadDelivery",
+        active_property: None,
+    },
+    EventSurface {
+        control: "Slider",
+        event: "SizeChanged",
+        payload: "Unit",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
         active_property: None,
     },
     EventSurface {
@@ -9810,6 +10949,15 @@ pub static PROJECTED_EVENTS: &[EventSurface] = &[
     EventSurface {
         control: "InfoBar",
         event: "Closed",
+        payload: "Unit",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
+        control: "ScrollViewer",
+        event: "ViewChanged",
         payload: "Unit",
         conversion: "Identity",
         subscription: "callback",
@@ -9970,6 +11118,15 @@ pub static PROJECTED_EVENTS: &[EventSurface] = &[
         active_property: None,
     },
     EventSurface {
+        control: "AppBarToggleButton",
+        event: "Click",
+        payload: "Unit",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
         control: "SplitButton",
         event: "Click",
         payload: "Unit",
@@ -10083,6 +11240,51 @@ pub static PROJECTED_EVENTS: &[EventSurface] = &[
         payload: "Str",
         conversion: "Identity",
         subscription: "always",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
+        control: "PipsPager",
+        event: "SelectedIndexChanged",
+        payload: "I32",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
+        control: "ToggleSplitButton",
+        event: "Click",
+        payload: "Unit",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
+        control: "ToggleSplitButton",
+        event: "IsCheckedChanged",
+        payload: "Bool",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
+        control: "ItemsView",
+        event: "ItemInvoked",
+        payload: "Str",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
+        control: "RefreshContainer",
+        event: "RefreshRequested",
+        payload: "Unit",
+        conversion: "Identity",
+        subscription: "callback",
         delivery: "registration+deterministic",
         active_property: None,
     },
@@ -10391,6 +11593,10 @@ pub static STRUCTURAL_SURFACES: &[StructuralSurface] = &[
         member: "Slot.Icon",
     },
     StructuralSurface {
+        control: "AppBarToggleButton",
+        member: "Slot.Icon",
+    },
+    StructuralSurface {
         control: "MenuBar",
         member: "Slot.Items",
     },
@@ -10445,6 +11651,34 @@ pub static STRUCTURAL_SURFACES: &[StructuralSurface] = &[
     StructuralSurface {
         control: "Viewbox",
         member: "Slot.Child",
+    },
+    StructuralSurface {
+        control: "ToggleSplitButton",
+        member: "Content",
+    },
+    StructuralSurface {
+        control: "SemanticZoom",
+        member: "Slot.ZoomedInView",
+    },
+    StructuralSurface {
+        control: "SemanticZoom",
+        member: "Slot.ZoomedOutView",
+    },
+    StructuralSurface {
+        control: "ParallaxView",
+        member: "Slot.Source",
+    },
+    StructuralSurface {
+        control: "ParallaxView",
+        member: "Slot.Child",
+    },
+    StructuralSurface {
+        control: "SwipeControl",
+        member: "Slot.Content",
+    },
+    StructuralSurface {
+        control: "RefreshContainer",
+        member: "Content",
     },
     StructuralSurface {
         control: "TitleBar",

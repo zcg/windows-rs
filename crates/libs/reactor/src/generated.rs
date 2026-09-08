@@ -14,6 +14,7 @@ pub(crate) struct BorderEvents {
     on_pointer_entered: Option<Callback<PointerEventInfo>>,
     on_pointer_exited: Option<Callback<PointerEventInfo>>,
     on_pointer_released: Option<Callback<PointerEventInfo>>,
+    on_pointer_wheel_changed: Option<Callback<PointerEventInfo>>,
     on_pointer_capture_lost: Option<Callback<()>>,
     on_pointer_canceled: Option<Callback<()>>,
 }
@@ -21,6 +22,11 @@ pub(crate) struct BorderEvents {
 pub(crate) struct AutoSuggestBoxEvents {
     on_text_changed: Option<Callback<String>>,
     on_suggestion_chosen: Option<Callback<String>>,
+}
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct SliderEvents {
+    on_value_changed: Option<Callback<f64>>,
+    on_size_changed: Option<Callback<()>>,
 }
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct TitleBarEvents {
@@ -60,6 +66,11 @@ pub(crate) struct GridViewEvents {
     on_reordered: Option<Callback<Vec<String>>>,
     on_selection_changed: Option<Callback<Option<usize>>>,
 }
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct ToggleSplitButtonEvents {
+    on_click: Option<Callback<()>>,
+    on_is_checked_changed: Option<Callback<bool>>,
+}
 pub mod public {
     use super::*;
     #[non_exhaustive]
@@ -85,6 +96,14 @@ pub mod public {
         Success,
         Warning,
         Error,
+    }
+    #[non_exhaustive]
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ItemsViewSelectionMode {
+        None,
+        Single,
+        Multiple,
+        Extended,
     }
     #[non_exhaustive]
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -122,6 +141,14 @@ pub mod public {
         Peek,
         Hidden,
         Visible,
+    }
+    #[non_exhaustive]
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum RefreshPullDirection {
+        LeftToRight,
+        TopToBottom,
+        RightToLeft,
+        BottomToTop,
     }
     #[non_exhaustive]
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -401,6 +428,7 @@ pub mod public {
         text_wrapping: Property<TextWrapping>,
         font_size: Property<f64>,
         font_weight: Property<FontWeight>,
+        font_family: Property<String>,
         is_text_selection_enabled: Property<bool>,
         max_lines: Property<i32>,
         text_trimming: Property<TextTrimming>,
@@ -441,6 +469,17 @@ pub mod public {
         pub fn font_weight(mut self, value: impl Into<Option<FontWeight>>) -> Self {
             let value = value.into();
             self.font_weight = Property::from(value);
+            self
+        }
+        pub fn font_family(mut self, value: impl Into<String>) -> Self {
+            self.font_family = Property::Set(value.into());
+            self
+        }
+        pub fn font_family_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<String>,
+        {
+            self.font_family = Property::from(value.map(Into::into));
             self
         }
         pub fn is_text_selection_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
@@ -926,6 +965,17 @@ pub mod public {
             .on_pointer_released = Some(callback.into_payload_callback());
             self
         }
+        pub fn on_pointer_wheel_changed(
+            mut self,
+            callback: impl IntoPayloadCallback<PointerEventInfo>,
+        ) -> Self {
+            std::rc::Rc::make_mut(
+                self.events
+                    .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
+            )
+            .on_pointer_wheel_changed = Some(callback.into_payload_callback());
+            self
+        }
         pub fn on_pointer_capture_lost(mut self, callback: impl IntoUnitCallback) -> Self {
             std::rc::Rc::make_mut(
                 self.events
@@ -1061,6 +1111,7 @@ pub mod public {
     pub struct VariableSizedWrapGrid {
         item_width: Property<f64>,
         item_height: Property<f64>,
+        maximum_rows_or_columns: Property<i32>,
         orientation: Property<Orientation>,
         element_state: Option<std::rc::Rc<ElementState>>,
         children: std::rc::Rc<Vec<KeyedElement>>,
@@ -1089,6 +1140,11 @@ pub mod public {
                 "VariableSizedWrapGrid ItemHeight must be finite and positive",
             );
             self.item_height = Property::from(value);
+            self
+        }
+        pub fn maximum_rows_or_columns(mut self, value: impl Into<Option<i32>>) -> Self {
+            let value = value.into();
+            self.maximum_rows_or_columns = Property::from(value);
             self
         }
         pub fn orientation(mut self, value: impl Into<Option<Orientation>>) -> Self {
@@ -1656,7 +1712,8 @@ pub mod public {
         is_enabled: Property<bool>,
         step_frequency: Property<f64>,
         orientation: Property<Orientation>,
-        on_value_changed: Option<Callback<f64>>,
+        is_thumb_tool_tip_enabled: Property<bool>,
+        events: Option<std::rc::Rc<SliderEvents>>,
         reference: Option<NativeElementRef>,
         element_state: Option<std::rc::Rc<ElementState>>,
     }
@@ -1704,8 +1761,25 @@ pub mod public {
             self.orientation = Property::from(value);
             self
         }
+        pub fn is_thumb_tool_tip_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_thumb_tool_tip_enabled = Property::from(value);
+            self
+        }
         pub fn on_value_changed(mut self, callback: impl IntoPayloadCallback<f64>) -> Self {
-            self.on_value_changed = Some(callback.into_payload_callback());
+            std::rc::Rc::make_mut(
+                self.events
+                    .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
+            )
+            .on_value_changed = Some(callback.into_payload_callback());
+            self
+        }
+        pub fn on_size_changed(mut self, callback: impl IntoUnitCallback) -> Self {
+            std::rc::Rc::make_mut(
+                self.events
+                    .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
+            )
+            .on_size_changed = Some(callback.into_unit_callback());
             self
         }
     }
@@ -1849,6 +1923,7 @@ pub mod public {
         pane_title: Property<String>,
         open_pane_length: Property<f64>,
         is_pane_open: Property<bool>,
+        font_family: Property<String>,
         events: Option<std::rc::Rc<NavigationViewEvents>>,
         element_state: Option<std::rc::Rc<ElementState>>,
     }
@@ -1917,6 +1992,17 @@ pub mod public {
         pub fn is_pane_open(mut self, value: impl Into<Option<bool>>) -> Self {
             let value = value.into();
             self.is_pane_open = Property::from(value);
+            self
+        }
+        pub fn font_family(mut self, value: impl Into<String>) -> Self {
+            self.font_family = Property::Set(value.into());
+            self
+        }
+        pub fn font_family_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<String>,
+        {
+            self.font_family = Property::from(value.map(Into::into));
             self
         }
         pub fn on_is_pane_open_changed(mut self, callback: impl IntoPayloadCallback<bool>) -> Self {
@@ -2681,12 +2767,18 @@ pub mod public {
     pub struct ScrollViewer {
         horizontal_scroll_bar_visibility: Property<ScrollBarVisibility>,
         vertical_scroll_bar_visibility: Property<ScrollBarVisibility>,
+        on_view_changed: Option<Callback<()>>,
+        reference: Option<NativeElementRef>,
         element_state: Option<std::rc::Rc<ElementState>>,
         content: Option<Box<Element>>,
     }
     impl ScrollViewer {
         pub fn new() -> Self {
             Self::default()
+        }
+        pub fn element_ref(mut self, reference: &ElementRef<Self>) -> Self {
+            self.reference = Some(reference.binding());
+            self
         }
         pub fn horizontal_scroll_bar_visibility(
             mut self,
@@ -2704,6 +2796,10 @@ pub mod public {
             self.vertical_scroll_bar_visibility = Property::from(value);
             self
         }
+        pub fn on_view_changed(mut self, callback: impl IntoUnitCallback) -> Self {
+            self.on_view_changed = Some(callback.into_unit_callback());
+            self
+        }
     }
     impl sealed::Sealed for ScrollViewer {}
     impl sealed::NativeControl for ScrollViewer {
@@ -2711,6 +2807,8 @@ pub mod public {
             self.into()
         }
     }
+    impl crate::reference::sealed::Sealed for ScrollViewer {}
+    impl crate::reference::ReferenceControl for ScrollViewer {}
     impl sealed::LayoutControl for ScrollViewer {
         fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
             &mut self.element_state
@@ -2778,6 +2876,7 @@ pub mod public {
     #[derive(Clone, Debug, Default, PartialEq)]
     pub struct Image {
         source: Property<ImageValue>,
+        decode_width: Property<i32>,
         stretch: Property<Stretch>,
         events: Option<std::rc::Rc<ImageEvents>>,
         reference: Option<NativeElementRef>,
@@ -2816,6 +2915,11 @@ pub mod public {
         }
         pub fn source_data(mut self, value: EncodedImage) -> Self {
             self.source = Property::Set(ImageValue::Encoded(value));
+            self
+        }
+        pub fn decode_width(mut self, value: impl Into<Option<i32>>) -> Self {
+            let value = value.into();
+            self.decode_width = Property::from(value);
             self
         }
         pub fn stretch(mut self, value: impl Into<Option<Stretch>>) -> Self {
@@ -4299,6 +4403,70 @@ pub mod public {
     }
     impl LayoutControl for AppBarSeparator {}
     #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct AppBarToggleButton {
+        label: Property<String>,
+        is_checked: Property<bool>,
+        is_enabled: Property<bool>,
+        on_click: Option<Callback<()>>,
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl AppBarToggleButton {
+        pub fn new() -> Self {
+            Self::default()
+        }
+        pub fn label(mut self, value: impl Into<String>) -> Self {
+            self.label = Property::Set(value.into());
+            self
+        }
+        pub fn label_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<String>,
+        {
+            self.label = Property::from(value.map(Into::into));
+            self
+        }
+        pub fn is_checked(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_checked = Property::from(value);
+            self
+        }
+        pub fn is_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_enabled = Property::from(value);
+            self
+        }
+        pub fn on_click(mut self, callback: impl IntoUnitCallback) -> Self {
+            self.on_click = Some(callback.into_unit_callback());
+            self
+        }
+    }
+    impl sealed::Sealed for AppBarToggleButton {}
+    impl sealed::NativeControl for AppBarToggleButton {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for AppBarToggleButton {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for AppBarToggleButton {}
+    #[non_exhaustive]
+    #[repr(u8)]
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+    pub enum AppBarToggleButtonSlot {
+        Icon,
+    }
+    impl sealed::SlotIndex<AppBarToggleButtonSlot> for AppBarToggleButton {
+        fn slot_index(slot: AppBarToggleButtonSlot) -> u8 {
+            slot as u8
+        }
+    }
+    impl SlotsControl for AppBarToggleButton {
+        type Slot = AppBarToggleButtonSlot;
+    }
+    #[derive(Clone, Debug, Default, PartialEq)]
     pub struct MenuBar {
         element_state: Option<std::rc::Rc<ElementState>>,
     }
@@ -5292,6 +5460,7 @@ pub mod public {
     pub struct RichTextBlock {
         paragraphs: Property<RichText>,
         font_size: Property<f64>,
+        font_family: Property<String>,
         is_text_selection_enabled: Property<bool>,
         text_wrapping: Property<TextWrapping>,
         element_state: Option<std::rc::Rc<ElementState>>,
@@ -5314,6 +5483,17 @@ pub mod public {
                 "RichTextBlock FontSize must be finite and positive",
             );
             self.font_size = Property::from(value);
+            self
+        }
+        pub fn font_family(mut self, value: impl Into<String>) -> Self {
+            self.font_family = Property::Set(value.into());
+            self
+        }
+        pub fn font_family_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<String>,
+        {
+            self.font_family = Property::from(value.map(Into::into));
             self
         }
         pub fn is_text_selection_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
@@ -5436,6 +5616,487 @@ pub mod public {
         }
     }
     impl LayoutControl for SwapChainPanel {}
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct PipsPager {
+        number_of_pages: Property<i32>,
+        selected_page_index: Property<i32>,
+        max_visible_pips: Property<i32>,
+        on_selected_index_changed: Option<Callback<i32>>,
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl PipsPager {
+        pub fn new() -> Self {
+            Self::default()
+        }
+        pub fn number_of_pages(mut self, value: impl Into<Option<i32>>) -> Self {
+            let value = value.into();
+            assert!(
+                value.as_ref().is_none_or(|value| *value >= 0),
+                "PipsPager NumberOfPages must be non-negative"
+            );
+            self.number_of_pages = Property::from(value);
+            self
+        }
+        pub fn selected_page_index(mut self, value: impl Into<Option<i32>>) -> Self {
+            let value = value.into();
+            self.selected_page_index = Property::from(value);
+            self
+        }
+        pub fn max_visible_pips(mut self, value: impl Into<Option<i32>>) -> Self {
+            let value = value.into();
+            assert!(
+                value.as_ref().is_none_or(|value| *value >= 0),
+                "PipsPager MaxVisiblePips must be non-negative"
+            );
+            self.max_visible_pips = Property::from(value);
+            self
+        }
+        pub fn on_selected_index_changed(
+            mut self,
+            callback: impl IntoPayloadCallback<i32>,
+        ) -> Self {
+            self.on_selected_index_changed = Some(callback.into_payload_callback());
+            self
+        }
+    }
+    impl sealed::Sealed for PipsPager {}
+    impl sealed::NativeControl for PipsPager {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for PipsPager {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for PipsPager {}
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct ToggleSplitButton {
+        is_checked: Property<bool>,
+        is_enabled: Property<bool>,
+        events: Option<std::rc::Rc<ToggleSplitButtonEvents>>,
+        reference: Option<NativeElementRef>,
+        element_state: Option<std::rc::Rc<ElementState>>,
+        content: Option<Box<Element>>,
+    }
+    impl ToggleSplitButton {
+        pub fn new() -> Self {
+            Self::default()
+        }
+        pub fn element_ref(mut self, reference: &ElementRef<Self>) -> Self {
+            self.reference = Some(reference.binding());
+            self
+        }
+        pub fn is_checked(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_checked = Property::from(value);
+            self
+        }
+        pub fn is_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_enabled = Property::from(value);
+            self
+        }
+        pub fn on_click(mut self, callback: impl IntoUnitCallback) -> Self {
+            std::rc::Rc::make_mut(
+                self.events
+                    .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
+            )
+            .on_click = Some(callback.into_unit_callback());
+            self
+        }
+        pub fn on_is_checked_changed(mut self, callback: impl IntoPayloadCallback<bool>) -> Self {
+            std::rc::Rc::make_mut(
+                self.events
+                    .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
+            )
+            .on_is_checked_changed = Some(callback.into_payload_callback());
+            self
+        }
+    }
+    impl sealed::Sealed for ToggleSplitButton {}
+    impl sealed::NativeControl for ToggleSplitButton {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl crate::reference::sealed::Sealed for ToggleSplitButton {}
+    impl crate::reference::ReferenceControl for ToggleSplitButton {}
+    impl sealed::LayoutControl for ToggleSplitButton {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for ToggleSplitButton {}
+    impl sealed::ContentControl for ToggleSplitButton {}
+    impl ContentControl for ToggleSplitButton {}
+    impl FocusControl for ToggleSplitButton {}
+    #[cfg(test)]
+    impl NativeContentTestExt for ToggleSplitButton {
+        fn native_content(mut self, content: impl Into<Element>) -> Self {
+            self.content = Some(Box::new(content.into()));
+            self
+        }
+    }
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct ItemsView {
+        items_source: Property<std::rc::Rc<Vec<String>>>,
+        layout: Property<ItemsViewLayout>,
+        selection_mode: Property<ItemsViewSelectionMode>,
+        on_item_invoked: Option<Callback<String>>,
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl ItemsView {
+        pub fn new() -> Self {
+            Self::default()
+        }
+        pub fn items_source<I, S>(mut self, value: I) -> Self
+        where
+            I: IntoIterator<Item = S>,
+            S: Into<String>,
+        {
+            self.items_source = Property::Set(std::rc::Rc::new(
+                value.into_iter().map(Into::into).collect(),
+            ));
+            self
+        }
+        pub fn items_source_optional<I, S>(mut self, value: Option<I>) -> Self
+        where
+            I: IntoIterator<Item = S>,
+            S: Into<String>,
+        {
+            self.items_source = Property::from(
+                value.map(|value| std::rc::Rc::new(value.into_iter().map(Into::into).collect())),
+            );
+            self
+        }
+        pub fn layout(mut self, value: impl Into<Option<ItemsViewLayout>>) -> Self {
+            let value = value.into();
+            self.layout = Property::from(value);
+            self
+        }
+        pub fn selection_mode(mut self, value: impl Into<Option<ItemsViewSelectionMode>>) -> Self {
+            let value = value.into();
+            self.selection_mode = Property::from(value);
+            self
+        }
+        pub fn on_item_invoked(mut self, callback: impl IntoPayloadCallback<String>) -> Self {
+            self.on_item_invoked = Some(callback.into_payload_callback());
+            self
+        }
+    }
+    impl sealed::Sealed for ItemsView {}
+    impl sealed::NativeControl for ItemsView {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for ItemsView {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for ItemsView {}
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct MediaPlayerElement {
+        source: Property<String>,
+        are_transport_controls_enabled: Property<bool>,
+        auto_play: Property<bool>,
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl MediaPlayerElement {
+        pub fn new() -> Self {
+            Self::default()
+        }
+        pub fn source(mut self, value: impl Into<String>) -> windows_core::Result<Self> {
+            let value = value.into();
+            validate_uri(&value)?;
+            self.source = Property::Set(value);
+            Ok(self)
+        }
+        pub fn source_optional<T>(mut self, value: Option<T>) -> windows_core::Result<Self>
+        where
+            T: Into<String>,
+        {
+            self.source = match value {
+                Some(value) => {
+                    let value = value.into();
+                    validate_uri(&value)?;
+                    Property::Set(value)
+                }
+                None => Property::Inherited,
+            };
+            Ok(self)
+        }
+        pub fn are_transport_controls_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.are_transport_controls_enabled = Property::from(value);
+            self
+        }
+        pub fn auto_play(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.auto_play = Property::from(value);
+            self
+        }
+    }
+    impl sealed::Sealed for MediaPlayerElement {}
+    impl sealed::NativeControl for MediaPlayerElement {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for MediaPlayerElement {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for MediaPlayerElement {}
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct SemanticZoom {
+        is_zoomed_in_view_active: Property<bool>,
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl SemanticZoom {
+        pub fn new() -> Self {
+            Self::default()
+        }
+        pub fn is_zoomed_in_view_active(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_zoomed_in_view_active = Property::from(value);
+            self
+        }
+    }
+    impl sealed::Sealed for SemanticZoom {}
+    impl sealed::NativeControl for SemanticZoom {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for SemanticZoom {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for SemanticZoom {}
+    #[non_exhaustive]
+    #[repr(u8)]
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+    pub enum SemanticZoomSlot {
+        ZoomedInView,
+        ZoomedOutView,
+    }
+    impl sealed::SlotIndex<SemanticZoomSlot> for SemanticZoom {
+        fn slot_index(slot: SemanticZoomSlot) -> u8 {
+            slot as u8
+        }
+    }
+    impl SlotsControl for SemanticZoom {
+        type Slot = SemanticZoomSlot;
+    }
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct ParallaxView {
+        horizontal_shift: Property<f64>,
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl ParallaxView {
+        pub fn new() -> Self {
+            Self::default()
+        }
+        pub fn horizontal_shift(mut self, value: impl Into<Option<f64>>) -> Self {
+            let value = value.into();
+            self.horizontal_shift = Property::from(value);
+            self
+        }
+    }
+    impl sealed::Sealed for ParallaxView {}
+    impl sealed::NativeControl for ParallaxView {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for ParallaxView {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for ParallaxView {}
+    #[non_exhaustive]
+    #[repr(u8)]
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+    pub enum ParallaxViewSlot {
+        Source,
+        Child,
+    }
+    impl sealed::SlotIndex<ParallaxViewSlot> for ParallaxView {
+        fn slot_index(slot: ParallaxViewSlot) -> u8 {
+            slot as u8
+        }
+    }
+    impl SlotsControl for ParallaxView {
+        type Slot = ParallaxViewSlot;
+    }
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct AnnotatedScrollBar {
+        small_change: Property<f64>,
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl AnnotatedScrollBar {
+        pub fn new() -> Self {
+            Self::default()
+        }
+        pub fn small_change(mut self, value: impl Into<Option<f64>>) -> Self {
+            let value = value.into();
+            self.small_change = Property::from(value);
+            self
+        }
+    }
+    impl sealed::Sealed for AnnotatedScrollBar {}
+    impl sealed::NativeControl for AnnotatedScrollBar {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for AnnotatedScrollBar {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for AnnotatedScrollBar {}
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct MapControl {
+        center: Property<String>,
+        zoom_level: Property<f64>,
+        map_service_token: Property<String>,
+        interactive_controls_visible: Property<bool>,
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl MapControl {
+        pub fn new() -> Self {
+            Self::default()
+        }
+        pub fn center(mut self, latitude: f64, longitude: f64) -> Self {
+            self.center = Property::Set(format!("{latitude},{longitude}"));
+            self
+        }
+        pub fn center_optional(mut self, value: Option<(f64, f64)>) -> Self {
+            self.center = match value {
+                Some((latitude, longitude)) => Property::Set(format!("{latitude},{longitude}")),
+                None => Property::Inherited,
+            };
+            self
+        }
+        pub fn zoom_level(mut self, value: impl Into<Option<f64>>) -> Self {
+            let value = value.into();
+            self.zoom_level = Property::from(value);
+            self
+        }
+        pub fn map_service_token(mut self, value: impl Into<String>) -> Self {
+            self.map_service_token = Property::Set(value.into());
+            self
+        }
+        pub fn map_service_token_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<String>,
+        {
+            self.map_service_token = Property::from(value.map(Into::into));
+            self
+        }
+        pub fn interactive_controls_visible(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.interactive_controls_visible = Property::from(value);
+            self
+        }
+    }
+    impl sealed::Sealed for MapControl {}
+    impl sealed::NativeControl for MapControl {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for MapControl {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for MapControl {}
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct SwipeControl {
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl SwipeControl {
+        pub fn new() -> Self {
+            Self::default()
+        }
+    }
+    impl sealed::Sealed for SwipeControl {}
+    impl sealed::NativeControl for SwipeControl {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for SwipeControl {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for SwipeControl {}
+    #[non_exhaustive]
+    #[repr(u8)]
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+    pub enum SwipeControlSlot {
+        Content,
+    }
+    impl sealed::SlotIndex<SwipeControlSlot> for SwipeControl {
+        fn slot_index(slot: SwipeControlSlot) -> u8 {
+            slot as u8
+        }
+    }
+    impl SlotsControl for SwipeControl {
+        type Slot = SwipeControlSlot;
+    }
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct RefreshContainer {
+        pull_direction: Property<RefreshPullDirection>,
+        on_refresh_requested: Option<Callback<()>>,
+        element_state: Option<std::rc::Rc<ElementState>>,
+        content: Option<Box<Element>>,
+    }
+    impl RefreshContainer {
+        pub fn new() -> Self {
+            Self::default()
+        }
+        pub fn pull_direction(mut self, value: impl Into<Option<RefreshPullDirection>>) -> Self {
+            let value = value.into();
+            self.pull_direction = Property::from(value);
+            self
+        }
+        pub fn on_refresh_requested(mut self, callback: impl IntoUnitCallback) -> Self {
+            self.on_refresh_requested = Some(callback.into_unit_callback());
+            self
+        }
+    }
+    impl sealed::Sealed for RefreshContainer {}
+    impl sealed::NativeControl for RefreshContainer {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for RefreshContainer {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for RefreshContainer {}
+    impl sealed::ContentControl for RefreshContainer {}
+    impl ContentControl for RefreshContainer {}
+    #[cfg(test)]
+    impl NativeContentTestExt for RefreshContainer {
+        fn native_content(mut self, content: impl Into<Element>) -> Self {
+            self.content = Some(Box::new(content.into()));
+            self
+        }
+    }
     #[derive(Clone, Debug, PartialEq)]
     pub(crate) enum Element {
         TextBlock(std::rc::Rc<TextBlock>),
@@ -5495,6 +6156,7 @@ pub mod public {
         CommandBar(std::rc::Rc<CommandBar>),
         AppBarButton(std::rc::Rc<AppBarButton>),
         AppBarSeparator(std::rc::Rc<AppBarSeparator>),
+        AppBarToggleButton(std::rc::Rc<AppBarToggleButton>),
         MenuBar(std::rc::Rc<MenuBar>),
         MenuBarItem(std::rc::Rc<MenuBarItem>),
         SplitButton(std::rc::Rc<SplitButton>),
@@ -5517,6 +6179,17 @@ pub mod public {
         Viewbox(std::rc::Rc<Viewbox>),
         WebView2(std::rc::Rc<WebView2>),
         SwapChainPanel(std::rc::Rc<SwapChainPanel>),
+        PipsPager(std::rc::Rc<PipsPager>),
+        ToggleSplitButton(std::rc::Rc<ToggleSplitButton>),
+        ItemsView(std::rc::Rc<ItemsView>),
+        #[allow(clippy::enum_variant_names)]
+        MediaPlayerElement(std::rc::Rc<MediaPlayerElement>),
+        SemanticZoom(std::rc::Rc<SemanticZoom>),
+        ParallaxView(std::rc::Rc<ParallaxView>),
+        AnnotatedScrollBar(std::rc::Rc<AnnotatedScrollBar>),
+        MapControl(std::rc::Rc<MapControl>),
+        SwipeControl(std::rc::Rc<SwipeControl>),
+        RefreshContainer(std::rc::Rc<RefreshContainer>),
     }
     impl From<TextBlock> for Element {
         fn from(value: TextBlock) -> Self {
@@ -6088,6 +6761,16 @@ pub mod public {
             Self::native(value)
         }
     }
+    impl From<AppBarToggleButton> for Element {
+        fn from(value: AppBarToggleButton) -> Self {
+            Self::AppBarToggleButton(std::rc::Rc::new(value))
+        }
+    }
+    impl From<AppBarToggleButton> for View {
+        fn from(value: AppBarToggleButton) -> Self {
+            Self::native(value)
+        }
+    }
     impl From<MenuBar> for Element {
         fn from(value: MenuBar) -> Self {
             Self::MenuBar(std::rc::Rc::new(value))
@@ -6309,6 +6992,106 @@ pub mod public {
             Self::native(value)
         }
     }
+    impl From<PipsPager> for Element {
+        fn from(value: PipsPager) -> Self {
+            Self::PipsPager(std::rc::Rc::new(value))
+        }
+    }
+    impl From<PipsPager> for View {
+        fn from(value: PipsPager) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<ToggleSplitButton> for Element {
+        fn from(value: ToggleSplitButton) -> Self {
+            Self::ToggleSplitButton(std::rc::Rc::new(value))
+        }
+    }
+    impl From<ToggleSplitButton> for View {
+        fn from(value: ToggleSplitButton) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<ItemsView> for Element {
+        fn from(value: ItemsView) -> Self {
+            Self::ItemsView(std::rc::Rc::new(value))
+        }
+    }
+    impl From<ItemsView> for View {
+        fn from(value: ItemsView) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<MediaPlayerElement> for Element {
+        fn from(value: MediaPlayerElement) -> Self {
+            Self::MediaPlayerElement(std::rc::Rc::new(value))
+        }
+    }
+    impl From<MediaPlayerElement> for View {
+        fn from(value: MediaPlayerElement) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<SemanticZoom> for Element {
+        fn from(value: SemanticZoom) -> Self {
+            Self::SemanticZoom(std::rc::Rc::new(value))
+        }
+    }
+    impl From<SemanticZoom> for View {
+        fn from(value: SemanticZoom) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<ParallaxView> for Element {
+        fn from(value: ParallaxView) -> Self {
+            Self::ParallaxView(std::rc::Rc::new(value))
+        }
+    }
+    impl From<ParallaxView> for View {
+        fn from(value: ParallaxView) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<AnnotatedScrollBar> for Element {
+        fn from(value: AnnotatedScrollBar) -> Self {
+            Self::AnnotatedScrollBar(std::rc::Rc::new(value))
+        }
+    }
+    impl From<AnnotatedScrollBar> for View {
+        fn from(value: AnnotatedScrollBar) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<MapControl> for Element {
+        fn from(value: MapControl) -> Self {
+            Self::MapControl(std::rc::Rc::new(value))
+        }
+    }
+    impl From<MapControl> for View {
+        fn from(value: MapControl) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<SwipeControl> for Element {
+        fn from(value: SwipeControl) -> Self {
+            Self::SwipeControl(std::rc::Rc::new(value))
+        }
+    }
+    impl From<SwipeControl> for View {
+        fn from(value: SwipeControl) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<RefreshContainer> for Element {
+        fn from(value: RefreshContainer) -> Self {
+            Self::RefreshContainer(std::rc::Rc::new(value))
+        }
+    }
+    impl From<RefreshContainer> for View {
+        fn from(value: RefreshContainer) -> Self {
+            Self::native(value)
+        }
+    }
     impl ElementPartsExt for Element {
         fn kind(&self) -> MountedKind {
             match self {
@@ -6369,6 +7152,7 @@ pub mod public {
                 Self::CommandBar(_) => MountedKind::CommandBar,
                 Self::AppBarButton(_) => MountedKind::AppBarButton,
                 Self::AppBarSeparator(_) => MountedKind::AppBarSeparator,
+                Self::AppBarToggleButton(_) => MountedKind::AppBarToggleButton,
                 Self::MenuBar(_) => MountedKind::MenuBar,
                 Self::MenuBarItem(_) => MountedKind::MenuBarItem,
                 Self::SplitButton(_) => MountedKind::SplitButton,
@@ -6391,6 +7175,16 @@ pub mod public {
                 Self::Viewbox(_) => MountedKind::Viewbox,
                 Self::WebView2(_) => MountedKind::WebView2,
                 Self::SwapChainPanel(_) => MountedKind::SwapChainPanel,
+                Self::PipsPager(_) => MountedKind::PipsPager,
+                Self::ToggleSplitButton(_) => MountedKind::ToggleSplitButton,
+                Self::ItemsView(_) => MountedKind::ItemsView,
+                Self::MediaPlayerElement(_) => MountedKind::MediaPlayerElement,
+                Self::SemanticZoom(_) => MountedKind::SemanticZoom,
+                Self::ParallaxView(_) => MountedKind::ParallaxView,
+                Self::AnnotatedScrollBar(_) => MountedKind::AnnotatedScrollBar,
+                Self::MapControl(_) => MountedKind::MapControl,
+                Self::SwipeControl(_) => MountedKind::SwipeControl,
+                Self::RefreshContainer(_) => MountedKind::RefreshContainer,
             }
         }
         fn into_parts(self) -> ElementParts {
@@ -6402,6 +7196,7 @@ pub mod public {
                         text_wrapping,
                         font_size,
                         font_weight,
+                        font_family,
                         is_text_selection_enabled,
                         max_lines,
                         text_trimming,
@@ -6415,6 +7210,7 @@ pub mod public {
                             text_wrapping,
                             font_size,
                             font_weight,
+                            font_family,
                             is_text_selection_enabled,
                             max_lines,
                             text_trimming,
@@ -6592,6 +7388,7 @@ pub mod public {
                     let VariableSizedWrapGrid {
                         item_width,
                         item_height,
+                        maximum_rows_or_columns,
                         orientation,
                         element_state,
                         children,
@@ -6602,6 +7399,7 @@ pub mod public {
                             VariableSizedWrapGridMountedProps {
                                 item_width,
                                 item_height,
+                                maximum_rows_or_columns,
                                 orientation,
                             },
                         )),
@@ -6765,7 +7563,8 @@ pub mod public {
                         is_enabled,
                         step_frequency,
                         orientation,
-                        on_value_changed,
+                        is_thumb_tool_tip_enabled,
+                        events,
                         reference,
                         element_state,
                     } = value;
@@ -6778,7 +7577,8 @@ pub mod public {
                             is_enabled,
                             step_frequency,
                             orientation,
-                            on_value_changed,
+                            is_thumb_tool_tip_enabled,
+                            events,
                         })),
                         reference,
                         element_state,
@@ -6826,6 +7626,7 @@ pub mod public {
                         pane_title,
                         open_pane_length,
                         is_pane_open,
+                        font_family,
                         events,
                         element_state,
                     } = value;
@@ -6842,6 +7643,7 @@ pub mod public {
                                 pane_title,
                                 open_pane_length,
                                 is_pane_open,
+                                font_family,
                                 events,
                             },
                         )),
@@ -7143,6 +7945,8 @@ pub mod public {
                     let ScrollViewer {
                         horizontal_scroll_bar_visibility,
                         vertical_scroll_bar_visibility,
+                        on_view_changed,
+                        reference,
                         element_state,
                         content,
                     } = value;
@@ -7152,9 +7956,10 @@ pub mod public {
                             ScrollViewerMountedProps {
                                 horizontal_scroll_bar_visibility,
                                 vertical_scroll_bar_visibility,
+                                on_view_changed,
                             },
                         )),
-                        reference: None,
+                        reference,
                         element_state,
                         window_title_bar: None,
                         structure: ElementStructure::Content(content.map(|element| *element)),
@@ -7184,6 +7989,7 @@ pub mod public {
                     let value = std::rc::Rc::unwrap_or_clone(value);
                     let Image {
                         source,
+                        decode_width,
                         stretch,
                         events,
                         reference,
@@ -7193,6 +7999,7 @@ pub mod public {
                         kind: MountedKind::Image,
                         props: MountedProps::Image(std::rc::Rc::new(ImageMountedProps {
                             source,
+                            decode_width,
                             stretch,
                             events,
                         })),
@@ -7752,6 +8559,31 @@ pub mod public {
                         structure: ElementStructure::None,
                     }
                 }
+                Self::AppBarToggleButton(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let AppBarToggleButton {
+                        label,
+                        is_checked,
+                        is_enabled,
+                        on_click,
+                        element_state,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::AppBarToggleButton,
+                        props: MountedProps::AppBarToggleButton(std::rc::Rc::new(
+                            AppBarToggleButtonMountedProps {
+                                label,
+                                is_checked,
+                                is_enabled,
+                                on_click,
+                            },
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
                 Self::MenuBar(value) => {
                     let value = std::rc::Rc::unwrap_or_clone(value);
                     let MenuBar { element_state } = value;
@@ -8150,6 +8982,7 @@ pub mod public {
                     let RichTextBlock {
                         paragraphs,
                         font_size,
+                        font_family,
                         is_text_selection_enabled,
                         text_wrapping,
                         element_state,
@@ -8160,6 +8993,7 @@ pub mod public {
                             RichTextBlockMountedProps {
                                 paragraphs,
                                 font_size,
+                                font_family,
                                 is_text_selection_enabled,
                                 text_wrapping,
                             },
@@ -8219,6 +9053,212 @@ pub mod public {
                         structure: ElementStructure::None,
                     }
                 }
+                Self::PipsPager(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let PipsPager {
+                        number_of_pages,
+                        selected_page_index,
+                        max_visible_pips,
+                        on_selected_index_changed,
+                        element_state,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::PipsPager,
+                        props: MountedProps::PipsPager(std::rc::Rc::new(PipsPagerMountedProps {
+                            number_of_pages,
+                            selected_page_index,
+                            max_visible_pips,
+                            on_selected_index_changed,
+                        })),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::ToggleSplitButton(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let ToggleSplitButton {
+                        is_checked,
+                        is_enabled,
+                        events,
+                        reference,
+                        element_state,
+                        content,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::ToggleSplitButton,
+                        props: MountedProps::ToggleSplitButton(std::rc::Rc::new(
+                            ToggleSplitButtonMountedProps {
+                                is_checked,
+                                is_enabled,
+                                events,
+                            },
+                        )),
+                        reference,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::Content(content.map(|element| *element)),
+                    }
+                }
+                Self::ItemsView(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let ItemsView {
+                        items_source,
+                        layout,
+                        selection_mode,
+                        on_item_invoked,
+                        element_state,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::ItemsView,
+                        props: MountedProps::ItemsView(std::rc::Rc::new(ItemsViewMountedProps {
+                            items_source,
+                            layout,
+                            selection_mode,
+                            on_item_invoked,
+                        })),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::MediaPlayerElement(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let MediaPlayerElement {
+                        source,
+                        are_transport_controls_enabled,
+                        auto_play,
+                        element_state,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::MediaPlayerElement,
+                        props: MountedProps::MediaPlayerElement(std::rc::Rc::new(
+                            MediaPlayerElementMountedProps {
+                                source,
+                                are_transport_controls_enabled,
+                                auto_play,
+                            },
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::SemanticZoom(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let SemanticZoom {
+                        is_zoomed_in_view_active,
+                        element_state,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::SemanticZoom,
+                        props: MountedProps::SemanticZoom(std::rc::Rc::new(
+                            SemanticZoomMountedProps {
+                                is_zoomed_in_view_active,
+                            },
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::ParallaxView(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let ParallaxView {
+                        horizontal_shift,
+                        element_state,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::ParallaxView,
+                        props: MountedProps::ParallaxView(std::rc::Rc::new(
+                            ParallaxViewMountedProps { horizontal_shift },
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::AnnotatedScrollBar(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let AnnotatedScrollBar {
+                        small_change,
+                        element_state,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::AnnotatedScrollBar,
+                        props: MountedProps::AnnotatedScrollBar(std::rc::Rc::new(
+                            AnnotatedScrollBarMountedProps { small_change },
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::MapControl(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let MapControl {
+                        center,
+                        zoom_level,
+                        map_service_token,
+                        interactive_controls_visible,
+                        element_state,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::MapControl,
+                        props: MountedProps::MapControl(std::rc::Rc::new(MapControlMountedProps {
+                            center,
+                            zoom_level,
+                            map_service_token,
+                            interactive_controls_visible,
+                        })),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::SwipeControl(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let SwipeControl { element_state } = value;
+                    ElementParts {
+                        kind: MountedKind::SwipeControl,
+                        props: MountedProps::SwipeControl(std::rc::Rc::new(
+                            SwipeControlMountedProps {},
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::RefreshContainer(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let RefreshContainer {
+                        pull_direction,
+                        on_refresh_requested,
+                        element_state,
+                        content,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::RefreshContainer,
+                        props: MountedProps::RefreshContainer(std::rc::Rc::new(
+                            RefreshContainerMountedProps {
+                                pull_direction,
+                                on_refresh_requested,
+                            },
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::Content(content.map(|element| *element)),
+                    }
+                }
             }
         }
         fn props_match(&self, props: &MountedProps) -> bool {
@@ -8228,6 +9268,7 @@ pub mod public {
                         && value.text_wrapping == mounted.text_wrapping
                         && f64_property_eq(&value.font_size, &mounted.font_size)
                         && value.font_weight == mounted.font_weight
+                        && value.font_family == mounted.font_family
                         && value.is_text_selection_enabled == mounted.is_text_selection_enabled
                         && value.max_lines == mounted.max_lines
                         && value.text_trimming == mounted.text_trimming
@@ -8281,6 +9322,7 @@ pub mod public {
                 ) => {
                     true && f64_property_eq(&value.item_width, &mounted.item_width)
                         && f64_property_eq(&value.item_height, &mounted.item_height)
+                        && value.maximum_rows_or_columns == mounted.maximum_rows_or_columns
                         && value.orientation == mounted.orientation
                 }
                 (Self::Grid(value), MountedProps::Grid(mounted)) => {
@@ -8330,7 +9372,8 @@ pub mod public {
                         && value.is_enabled == mounted.is_enabled
                         && f64_property_eq(&value.step_frequency, &mounted.step_frequency)
                         && value.orientation == mounted.orientation
-                        && value.on_value_changed == mounted.on_value_changed
+                        && value.is_thumb_tool_tip_enabled == mounted.is_thumb_tool_tip_enabled
+                        && value.events == mounted.events
                 }
                 (Self::TitleBar(value), MountedProps::TitleBar(mounted)) => {
                     true && value.title == mounted.title
@@ -8352,6 +9395,7 @@ pub mod public {
                         && value.pane_title == mounted.pane_title
                         && f64_property_eq(&value.open_pane_length, &mounted.open_pane_length)
                         && value.is_pane_open == mounted.is_pane_open
+                        && value.font_family == mounted.font_family
                         && value.events == mounted.events
                 }
                 (Self::NavigationViewItem(value), MountedProps::NavigationViewItem(mounted)) => {
@@ -8424,6 +9468,7 @@ pub mod public {
                         == mounted.horizontal_scroll_bar_visibility
                         && value.vertical_scroll_bar_visibility
                             == mounted.vertical_scroll_bar_visibility
+                        && value.on_view_changed == mounted.on_view_changed
                 }
                 (Self::ScrollView(value), MountedProps::ScrollView(mounted)) => {
                     true && value.horizontal_scroll_bar_visibility
@@ -8433,6 +9478,7 @@ pub mod public {
                 }
                 (Self::Image(value), MountedProps::Image(mounted)) => {
                     true && value.source == mounted.source
+                        && value.decode_width == mounted.decode_width
                         && value.stretch == mounted.stretch
                         && value.events == mounted.events
                 }
@@ -8556,6 +9602,12 @@ pub mod public {
                         && value.on_click == mounted.on_click
                 }
                 (Self::AppBarSeparator(_), MountedProps::AppBarSeparator(_)) => true,
+                (Self::AppBarToggleButton(value), MountedProps::AppBarToggleButton(mounted)) => {
+                    true && value.label == mounted.label
+                        && value.is_checked == mounted.is_checked
+                        && value.is_enabled == mounted.is_enabled
+                        && value.on_click == mounted.on_click
+                }
                 (Self::MenuBar(_), MountedProps::MenuBar(_)) => true,
                 (Self::MenuBarItem(value), MountedProps::MenuBarItem(mounted)) => {
                     true && value.title == mounted.title
@@ -8647,6 +9699,7 @@ pub mod public {
                 (Self::RichTextBlock(value), MountedProps::RichTextBlock(mounted)) => {
                     true && value.paragraphs == mounted.paragraphs
                         && f64_property_eq(&value.font_size, &mounted.font_size)
+                        && value.font_family == mounted.font_family
                         && value.is_text_selection_enabled == mounted.is_text_selection_enabled
                         && value.text_wrapping == mounted.text_wrapping
                 }
@@ -8655,6 +9708,50 @@ pub mod public {
                 }
                 (Self::WebView2(_), MountedProps::WebView2(_)) => true,
                 (Self::SwapChainPanel(_), MountedProps::SwapChainPanel(_)) => true,
+                (Self::PipsPager(value), MountedProps::PipsPager(mounted)) => {
+                    true && value.number_of_pages == mounted.number_of_pages
+                        && value.selected_page_index == mounted.selected_page_index
+                        && value.max_visible_pips == mounted.max_visible_pips
+                        && value.on_selected_index_changed == mounted.on_selected_index_changed
+                }
+                (Self::ToggleSplitButton(value), MountedProps::ToggleSplitButton(mounted)) => {
+                    true && value.is_checked == mounted.is_checked
+                        && value.is_enabled == mounted.is_enabled
+                        && value.events == mounted.events
+                }
+                (Self::ItemsView(value), MountedProps::ItemsView(mounted)) => {
+                    true && value.items_source == mounted.items_source
+                        && value.layout == mounted.layout
+                        && value.selection_mode == mounted.selection_mode
+                        && value.on_item_invoked == mounted.on_item_invoked
+                }
+                (Self::MediaPlayerElement(value), MountedProps::MediaPlayerElement(mounted)) => {
+                    true && value.source == mounted.source
+                        && value.are_transport_controls_enabled
+                            == mounted.are_transport_controls_enabled
+                        && value.auto_play == mounted.auto_play
+                }
+                (Self::SemanticZoom(value), MountedProps::SemanticZoom(mounted)) => {
+                    true && value.is_zoomed_in_view_active == mounted.is_zoomed_in_view_active
+                }
+                (Self::ParallaxView(value), MountedProps::ParallaxView(mounted)) => {
+                    true && f64_property_eq(&value.horizontal_shift, &mounted.horizontal_shift)
+                }
+                (Self::AnnotatedScrollBar(value), MountedProps::AnnotatedScrollBar(mounted)) => {
+                    true && f64_property_eq(&value.small_change, &mounted.small_change)
+                }
+                (Self::MapControl(value), MountedProps::MapControl(mounted)) => {
+                    true && value.center == mounted.center
+                        && f64_property_eq(&value.zoom_level, &mounted.zoom_level)
+                        && value.map_service_token == mounted.map_service_token
+                        && value.interactive_controls_visible
+                            == mounted.interactive_controls_visible
+                }
+                (Self::SwipeControl(_), MountedProps::SwipeControl(_)) => true,
+                (Self::RefreshContainer(value), MountedProps::RefreshContainer(mounted)) => {
+                    true && value.pull_direction == mounted.pull_direction
+                        && value.on_refresh_requested == mounted.on_refresh_requested
+                }
                 _ => false,
             }
         }
@@ -8688,7 +9785,7 @@ pub mod public {
                 Self::InfoBadge(_) => None,
                 Self::InfoBar(_) => None,
                 Self::PersonPicture(_) => None,
-                Self::ScrollViewer(_) => None,
+                Self::ScrollViewer(value) => value.reference.as_ref(),
                 Self::ScrollView(_) => None,
                 Self::Image(value) => value.reference.as_ref(),
                 Self::ProgressRing(_) => None,
@@ -8717,6 +9814,7 @@ pub mod public {
                 Self::CommandBar(_) => None,
                 Self::AppBarButton(_) => None,
                 Self::AppBarSeparator(_) => None,
+                Self::AppBarToggleButton(_) => None,
                 Self::MenuBar(_) => None,
                 Self::MenuBarItem(_) => None,
                 Self::SplitButton(_) => None,
@@ -8739,6 +9837,16 @@ pub mod public {
                 Self::Viewbox(_) => None,
                 Self::WebView2(value) => value.reference.as_ref(),
                 Self::SwapChainPanel(value) => value.reference.as_ref(),
+                Self::PipsPager(_) => None,
+                Self::ToggleSplitButton(value) => value.reference.as_ref(),
+                Self::ItemsView(_) => None,
+                Self::MediaPlayerElement(_) => None,
+                Self::SemanticZoom(_) => None,
+                Self::ParallaxView(_) => None,
+                Self::AnnotatedScrollBar(_) => None,
+                Self::MapControl(_) => None,
+                Self::SwipeControl(_) => None,
+                Self::RefreshContainer(_) => None,
             }
         }
         fn element_state(&self) -> Option<&ElementState> {
@@ -8800,6 +9908,7 @@ pub mod public {
                 Self::CommandBar(value) => value.element_state.as_deref(),
                 Self::AppBarButton(value) => value.element_state.as_deref(),
                 Self::AppBarSeparator(value) => value.element_state.as_deref(),
+                Self::AppBarToggleButton(value) => value.element_state.as_deref(),
                 Self::MenuBar(value) => value.element_state.as_deref(),
                 Self::MenuBarItem(value) => value.element_state.as_deref(),
                 Self::SplitButton(value) => value.element_state.as_deref(),
@@ -8822,6 +9931,16 @@ pub mod public {
                 Self::Viewbox(value) => value.element_state.as_deref(),
                 Self::WebView2(value) => value.element_state.as_deref(),
                 Self::SwapChainPanel(value) => value.element_state.as_deref(),
+                Self::PipsPager(value) => value.element_state.as_deref(),
+                Self::ToggleSplitButton(value) => value.element_state.as_deref(),
+                Self::ItemsView(value) => value.element_state.as_deref(),
+                Self::MediaPlayerElement(value) => value.element_state.as_deref(),
+                Self::SemanticZoom(value) => value.element_state.as_deref(),
+                Self::ParallaxView(value) => value.element_state.as_deref(),
+                Self::AnnotatedScrollBar(value) => value.element_state.as_deref(),
+                Self::MapControl(value) => value.element_state.as_deref(),
+                Self::SwipeControl(value) => value.element_state.as_deref(),
+                Self::RefreshContainer(value) => value.element_state.as_deref(),
             }
         }
         fn window_title_bar(&self) -> Option<WindowTitleBarHeight> {
@@ -8883,6 +10002,7 @@ pub mod public {
                 Self::CommandBar(_) => None,
                 Self::AppBarButton(_) => None,
                 Self::AppBarSeparator(_) => None,
+                Self::AppBarToggleButton(_) => None,
                 Self::MenuBar(_) => None,
                 Self::MenuBarItem(_) => None,
                 Self::SplitButton(_) => None,
@@ -8905,6 +10025,16 @@ pub mod public {
                 Self::Viewbox(_) => None,
                 Self::WebView2(_) => None,
                 Self::SwapChainPanel(_) => None,
+                Self::PipsPager(_) => None,
+                Self::ToggleSplitButton(_) => None,
+                Self::ItemsView(_) => None,
+                Self::MediaPlayerElement(_) => None,
+                Self::SemanticZoom(_) => None,
+                Self::ParallaxView(_) => None,
+                Self::AnnotatedScrollBar(_) => None,
+                Self::MapControl(_) => None,
+                Self::SwipeControl(_) => None,
+                Self::RefreshContainer(_) => None,
             }
         }
         fn structure(&self) -> ElementStructureRef<'_> {
@@ -8972,6 +10102,7 @@ pub mod public {
                 Self::CommandBar(_) => ElementStructureRef::None,
                 Self::AppBarButton(_) => ElementStructureRef::None,
                 Self::AppBarSeparator(_) => ElementStructureRef::None,
+                Self::AppBarToggleButton(_) => ElementStructureRef::None,
                 Self::MenuBar(_) => ElementStructureRef::None,
                 Self::MenuBarItem(_) => ElementStructureRef::None,
                 Self::SplitButton(value) => ElementStructureRef::Content(value.content.as_deref()),
@@ -8998,6 +10129,20 @@ pub mod public {
                 Self::Viewbox(_) => ElementStructureRef::None,
                 Self::WebView2(_) => ElementStructureRef::None,
                 Self::SwapChainPanel(_) => ElementStructureRef::None,
+                Self::PipsPager(_) => ElementStructureRef::None,
+                Self::ToggleSplitButton(value) => {
+                    ElementStructureRef::Content(value.content.as_deref())
+                }
+                Self::ItemsView(_) => ElementStructureRef::None,
+                Self::MediaPlayerElement(_) => ElementStructureRef::None,
+                Self::SemanticZoom(_) => ElementStructureRef::None,
+                Self::ParallaxView(_) => ElementStructureRef::None,
+                Self::AnnotatedScrollBar(_) => ElementStructureRef::None,
+                Self::MapControl(_) => ElementStructureRef::None,
+                Self::SwipeControl(_) => ElementStructureRef::None,
+                Self::RefreshContainer(value) => {
+                    ElementStructureRef::Content(value.content.as_deref())
+                }
             }
         }
         fn visit_events(&self, visit: &mut dyn FnMut(EventId, bool)) {
@@ -9080,6 +10225,13 @@ pub mod public {
                             .is_some_and(|events| events.on_pointer_released.is_some()),
                     );
                     visit(
+                        EventId::BorderPointerWheelChanged,
+                        value
+                            .events
+                            .as_ref()
+                            .is_some_and(|events| events.on_pointer_wheel_changed.is_some()),
+                    );
+                    visit(
                         EventId::BorderPointerCaptureLost,
                         value
                             .events
@@ -9122,8 +10274,15 @@ pub mod public {
                 Self::NumberBox(_) => {
                     visit(EventId::NumberBoxValueChanged, true);
                 }
-                Self::Slider(_) => {
+                Self::Slider(value) => {
                     visit(EventId::SliderValueChanged, true);
+                    visit(
+                        EventId::SliderSizeChanged,
+                        value
+                            .events
+                            .as_ref()
+                            .is_some_and(|events| events.on_size_changed.is_some()),
+                    );
                 }
                 Self::TitleBar(value) => {
                     visit(
@@ -9178,7 +10337,12 @@ pub mod public {
                     visit(EventId::InfoBarClosed, value.on_closed.is_some());
                 }
                 Self::PersonPicture(_) => {}
-                Self::ScrollViewer(_) => {}
+                Self::ScrollViewer(value) => {
+                    visit(
+                        EventId::ScrollViewerViewChanged,
+                        value.on_view_changed.is_some(),
+                    );
+                }
                 Self::ScrollView(_) => {}
                 Self::Image(value) => {
                     visit(
@@ -9278,6 +10442,9 @@ pub mod public {
                     visit(EventId::AppBarButtonClick, value.on_click.is_some());
                 }
                 Self::AppBarSeparator(_) => {}
+                Self::AppBarToggleButton(value) => {
+                    visit(EventId::AppBarToggleButtonClick, value.on_click.is_some());
+                }
                 Self::MenuBar(_) => {}
                 Self::MenuBarItem(_) => {}
                 Self::SplitButton(value) => {
@@ -9351,6 +10518,46 @@ pub mod public {
                 Self::Viewbox(_) => {}
                 Self::WebView2(_) => {}
                 Self::SwapChainPanel(_) => {}
+                Self::PipsPager(value) => {
+                    visit(
+                        EventId::PipsPagerSelectedIndexChanged,
+                        value.on_selected_index_changed.is_some(),
+                    );
+                }
+                Self::ToggleSplitButton(value) => {
+                    visit(
+                        EventId::ToggleSplitButtonClick,
+                        value
+                            .events
+                            .as_ref()
+                            .is_some_and(|events| events.on_click.is_some()),
+                    );
+                    visit(
+                        EventId::ToggleSplitButtonIsCheckedChanged,
+                        value
+                            .events
+                            .as_ref()
+                            .is_some_and(|events| events.on_is_checked_changed.is_some()),
+                    );
+                }
+                Self::ItemsView(value) => {
+                    visit(
+                        EventId::ItemsViewItemInvoked,
+                        value.on_item_invoked.is_some(),
+                    );
+                }
+                Self::MediaPlayerElement(_) => {}
+                Self::SemanticZoom(_) => {}
+                Self::ParallaxView(_) => {}
+                Self::AnnotatedScrollBar(_) => {}
+                Self::MapControl(_) => {}
+                Self::SwipeControl(_) => {}
+                Self::RefreshContainer(value) => {
+                    visit(
+                        EventId::RefreshContainerRefreshRequested,
+                        value.on_refresh_requested.is_some(),
+                    );
+                }
             }
         }
     }
@@ -9409,6 +10616,13 @@ impl MountedPropsExt for MountedProps {
                     match &values.font_weight {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::FontWeight(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::TextBlockFontFamily,
+                    match &values.font_family {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Str(value.as_str())),
                     },
                 );
                 visit(
@@ -9639,6 +10853,13 @@ impl MountedPropsExt for MountedProps {
                     match &values.item_height {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::F64(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::VariableSizedWrapGridMaximumRowsOrColumns,
+                    match &values.maximum_rows_or_columns {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::I32(*value)),
                     },
                 );
                 visit(
@@ -9884,6 +11105,13 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(value) => Some(PropertyValueRef::Orientation(*value)),
                     },
                 );
+                visit(
+                    PropertyId::SliderIsThumbToolTipEnabled,
+                    match &values.is_thumb_tool_tip_enabled {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
             }
             Self::TitleBar(values) => {
                 visit(
@@ -9988,6 +11216,13 @@ impl MountedPropsExt for MountedProps {
                     match &values.is_pane_open {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::NavigationViewFontFamily,
+                    match &values.font_family {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Str(value.as_str())),
                     },
                 );
             }
@@ -10308,6 +11543,13 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(ImageValue::Encoded(value)) => {
                             Some(PropertyValueRef::EncodedImage(value))
                         }
+                    },
+                );
+                visit(
+                    PropertyId::ImageDecodeWidth,
+                    match &values.decode_width {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::I32(*value)),
                     },
                 );
                 visit(
@@ -10811,6 +12053,29 @@ impl MountedPropsExt for MountedProps {
                 );
             }
             Self::AppBarSeparator(_) => {}
+            Self::AppBarToggleButton(values) => {
+                visit(
+                    PropertyId::AppBarToggleButtonLabel,
+                    match &values.label {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Str(value.as_str())),
+                    },
+                );
+                visit(
+                    PropertyId::AppBarToggleButtonIsChecked,
+                    match &values.is_checked {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::AppBarToggleButtonIsEnabled,
+                    match &values.is_enabled {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+            }
             Self::MenuBar(_) => {}
             Self::MenuBarItem(values) => {
                 visit(
@@ -11171,6 +12436,13 @@ impl MountedPropsExt for MountedProps {
                     },
                 );
                 visit(
+                    PropertyId::RichTextBlockFontFamily,
+                    match &values.font_family {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Str(value.as_str())),
+                    },
+                );
+                visit(
                     PropertyId::RichTextBlockIsTextSelectionEnabled,
                     match &values.is_text_selection_enabled {
                         Property::Inherited => None,
@@ -11196,6 +12468,162 @@ impl MountedPropsExt for MountedProps {
             }
             Self::WebView2(_) => {}
             Self::SwapChainPanel(_) => {}
+            Self::PipsPager(values) => {
+                visit(
+                    PropertyId::PipsPagerNumberOfPages,
+                    match &values.number_of_pages {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::I32(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::PipsPagerSelectedPageIndex,
+                    match &values.selected_page_index {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::I32(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::PipsPagerMaxVisiblePips,
+                    match &values.max_visible_pips {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::I32(*value)),
+                    },
+                );
+            }
+            Self::ToggleSplitButton(values) => {
+                visit(
+                    PropertyId::ToggleSplitButtonIsChecked,
+                    match &values.is_checked {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::ToggleSplitButtonIsEnabled,
+                    match &values.is_enabled {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+            }
+            Self::ItemsView(values) => {
+                visit(
+                    PropertyId::ItemsViewItemsSource,
+                    match &values.items_source {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::StrList(value)),
+                    },
+                );
+                visit(
+                    PropertyId::ItemsViewLayout,
+                    match &values.layout {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::ItemsViewLayout(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::ItemsViewSelectionMode,
+                    match &values.selection_mode {
+                        Property::Inherited => None,
+                        Property::Set(value) => {
+                            Some(PropertyValueRef::ItemsViewSelectionMode(*value))
+                        }
+                    },
+                );
+            }
+            Self::MediaPlayerElement(values) => {
+                visit(
+                    PropertyId::MediaPlayerElementSource,
+                    match &values.source {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Str(value.as_str())),
+                    },
+                );
+                visit(
+                    PropertyId::MediaPlayerElementAreTransportControlsEnabled,
+                    match &values.are_transport_controls_enabled {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::MediaPlayerElementAutoPlay,
+                    match &values.auto_play {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+            }
+            Self::SemanticZoom(values) => {
+                visit(
+                    PropertyId::SemanticZoomIsZoomedInViewActive,
+                    match &values.is_zoomed_in_view_active {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+            }
+            Self::ParallaxView(values) => {
+                visit(
+                    PropertyId::ParallaxViewHorizontalShift,
+                    match &values.horizontal_shift {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::F64(*value)),
+                    },
+                );
+            }
+            Self::AnnotatedScrollBar(values) => {
+                visit(
+                    PropertyId::AnnotatedScrollBarSmallChange,
+                    match &values.small_change {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::F64(*value)),
+                    },
+                );
+            }
+            Self::MapControl(values) => {
+                visit(
+                    PropertyId::MapControlCenter,
+                    match &values.center {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Str(value.as_str())),
+                    },
+                );
+                visit(
+                    PropertyId::MapControlZoomLevel,
+                    match &values.zoom_level {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::F64(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::MapControlMapServiceToken,
+                    match &values.map_service_token {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Str(value.as_str())),
+                    },
+                );
+                visit(
+                    PropertyId::MapControlInteractiveControlsVisible,
+                    match &values.interactive_controls_visible {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+            }
+            Self::SwipeControl(_) => {}
+            Self::RefreshContainer(values) => {
+                visit(
+                    PropertyId::RefreshContainerPullDirection,
+                    match &values.pull_direction {
+                        Property::Inherited => None,
+                        Property::Set(value) => {
+                            Some(PropertyValueRef::RefreshPullDirection(*value))
+                        }
+                    },
+                );
+            }
         }
     }
     fn theme_style(&self) -> ThemeStyle {
@@ -11292,6 +12720,7 @@ impl MountedPropsExt for MountedProps {
             Self::CommandBar(_) => ThemeStyle::default(),
             Self::AppBarButton(_) => ThemeStyle::default(),
             Self::AppBarSeparator(_) => ThemeStyle::default(),
+            Self::AppBarToggleButton(_) => ThemeStyle::default(),
             Self::MenuBar(_) => ThemeStyle::default(),
             Self::MenuBarItem(_) => ThemeStyle::default(),
             Self::SplitButton(_) => ThemeStyle::default(),
@@ -11314,6 +12743,16 @@ impl MountedPropsExt for MountedProps {
             Self::Viewbox(_) => ThemeStyle::default(),
             Self::WebView2(_) => ThemeStyle::default(),
             Self::SwapChainPanel(_) => ThemeStyle::default(),
+            Self::PipsPager(_) => ThemeStyle::default(),
+            Self::ToggleSplitButton(_) => ThemeStyle::default(),
+            Self::ItemsView(_) => ThemeStyle::default(),
+            Self::MediaPlayerElement(_) => ThemeStyle::default(),
+            Self::SemanticZoom(_) => ThemeStyle::default(),
+            Self::ParallaxView(_) => ThemeStyle::default(),
+            Self::AnnotatedScrollBar(_) => ThemeStyle::default(),
+            Self::MapControl(_) => ThemeStyle::default(),
+            Self::SwipeControl(_) => ThemeStyle::default(),
+            Self::RefreshContainer(_) => ThemeStyle::default(),
         }
     }
 }
@@ -11398,6 +12837,13 @@ impl MountedEventsExt for MountedProps {
                         .is_some_and(|events| events.on_pointer_released.is_some()),
                 );
                 visit(
+                    EventId::BorderPointerWheelChanged,
+                    values
+                        .events
+                        .as_ref()
+                        .is_some_and(|events| events.on_pointer_wheel_changed.is_some()),
+                );
+                visit(
                     EventId::BorderPointerCaptureLost,
                     values
                         .events
@@ -11440,8 +12886,15 @@ impl MountedEventsExt for MountedProps {
             Self::NumberBox(_) => {
                 visit(EventId::NumberBoxValueChanged, true);
             }
-            Self::Slider(_) => {
+            Self::Slider(values) => {
                 visit(EventId::SliderValueChanged, true);
+                visit(
+                    EventId::SliderSizeChanged,
+                    values
+                        .events
+                        .as_ref()
+                        .is_some_and(|events| events.on_size_changed.is_some()),
+                );
             }
             Self::TitleBar(values) => {
                 visit(
@@ -11496,7 +12949,12 @@ impl MountedEventsExt for MountedProps {
                 visit(EventId::InfoBarClosed, values.on_closed.is_some());
             }
             Self::PersonPicture(_) => {}
-            Self::ScrollViewer(_) => {}
+            Self::ScrollViewer(values) => {
+                visit(
+                    EventId::ScrollViewerViewChanged,
+                    values.on_view_changed.is_some(),
+                );
+            }
             Self::ScrollView(_) => {}
             Self::Image(values) => {
                 visit(
@@ -11596,6 +13054,9 @@ impl MountedEventsExt for MountedProps {
                 visit(EventId::AppBarButtonClick, values.on_click.is_some());
             }
             Self::AppBarSeparator(_) => {}
+            Self::AppBarToggleButton(values) => {
+                visit(EventId::AppBarToggleButtonClick, values.on_click.is_some());
+            }
             Self::MenuBar(_) => {}
             Self::MenuBarItem(_) => {}
             Self::SplitButton(values) => {
@@ -11669,6 +13130,46 @@ impl MountedEventsExt for MountedProps {
             Self::Viewbox(_) => {}
             Self::WebView2(_) => {}
             Self::SwapChainPanel(_) => {}
+            Self::PipsPager(values) => {
+                visit(
+                    EventId::PipsPagerSelectedIndexChanged,
+                    values.on_selected_index_changed.is_some(),
+                );
+            }
+            Self::ToggleSplitButton(values) => {
+                visit(
+                    EventId::ToggleSplitButtonClick,
+                    values
+                        .events
+                        .as_ref()
+                        .is_some_and(|events| events.on_click.is_some()),
+                );
+                visit(
+                    EventId::ToggleSplitButtonIsCheckedChanged,
+                    values
+                        .events
+                        .as_ref()
+                        .is_some_and(|events| events.on_is_checked_changed.is_some()),
+                );
+            }
+            Self::ItemsView(values) => {
+                visit(
+                    EventId::ItemsViewItemInvoked,
+                    values.on_item_invoked.is_some(),
+                );
+            }
+            Self::MediaPlayerElement(_) => {}
+            Self::SemanticZoom(_) => {}
+            Self::ParallaxView(_) => {}
+            Self::AnnotatedScrollBar(_) => {}
+            Self::MapControl(_) => {}
+            Self::SwipeControl(_) => {}
+            Self::RefreshContainer(values) => {
+                visit(
+                    EventId::RefreshContainerRefreshRequested,
+                    values.on_refresh_requested.is_some(),
+                );
+            }
         }
     }
     fn dispatch_event(&self, event: EventId, payload: &EventPayload) -> Option<bool> {
@@ -11751,6 +13252,15 @@ impl MountedEventsExt for MountedProps {
                 .as_ref()
                 .and_then(|events| events.on_pointer_released.as_ref())
                 .map(|callback| callback.call(*value)),
+            (
+                Self::Border(values),
+                EventId::BorderPointerWheelChanged,
+                EventPayload::PointerEventInfo(value),
+            ) => values
+                .events
+                .as_ref()
+                .and_then(|events| events.on_pointer_wheel_changed.as_ref())
+                .map(|callback| callback.call(*value)),
             (Self::Border(values), EventId::BorderPointerCaptureLost, EventPayload::Unit) => values
                 .events
                 .as_ref()
@@ -11810,9 +13320,15 @@ impl MountedEventsExt for MountedProps {
                 .as_ref()
                 .map(|callback| callback.call(*value)),
             (Self::Slider(values), EventId::SliderValueChanged, EventPayload::F64(value)) => values
-                .on_value_changed
+                .events
                 .as_ref()
+                .and_then(|events| events.on_value_changed.as_ref())
                 .map(|callback| callback.call(*value)),
+            (Self::Slider(values), EventId::SliderSizeChanged, EventPayload::Unit) => values
+                .events
+                .as_ref()
+                .and_then(|events| events.on_size_changed.as_ref())
+                .map(|callback| callback.call(())),
             (Self::TitleBar(values), EventId::TitleBarBackRequested, EventPayload::Unit) => values
                 .events
                 .as_ref()
@@ -11898,6 +13414,12 @@ impl MountedEventsExt for MountedProps {
                 .map(|callback| callback.call(*value)),
             (Self::InfoBar(values), EventId::InfoBarClosed, EventPayload::Unit) => {
                 values.on_closed.as_ref().map(|callback| callback.call(()))
+            }
+            (Self::ScrollViewer(values), EventId::ScrollViewerViewChanged, EventPayload::Unit) => {
+                values
+                    .on_view_changed
+                    .as_ref()
+                    .map(|callback| callback.call(()))
             }
             (Self::Image(values), EventId::ImageImageOpened, EventPayload::Unit) => values
                 .events
@@ -12019,6 +13541,11 @@ impl MountedEventsExt for MountedProps {
             (Self::AppBarButton(values), EventId::AppBarButtonClick, EventPayload::Unit) => {
                 values.on_click.as_ref().map(|callback| callback.call(()))
             }
+            (
+                Self::AppBarToggleButton(values),
+                EventId::AppBarToggleButtonClick,
+                EventPayload::Unit,
+            ) => values.on_click.as_ref().map(|callback| callback.call(())),
             (Self::SplitButton(values), EventId::SplitButtonClick, EventPayload::Unit) => {
                 values.on_click.as_ref().map(|callback| callback.call(()))
             }
@@ -12120,6 +13647,46 @@ impl MountedEventsExt for MountedProps {
                 .on_text_changed
                 .as_ref()
                 .map(|callback| callback.call(value.clone())),
+            (
+                Self::PipsPager(values),
+                EventId::PipsPagerSelectedIndexChanged,
+                EventPayload::I32(value),
+            ) => values
+                .on_selected_index_changed
+                .as_ref()
+                .map(|callback| callback.call(*value)),
+            (
+                Self::ToggleSplitButton(values),
+                EventId::ToggleSplitButtonClick,
+                EventPayload::Unit,
+            ) => values
+                .events
+                .as_ref()
+                .and_then(|events| events.on_click.as_ref())
+                .map(|callback| callback.call(())),
+            (
+                Self::ToggleSplitButton(values),
+                EventId::ToggleSplitButtonIsCheckedChanged,
+                EventPayload::Bool(value),
+            ) => values
+                .events
+                .as_ref()
+                .and_then(|events| events.on_is_checked_changed.as_ref())
+                .map(|callback| callback.call(*value)),
+            (Self::ItemsView(values), EventId::ItemsViewItemInvoked, EventPayload::Str(value)) => {
+                values
+                    .on_item_invoked
+                    .as_ref()
+                    .map(|callback| callback.call(value.clone()))
+            }
+            (
+                Self::RefreshContainer(values),
+                EventId::RefreshContainerRefreshRequested,
+                EventPayload::Unit,
+            ) => values
+                .on_refresh_requested
+                .as_ref()
+                .map(|callback| callback.call(())),
             _ => None,
         }
     }
@@ -12286,6 +13853,7 @@ pub enum MountedKind {
     CommandBar,
     AppBarButton,
     AppBarSeparator,
+    AppBarToggleButton,
     MenuBar,
     MenuBarItem,
     SplitButton,
@@ -12308,6 +13876,16 @@ pub enum MountedKind {
     Viewbox,
     WebView2,
     SwapChainPanel,
+    PipsPager,
+    ToggleSplitButton,
+    ItemsView,
+    MediaPlayerElement,
+    SemanticZoom,
+    ParallaxView,
+    AnnotatedScrollBar,
+    MapControl,
+    SwipeControl,
+    RefreshContainer,
 }
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum SlotId {
@@ -12344,6 +13922,7 @@ pub enum SlotId {
     CommandBarPrimaryCommands,
     CommandBarSecondaryCommands,
     AppBarButtonIcon,
+    AppBarToggleButtonIcon,
     MenuBarItems,
     DatePickerHeader,
     TimePickerHeader,
@@ -12352,6 +13931,11 @@ pub enum SlotId {
     GridViewItems,
     RichEditBoxHeader,
     ViewboxChild,
+    SemanticZoomZoomedInView,
+    SemanticZoomZoomedOutView,
+    ParallaxViewSource,
+    ParallaxViewChild,
+    SwipeControlContent,
 }
 pub fn slot_id(kind: MountedKind, index: u8) -> Option<SlotId> {
     match kind {
@@ -12451,6 +14035,10 @@ pub fn slot_id(kind: MountedKind, index: u8) -> Option<SlotId> {
             0u8 => Some(SlotId::AppBarButtonIcon),
             _ => None,
         },
+        MountedKind::AppBarToggleButton => match index {
+            0u8 => Some(SlotId::AppBarToggleButtonIcon),
+            _ => None,
+        },
         MountedKind::MenuBar => match index {
             0u8 => Some(SlotId::MenuBarItems),
             _ => None,
@@ -12481,6 +14069,20 @@ pub fn slot_id(kind: MountedKind, index: u8) -> Option<SlotId> {
         },
         MountedKind::Viewbox => match index {
             0u8 => Some(SlotId::ViewboxChild),
+            _ => None,
+        },
+        MountedKind::SemanticZoom => match index {
+            0u8 => Some(SlotId::SemanticZoomZoomedInView),
+            1u8 => Some(SlotId::SemanticZoomZoomedOutView),
+            _ => None,
+        },
+        MountedKind::ParallaxView => match index {
+            0u8 => Some(SlotId::ParallaxViewSource),
+            1u8 => Some(SlotId::ParallaxViewChild),
+            _ => None,
+        },
+        MountedKind::SwipeControl => match index {
+            0u8 => Some(SlotId::SwipeControlContent),
             _ => None,
         },
         _ => None,
@@ -12562,6 +14164,7 @@ pub fn slots(kind: MountedKind) -> &'static [SlotId] {
         ],
         MountedKind::AppBarButton => &[SlotId::AppBarButtonIcon],
         MountedKind::AppBarSeparator => &[],
+        MountedKind::AppBarToggleButton => &[SlotId::AppBarToggleButtonIcon],
         MountedKind::MenuBar => &[SlotId::MenuBarItems],
         MountedKind::MenuBarItem => &[],
         MountedKind::SplitButton => &[],
@@ -12584,6 +14187,19 @@ pub fn slots(kind: MountedKind) -> &'static [SlotId] {
         MountedKind::Viewbox => &[SlotId::ViewboxChild],
         MountedKind::WebView2 => &[],
         MountedKind::SwapChainPanel => &[],
+        MountedKind::PipsPager => &[],
+        MountedKind::ToggleSplitButton => &[],
+        MountedKind::ItemsView => &[],
+        MountedKind::MediaPlayerElement => &[],
+        MountedKind::SemanticZoom => &[
+            SlotId::SemanticZoomZoomedInView,
+            SlotId::SemanticZoomZoomedOutView,
+        ],
+        MountedKind::ParallaxView => &[SlotId::ParallaxViewSource, SlotId::ParallaxViewChild],
+        MountedKind::AnnotatedScrollBar => &[],
+        MountedKind::MapControl => &[],
+        MountedKind::SwipeControl => &[SlotId::SwipeControlContent],
+        MountedKind::RefreshContainer => &[],
     }
 }
 pub fn slot_is_collection(slot: SlotId) -> bool {
@@ -12609,6 +14225,7 @@ pub(crate) struct TextBlockMountedProps {
     text_wrapping: Property<TextWrapping>,
     font_size: Property<f64>,
     font_weight: Property<FontWeight>,
+    font_family: Property<String>,
     is_text_selection_enabled: Property<bool>,
     max_lines: Property<i32>,
     text_trimming: Property<TextTrimming>,
@@ -12620,6 +14237,7 @@ impl PartialEq for TextBlockMountedProps {
             && self.text_wrapping == other.text_wrapping
             && f64_property_eq(&self.font_size, &other.font_size)
             && self.font_weight == other.font_weight
+            && self.font_family == other.font_family
             && self.is_text_selection_enabled == other.is_text_selection_enabled
             && self.max_lines == other.max_lines
             && self.text_trimming == other.text_trimming
@@ -12730,12 +14348,14 @@ impl PartialEq for StackPanelMountedProps {
 pub(crate) struct VariableSizedWrapGridMountedProps {
     item_width: Property<f64>,
     item_height: Property<f64>,
+    maximum_rows_or_columns: Property<i32>,
     orientation: Property<Orientation>,
 }
 impl PartialEq for VariableSizedWrapGridMountedProps {
     fn eq(&self, other: &Self) -> bool {
         true && f64_property_eq(&self.item_width, &other.item_width)
             && f64_property_eq(&self.item_height, &other.item_height)
+            && self.maximum_rows_or_columns == other.maximum_rows_or_columns
             && self.orientation == other.orientation
     }
 }
@@ -12842,7 +14462,8 @@ pub(crate) struct SliderMountedProps {
     is_enabled: Property<bool>,
     step_frequency: Property<f64>,
     orientation: Property<Orientation>,
-    on_value_changed: Option<Callback<f64>>,
+    is_thumb_tool_tip_enabled: Property<bool>,
+    events: Option<std::rc::Rc<SliderEvents>>,
 }
 impl PartialEq for SliderMountedProps {
     fn eq(&self, other: &Self) -> bool {
@@ -12852,7 +14473,8 @@ impl PartialEq for SliderMountedProps {
             && self.is_enabled == other.is_enabled
             && f64_property_eq(&self.step_frequency, &other.step_frequency)
             && self.orientation == other.orientation
-            && self.on_value_changed == other.on_value_changed
+            && self.is_thumb_tool_tip_enabled == other.is_thumb_tool_tip_enabled
+            && self.events == other.events
     }
 }
 #[derive(Clone, Debug)]
@@ -12885,6 +14507,7 @@ pub(crate) struct NavigationViewMountedProps {
     pane_title: Property<String>,
     open_pane_length: Property<f64>,
     is_pane_open: Property<bool>,
+    font_family: Property<String>,
     events: Option<std::rc::Rc<NavigationViewEvents>>,
 }
 impl PartialEq for NavigationViewMountedProps {
@@ -12898,6 +14521,7 @@ impl PartialEq for NavigationViewMountedProps {
             && self.pane_title == other.pane_title
             && f64_property_eq(&self.open_pane_length, &other.open_pane_length)
             && self.is_pane_open == other.is_pane_open
+            && self.font_family == other.font_family
             && self.events == other.events
     }
 }
@@ -13072,11 +14696,13 @@ impl PartialEq for PersonPictureMountedProps {
 pub(crate) struct ScrollViewerMountedProps {
     horizontal_scroll_bar_visibility: Property<ScrollBarVisibility>,
     vertical_scroll_bar_visibility: Property<ScrollBarVisibility>,
+    on_view_changed: Option<Callback<()>>,
 }
 impl PartialEq for ScrollViewerMountedProps {
     fn eq(&self, other: &Self) -> bool {
         true && self.horizontal_scroll_bar_visibility == other.horizontal_scroll_bar_visibility
             && self.vertical_scroll_bar_visibility == other.vertical_scroll_bar_visibility
+            && self.on_view_changed == other.on_view_changed
     }
 }
 #[derive(Clone, Debug)]
@@ -13093,12 +14719,14 @@ impl PartialEq for ScrollViewMountedProps {
 #[derive(Clone, Debug)]
 pub(crate) struct ImageMountedProps {
     source: Property<ImageValue>,
+    decode_width: Property<i32>,
     stretch: Property<Stretch>,
     events: Option<std::rc::Rc<ImageEvents>>,
 }
 impl PartialEq for ImageMountedProps {
     fn eq(&self, other: &Self) -> bool {
         true && self.source == other.source
+            && self.decode_width == other.decode_width
             && self.stretch == other.stretch
             && self.events == other.events
     }
@@ -13427,6 +15055,21 @@ impl PartialEq for AppBarSeparatorMountedProps {
     }
 }
 #[derive(Clone, Debug)]
+pub(crate) struct AppBarToggleButtonMountedProps {
+    label: Property<String>,
+    is_checked: Property<bool>,
+    is_enabled: Property<bool>,
+    on_click: Option<Callback<()>>,
+}
+impl PartialEq for AppBarToggleButtonMountedProps {
+    fn eq(&self, other: &Self) -> bool {
+        true && self.label == other.label
+            && self.is_checked == other.is_checked
+            && self.is_enabled == other.is_enabled
+            && self.on_click == other.on_click
+    }
+}
+#[derive(Clone, Debug)]
 pub(crate) struct MenuBarMountedProps {}
 impl PartialEq for MenuBarMountedProps {
     fn eq(&self, _other: &Self) -> bool {
@@ -13665,6 +15308,7 @@ impl PartialEq for RichEditBoxMountedProps {
 pub(crate) struct RichTextBlockMountedProps {
     paragraphs: Property<RichText>,
     font_size: Property<f64>,
+    font_family: Property<String>,
     is_text_selection_enabled: Property<bool>,
     text_wrapping: Property<TextWrapping>,
 }
@@ -13672,6 +15316,7 @@ impl PartialEq for RichTextBlockMountedProps {
     fn eq(&self, other: &Self) -> bool {
         true && self.paragraphs == other.paragraphs
             && f64_property_eq(&self.font_size, &other.font_size)
+            && self.font_family == other.font_family
             && self.is_text_selection_enabled == other.is_text_selection_enabled
             && self.text_wrapping == other.text_wrapping
     }
@@ -13697,6 +15342,122 @@ pub(crate) struct SwapChainPanelMountedProps {}
 impl PartialEq for SwapChainPanelMountedProps {
     fn eq(&self, _other: &Self) -> bool {
         true
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct PipsPagerMountedProps {
+    number_of_pages: Property<i32>,
+    selected_page_index: Property<i32>,
+    max_visible_pips: Property<i32>,
+    on_selected_index_changed: Option<Callback<i32>>,
+}
+impl PartialEq for PipsPagerMountedProps {
+    fn eq(&self, other: &Self) -> bool {
+        true && self.number_of_pages == other.number_of_pages
+            && self.selected_page_index == other.selected_page_index
+            && self.max_visible_pips == other.max_visible_pips
+            && self.on_selected_index_changed == other.on_selected_index_changed
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct ToggleSplitButtonMountedProps {
+    is_checked: Property<bool>,
+    is_enabled: Property<bool>,
+    events: Option<std::rc::Rc<ToggleSplitButtonEvents>>,
+}
+impl PartialEq for ToggleSplitButtonMountedProps {
+    fn eq(&self, other: &Self) -> bool {
+        true && self.is_checked == other.is_checked
+            && self.is_enabled == other.is_enabled
+            && self.events == other.events
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct ItemsViewMountedProps {
+    items_source: Property<std::rc::Rc<Vec<String>>>,
+    layout: Property<ItemsViewLayout>,
+    selection_mode: Property<ItemsViewSelectionMode>,
+    on_item_invoked: Option<Callback<String>>,
+}
+impl PartialEq for ItemsViewMountedProps {
+    fn eq(&self, other: &Self) -> bool {
+        true && self.items_source == other.items_source
+            && self.layout == other.layout
+            && self.selection_mode == other.selection_mode
+            && self.on_item_invoked == other.on_item_invoked
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct MediaPlayerElementMountedProps {
+    source: Property<String>,
+    are_transport_controls_enabled: Property<bool>,
+    auto_play: Property<bool>,
+}
+impl PartialEq for MediaPlayerElementMountedProps {
+    fn eq(&self, other: &Self) -> bool {
+        true && self.source == other.source
+            && self.are_transport_controls_enabled == other.are_transport_controls_enabled
+            && self.auto_play == other.auto_play
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct SemanticZoomMountedProps {
+    is_zoomed_in_view_active: Property<bool>,
+}
+impl PartialEq for SemanticZoomMountedProps {
+    fn eq(&self, other: &Self) -> bool {
+        true && self.is_zoomed_in_view_active == other.is_zoomed_in_view_active
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct ParallaxViewMountedProps {
+    horizontal_shift: Property<f64>,
+}
+impl PartialEq for ParallaxViewMountedProps {
+    fn eq(&self, other: &Self) -> bool {
+        true && f64_property_eq(&self.horizontal_shift, &other.horizontal_shift)
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct AnnotatedScrollBarMountedProps {
+    small_change: Property<f64>,
+}
+impl PartialEq for AnnotatedScrollBarMountedProps {
+    fn eq(&self, other: &Self) -> bool {
+        true && f64_property_eq(&self.small_change, &other.small_change)
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct MapControlMountedProps {
+    center: Property<String>,
+    zoom_level: Property<f64>,
+    map_service_token: Property<String>,
+    interactive_controls_visible: Property<bool>,
+}
+impl PartialEq for MapControlMountedProps {
+    fn eq(&self, other: &Self) -> bool {
+        true && self.center == other.center
+            && f64_property_eq(&self.zoom_level, &other.zoom_level)
+            && self.map_service_token == other.map_service_token
+            && self.interactive_controls_visible == other.interactive_controls_visible
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct SwipeControlMountedProps {}
+impl PartialEq for SwipeControlMountedProps {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct RefreshContainerMountedProps {
+    pull_direction: Property<RefreshPullDirection>,
+    on_refresh_requested: Option<Callback<()>>,
+}
+impl PartialEq for RefreshContainerMountedProps {
+    fn eq(&self, other: &Self) -> bool {
+        true && self.pull_direction == other.pull_direction
+            && self.on_refresh_requested == other.on_refresh_requested
     }
 }
 #[derive(Clone, Debug, PartialEq)]
@@ -13758,6 +15519,7 @@ pub enum MountedProps {
     CommandBar(std::rc::Rc<CommandBarMountedProps>),
     AppBarButton(std::rc::Rc<AppBarButtonMountedProps>),
     AppBarSeparator(std::rc::Rc<AppBarSeparatorMountedProps>),
+    AppBarToggleButton(std::rc::Rc<AppBarToggleButtonMountedProps>),
     MenuBar(std::rc::Rc<MenuBarMountedProps>),
     MenuBarItem(std::rc::Rc<MenuBarItemMountedProps>),
     SplitButton(std::rc::Rc<SplitButtonMountedProps>),
@@ -13780,6 +15542,16 @@ pub enum MountedProps {
     Viewbox(std::rc::Rc<ViewboxMountedProps>),
     WebView2(std::rc::Rc<WebView2MountedProps>),
     SwapChainPanel(std::rc::Rc<SwapChainPanelMountedProps>),
+    PipsPager(std::rc::Rc<PipsPagerMountedProps>),
+    ToggleSplitButton(std::rc::Rc<ToggleSplitButtonMountedProps>),
+    ItemsView(std::rc::Rc<ItemsViewMountedProps>),
+    MediaPlayerElement(std::rc::Rc<MediaPlayerElementMountedProps>),
+    SemanticZoom(std::rc::Rc<SemanticZoomMountedProps>),
+    ParallaxView(std::rc::Rc<ParallaxViewMountedProps>),
+    AnnotatedScrollBar(std::rc::Rc<AnnotatedScrollBarMountedProps>),
+    MapControl(std::rc::Rc<MapControlMountedProps>),
+    SwipeControl(std::rc::Rc<SwipeControlMountedProps>),
+    RefreshContainer(std::rc::Rc<RefreshContainerMountedProps>),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub enum ElementStructure {
@@ -13820,6 +15592,8 @@ pub enum PropertyId {
     GridColumn,
     GridRowSpan,
     GridColumnSpan,
+    WrapGridRowSpan,
+    WrapGridColumnSpan,
     GridRows,
     GridColumns,
     RelativeAlignLeft,
@@ -13837,6 +15611,7 @@ pub enum PropertyId {
     TextBlockTextWrapping,
     TextBlockFontSize,
     TextBlockFontWeight,
+    TextBlockFontFamily,
     TextBlockIsTextSelectionEnabled,
     TextBlockMaxLines,
     TextBlockTextTrimming,
@@ -13867,6 +15642,7 @@ pub enum PropertyId {
     StackPanelSpacing,
     VariableSizedWrapGridItemWidth,
     VariableSizedWrapGridItemHeight,
+    VariableSizedWrapGridMaximumRowsOrColumns,
     VariableSizedWrapGridOrientation,
     GridRowSpacing,
     GridColumnSpacing,
@@ -13898,6 +15674,7 @@ pub enum PropertyId {
     SliderIsEnabled,
     SliderStepFrequency,
     SliderOrientation,
+    SliderIsThumbToolTipEnabled,
     TitleBarTitle,
     TitleBarSubtitle,
     TitleBarIsBackButtonVisible,
@@ -13912,6 +15689,7 @@ pub enum PropertyId {
     NavigationViewPaneTitle,
     NavigationViewOpenPaneLength,
     NavigationViewIsPaneOpen,
+    NavigationViewFontFamily,
     NavigationViewItemTag,
     NavigationViewItemIsSelected,
     NavigationViewItemSelectsOnInvoked,
@@ -13952,6 +15730,7 @@ pub enum PropertyId {
     ScrollViewHorizontalScrollBarVisibility,
     ScrollViewVerticalScrollBarVisibility,
     ImageSource,
+    ImageDecodeWidth,
     ImageStretch,
     ProgressRingMinimum,
     ProgressRingMaximum,
@@ -14014,6 +15793,9 @@ pub enum PropertyId {
     DropDownButtonIsEnabled,
     AppBarButtonLabel,
     AppBarButtonIsEnabled,
+    AppBarToggleButtonLabel,
+    AppBarToggleButtonIsChecked,
+    AppBarToggleButtonIsEnabled,
     MenuBarItemTitle,
     SplitButtonIsEnabled,
     ColorPickerColor,
@@ -14060,14 +15842,35 @@ pub enum PropertyId {
     RichEditBoxIsEnabled,
     RichTextBlockBlocks,
     RichTextBlockFontSize,
+    RichTextBlockFontFamily,
     RichTextBlockIsTextSelectionEnabled,
     RichTextBlockTextWrapping,
     ViewboxStretch,
+    PipsPagerNumberOfPages,
+    PipsPagerSelectedPageIndex,
+    PipsPagerMaxVisiblePips,
+    ToggleSplitButtonIsChecked,
+    ToggleSplitButtonIsEnabled,
+    ItemsViewItemsSource,
+    ItemsViewLayout,
+    ItemsViewSelectionMode,
+    MediaPlayerElementSource,
+    MediaPlayerElementAreTransportControlsEnabled,
+    MediaPlayerElementAutoPlay,
+    SemanticZoomIsZoomedInViewActive,
+    ParallaxViewHorizontalShift,
+    AnnotatedScrollBarSmallChange,
+    MapControlCenter,
+    MapControlZoomLevel,
+    MapControlMapServiceToken,
+    MapControlInteractiveControlsVisible,
+    RefreshContainerPullDirection,
 }
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum EventId {
     OwnedCommandInvoked,
     OwnedMenuItemInvoked,
+    OwnedSwipeInvoked,
     ButtonClick,
     HyperlinkButtonClick,
     RepeatButtonClick,
@@ -14080,6 +15883,7 @@ pub enum EventId {
     BorderPointerEntered,
     BorderPointerExited,
     BorderPointerReleased,
+    BorderPointerWheelChanged,
     BorderPointerCaptureLost,
     BorderPointerCanceled,
     BreadcrumbBarItemClicked,
@@ -14089,6 +15893,7 @@ pub enum EventId {
     PasswordBoxPasswordChanged,
     NumberBoxValueChanged,
     SliderValueChanged,
+    SliderSizeChanged,
     TitleBarBackRequested,
     TitleBarPaneToggleRequested,
     NavigationViewIsPaneOpenChanged,
@@ -14101,6 +15906,7 @@ pub enum EventId {
     RadioButtonChecked,
     RadioButtonsSelectionChanged,
     InfoBarClosed,
+    ScrollViewerViewChanged,
     ImageImageOpened,
     ImageImageFailed,
     ListBoxSelectionChanged,
@@ -14118,6 +15924,7 @@ pub enum EventId {
     TeachingTipActionButtonClick,
     DropDownButtonClick,
     AppBarButtonClick,
+    AppBarToggleButtonClick,
     SplitButtonClick,
     ColorPickerColorChanged,
     DatePickerSelectedDateChanged,
@@ -14131,6 +15938,11 @@ pub enum EventId {
     GridViewDragItemsCompleted,
     GridViewSelectionChanged,
     RichEditBoxTextChanged,
+    PipsPagerSelectedIndexChanged,
+    ToggleSplitButtonClick,
+    ToggleSplitButtonIsCheckedChanged,
+    ItemsViewItemInvoked,
+    RefreshContainerRefreshRequested,
 }
 #[derive(Clone, Debug)]
 pub enum PropertyValue {
@@ -14148,6 +15960,8 @@ pub enum PropertyValue {
     HorizontalAlignment(HorizontalAlignment),
     I32(i32),
     InfoBarSeverity(InfoBarSeverity),
+    ItemsViewLayout(ItemsViewLayout),
+    ItemsViewSelectionMode(ItemsViewSelectionMode),
     KeyAccelerators(KeyAccelerators),
     ListViewSelectionMode(ListViewSelectionMode),
     NavigationViewBackButtonVisible(NavigationViewBackButtonVisible),
@@ -14155,6 +15969,7 @@ pub enum PropertyValue {
     OptionalF64(Option<f64>),
     Orientation(Orientation),
     PasswordRevealMode(PasswordRevealMode),
+    RefreshPullDirection(RefreshPullDirection),
     ResourceOverrides(ResourceOverrides),
     RichText(RichText),
     ScrollBarVisibility(ScrollBarVisibility),
@@ -14189,6 +16004,10 @@ impl PartialEq for PropertyValue {
             (Self::HorizontalAlignment(left), Self::HorizontalAlignment(right)) => left == right,
             (Self::I32(left), Self::I32(right)) => left == right,
             (Self::InfoBarSeverity(left), Self::InfoBarSeverity(right)) => left == right,
+            (Self::ItemsViewLayout(left), Self::ItemsViewLayout(right)) => left == right,
+            (Self::ItemsViewSelectionMode(left), Self::ItemsViewSelectionMode(right)) => {
+                left == right
+            }
             (Self::KeyAccelerators(left), Self::KeyAccelerators(right)) => left == right,
             (Self::ListViewSelectionMode(left), Self::ListViewSelectionMode(right)) => {
                 left == right
@@ -14208,6 +16027,7 @@ impl PartialEq for PropertyValue {
             },
             (Self::Orientation(left), Self::Orientation(right)) => left == right,
             (Self::PasswordRevealMode(left), Self::PasswordRevealMode(right)) => left == right,
+            (Self::RefreshPullDirection(left), Self::RefreshPullDirection(right)) => left == right,
             (Self::ResourceOverrides(left), Self::ResourceOverrides(right)) => left == right,
             (Self::RichText(left), Self::RichText(right)) => left == right,
             (Self::ScrollBarVisibility(left), Self::ScrollBarVisibility(right)) => left == right,
@@ -14251,6 +16071,8 @@ pub enum PropertyValueRef<'a> {
     HorizontalAlignment(HorizontalAlignment),
     I32(i32),
     InfoBarSeverity(InfoBarSeverity),
+    ItemsViewLayout(ItemsViewLayout),
+    ItemsViewSelectionMode(ItemsViewSelectionMode),
     KeyAccelerators(&'a KeyAccelerators),
     ListViewSelectionMode(ListViewSelectionMode),
     NavigationViewBackButtonVisible(NavigationViewBackButtonVisible),
@@ -14258,6 +16080,7 @@ pub enum PropertyValueRef<'a> {
     OptionalF64(Option<f64>),
     Orientation(Orientation),
     PasswordRevealMode(PasswordRevealMode),
+    RefreshPullDirection(RefreshPullDirection),
     ResourceOverrides(&'a ResourceOverrides),
     RichText(&'a RichText),
     ScrollBarVisibility(ScrollBarVisibility),
@@ -14294,6 +16117,10 @@ impl PropertyValueRef<'_> {
             }
             (Self::I32(left), PropertyValue::I32(right)) => left == *right,
             (Self::InfoBarSeverity(left), PropertyValue::InfoBarSeverity(right)) => left == *right,
+            (Self::ItemsViewLayout(left), PropertyValue::ItemsViewLayout(right)) => left == *right,
+            (Self::ItemsViewSelectionMode(left), PropertyValue::ItemsViewSelectionMode(right)) => {
+                left == *right
+            }
             (Self::KeyAccelerators(left), PropertyValue::KeyAccelerators(right)) => left == right,
             (Self::ListViewSelectionMode(left), PropertyValue::ListViewSelectionMode(right)) => {
                 left == *right
@@ -14313,6 +16140,9 @@ impl PropertyValueRef<'_> {
             },
             (Self::Orientation(left), PropertyValue::Orientation(right)) => left == *right,
             (Self::PasswordRevealMode(left), PropertyValue::PasswordRevealMode(right)) => {
+                left == *right
+            }
+            (Self::RefreshPullDirection(left), PropertyValue::RefreshPullDirection(right)) => {
                 left == *right
             }
             (Self::ResourceOverrides(left), PropertyValue::ResourceOverrides(right)) => {
@@ -14366,6 +16196,8 @@ impl PropertyValueRef<'_> {
             Self::HorizontalAlignment(value) => PropertyValue::HorizontalAlignment(value),
             Self::I32(value) => PropertyValue::I32(value),
             Self::InfoBarSeverity(value) => PropertyValue::InfoBarSeverity(value),
+            Self::ItemsViewLayout(value) => PropertyValue::ItemsViewLayout(value),
+            Self::ItemsViewSelectionMode(value) => PropertyValue::ItemsViewSelectionMode(value),
             Self::KeyAccelerators(value) => PropertyValue::KeyAccelerators(value.clone()),
             Self::ListViewSelectionMode(value) => PropertyValue::ListViewSelectionMode(value),
             Self::NavigationViewBackButtonVisible(value) => {
@@ -14377,6 +16209,7 @@ impl PropertyValueRef<'_> {
             Self::OptionalF64(value) => PropertyValue::OptionalF64(value),
             Self::Orientation(value) => PropertyValue::Orientation(value),
             Self::PasswordRevealMode(value) => PropertyValue::PasswordRevealMode(value),
+            Self::RefreshPullDirection(value) => PropertyValue::RefreshPullDirection(value),
             Self::ResourceOverrides(value) => PropertyValue::ResourceOverrides(value.clone()),
             Self::RichText(value) => PropertyValue::RichText(value.clone()),
             Self::ScrollBarVisibility(value) => PropertyValue::ScrollBarVisibility(value),
@@ -14468,6 +16301,16 @@ impl From<InfoBarSeverity> for PropertyValue {
         Self::InfoBarSeverity(value)
     }
 }
+impl From<ItemsViewLayout> for PropertyValue {
+    fn from(value: ItemsViewLayout) -> Self {
+        Self::ItemsViewLayout(value)
+    }
+}
+impl From<ItemsViewSelectionMode> for PropertyValue {
+    fn from(value: ItemsViewSelectionMode) -> Self {
+        Self::ItemsViewSelectionMode(value)
+    }
+}
 impl From<KeyAccelerators> for PropertyValue {
     fn from(value: KeyAccelerators) -> Self {
         Self::KeyAccelerators(value)
@@ -14501,6 +16344,11 @@ impl From<Orientation> for PropertyValue {
 impl From<PasswordRevealMode> for PropertyValue {
     fn from(value: PasswordRevealMode) -> Self {
         Self::PasswordRevealMode(value)
+    }
+}
+impl From<RefreshPullDirection> for PropertyValue {
+    fn from(value: RefreshPullDirection) -> Self {
+        Self::RefreshPullDirection(value)
     }
 }
 impl From<ResourceOverrides> for PropertyValue {
@@ -14596,6 +16444,7 @@ pub enum EventPayload {
     DragKind(DragKind),
     DroppedData(DroppedData),
     F64(f64),
+    I32(i32),
     NavigationViewDisplayMode(NavigationViewDisplayMode),
     OptionalDateTime(Option<windows_time::DateTime>),
     OptionalF64(Option<f64>),
@@ -14617,6 +16466,7 @@ impl PartialEq for EventPayload {
             (Self::DragKind(left), Self::DragKind(right)) => left == right,
             (Self::DroppedData(left), Self::DroppedData(right)) => left == right,
             (Self::F64(left), Self::F64(right)) => f64_eq(*left, *right),
+            (Self::I32(left), Self::I32(right)) => left == right,
             (Self::NavigationViewDisplayMode(left), Self::NavigationViewDisplayMode(right)) => {
                 left == right
             }
@@ -14754,6 +16604,17 @@ const TEXT_BLOCK_PROPERTIES: &[PropertyDescriptor] = &[
         name: "FontWeight",
         field: "font_weight",
         value: "FontWeight",
+        interface: "Microsoft.UI.Xaml.Controls.ITextBlock",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::TextBlockFontFamily,
+        name: "FontFamily",
+        field: "font_family",
+        value: "Str",
         interface: "Microsoft.UI.Xaml.Controls.ITextBlock",
         clearable: true,
         feedback: None,
@@ -15135,6 +16996,13 @@ const BORDER_EVENTS: &[EventDescriptor] = &[
         interface: "Microsoft.UI.Xaml.IUIElement",
     },
     EventDescriptor {
+        id: EventId::BorderPointerWheelChanged,
+        name: "PointerWheelChanged",
+        field: "on_pointer_wheel_changed",
+        payload: "PointerEventInfo",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+    },
+    EventDescriptor {
         id: EventId::BorderPointerCaptureLost,
         name: "PointerCaptureLost",
         field: "on_pointer_capture_lost",
@@ -15212,6 +17080,17 @@ const VARIABLE_SIZED_WRAP_GRID_PROPERTIES: &[PropertyDescriptor] = &[
         name: "ItemHeight",
         field: "item_height",
         value: "F64",
+        interface: "Microsoft.UI.Xaml.Controls.IVariableSizedWrapGrid",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::VariableSizedWrapGridMaximumRowsOrColumns,
+        name: "MaximumRowsOrColumns",
+        field: "maximum_rows_or_columns",
+        value: "I32",
         interface: "Microsoft.UI.Xaml.Controls.IVariableSizedWrapGrid",
         clearable: true,
         feedback: None,
@@ -15640,14 +17519,34 @@ const SLIDER_PROPERTIES: &[PropertyDescriptor] = &[
         feedback_contract: None,
         observes_feedback: false,
     },
+    PropertyDescriptor {
+        id: PropertyId::SliderIsThumbToolTipEnabled,
+        name: "IsThumbToolTipEnabled",
+        field: "is_thumb_tool_tip_enabled",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.Controls.ISlider",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
 ];
-const SLIDER_EVENTS: &[EventDescriptor] = &[EventDescriptor {
-    id: EventId::SliderValueChanged,
-    name: "ValueChanged",
-    field: "on_value_changed",
-    payload: "F64",
-    interface: "Microsoft.UI.Xaml.Controls.Primitives.IRangeBase",
-}];
+const SLIDER_EVENTS: &[EventDescriptor] = &[
+    EventDescriptor {
+        id: EventId::SliderValueChanged,
+        name: "ValueChanged",
+        field: "on_value_changed",
+        payload: "F64",
+        interface: "Microsoft.UI.Xaml.Controls.Primitives.IRangeBase",
+    },
+    EventDescriptor {
+        id: EventId::SliderSizeChanged,
+        name: "SizeChanged",
+        field: "on_size_changed",
+        payload: "Unit",
+        interface: "Microsoft.UI.Xaml.IFrameworkElement",
+    },
+];
 const SLIDER_SLOTS: &[SlotDescriptor] = &[SlotDescriptor {
     id: SlotId::SliderHeader,
     name: "Header",
@@ -15843,6 +17742,17 @@ const NAVIGATION_VIEW_PROPERTIES: &[PropertyDescriptor] = &[
         feedback: Some("IsPaneOpenChanged"),
         feedback_contract: Some("synchronous_exact"),
         observes_feedback: true,
+    },
+    PropertyDescriptor {
+        id: PropertyId::NavigationViewFontFamily,
+        name: "FontFamily",
+        field: "font_family",
+        value: "Str",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
     },
 ];
 const NAVIGATION_VIEW_EVENTS: &[EventDescriptor] = &[
@@ -16466,7 +18376,13 @@ const SCROLL_VIEWER_PROPERTIES: &[PropertyDescriptor] = &[
         observes_feedback: false,
     },
 ];
-const SCROLL_VIEWER_EVENTS: &[EventDescriptor] = &[];
+const SCROLL_VIEWER_EVENTS: &[EventDescriptor] = &[EventDescriptor {
+    id: EventId::ScrollViewerViewChanged,
+    name: "ViewChanged",
+    field: "on_view_changed",
+    payload: "Unit",
+    interface: "Microsoft.UI.Xaml.Controls.IScrollViewer",
+}];
 const SCROLL_VIEWER_SLOTS: &[SlotDescriptor] = &[];
 const SCROLL_VIEW_PROPERTIES: &[PropertyDescriptor] = &[
     PropertyDescriptor {
@@ -16500,6 +18416,17 @@ const IMAGE_PROPERTIES: &[PropertyDescriptor] = &[
         name: "Source",
         field: "source",
         value: "ImageValue",
+        interface: "Microsoft.UI.Xaml.Controls.IImage",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ImageDecodeWidth,
+        name: "DecodeWidth",
+        field: "decode_width",
+        value: "I32",
         interface: "Microsoft.UI.Xaml.Controls.IImage",
         clearable: true,
         feedback: None,
@@ -17465,6 +19392,55 @@ const APP_BAR_BUTTON_SLOTS: &[SlotDescriptor] = &[SlotDescriptor {
 const APP_BAR_SEPARATOR_PROPERTIES: &[PropertyDescriptor] = &[];
 const APP_BAR_SEPARATOR_EVENTS: &[EventDescriptor] = &[];
 const APP_BAR_SEPARATOR_SLOTS: &[SlotDescriptor] = &[];
+const APP_BAR_TOGGLE_BUTTON_PROPERTIES: &[PropertyDescriptor] = &[
+    PropertyDescriptor {
+        id: PropertyId::AppBarToggleButtonLabel,
+        name: "Label",
+        field: "label",
+        value: "Str",
+        interface: "Microsoft.UI.Xaml.Controls.IAppBarToggleButton",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::AppBarToggleButtonIsChecked,
+        name: "IsChecked",
+        field: "is_checked",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.Controls.Primitives.IToggleButton",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::AppBarToggleButtonIsEnabled,
+        name: "IsEnabled",
+        field: "is_enabled",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+];
+const APP_BAR_TOGGLE_BUTTON_EVENTS: &[EventDescriptor] = &[EventDescriptor {
+    id: EventId::AppBarToggleButtonClick,
+    name: "Click",
+    field: "on_click",
+    payload: "Unit",
+    interface: "Microsoft.UI.Xaml.Controls.Primitives.IButtonBase",
+}];
+const APP_BAR_TOGGLE_BUTTON_SLOTS: &[SlotDescriptor] = &[SlotDescriptor {
+    id: SlotId::AppBarToggleButtonIcon,
+    name: "Icon",
+    interface: "Microsoft.UI.Xaml.Controls.IAppBarToggleButton",
+    target: "icon_element",
+    collection: false,
+}];
 const MENU_BAR_PROPERTIES: &[PropertyDescriptor] = &[];
 const MENU_BAR_EVENTS: &[EventDescriptor] = &[];
 const MENU_BAR_SLOTS: &[SlotDescriptor] = &[SlotDescriptor {
@@ -18157,6 +20133,17 @@ const RICH_TEXT_BLOCK_PROPERTIES: &[PropertyDescriptor] = &[
         observes_feedback: false,
     },
     PropertyDescriptor {
+        id: PropertyId::RichTextBlockFontFamily,
+        name: "FontFamily",
+        field: "font_family",
+        value: "Str",
+        interface: "Microsoft.UI.Xaml.Controls.IRichTextBlock",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
         id: PropertyId::RichTextBlockIsTextSelectionEnabled,
         name: "IsTextSelectionEnabled",
         field: "is_text_selection_enabled",
@@ -18206,6 +20193,315 @@ const WEB_VIEW2_SLOTS: &[SlotDescriptor] = &[];
 const SWAP_CHAIN_PANEL_PROPERTIES: &[PropertyDescriptor] = &[];
 const SWAP_CHAIN_PANEL_EVENTS: &[EventDescriptor] = &[];
 const SWAP_CHAIN_PANEL_SLOTS: &[SlotDescriptor] = &[];
+const PIPS_PAGER_PROPERTIES: &[PropertyDescriptor] = &[
+    PropertyDescriptor {
+        id: PropertyId::PipsPagerNumberOfPages,
+        name: "NumberOfPages",
+        field: "number_of_pages",
+        value: "I32",
+        interface: "Microsoft.UI.Xaml.Controls.IPipsPager",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::PipsPagerSelectedPageIndex,
+        name: "SelectedPageIndex",
+        field: "selected_page_index",
+        value: "I32",
+        interface: "Microsoft.UI.Xaml.Controls.IPipsPager",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::PipsPagerMaxVisiblePips,
+        name: "MaxVisiblePips",
+        field: "max_visible_pips",
+        value: "I32",
+        interface: "Microsoft.UI.Xaml.Controls.IPipsPager",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+];
+const PIPS_PAGER_EVENTS: &[EventDescriptor] = &[EventDescriptor {
+    id: EventId::PipsPagerSelectedIndexChanged,
+    name: "SelectedIndexChanged",
+    field: "on_selected_index_changed",
+    payload: "I32",
+    interface: "Microsoft.UI.Xaml.Controls.IPipsPager",
+}];
+const PIPS_PAGER_SLOTS: &[SlotDescriptor] = &[];
+const TOGGLE_SPLIT_BUTTON_PROPERTIES: &[PropertyDescriptor] = &[
+    PropertyDescriptor {
+        id: PropertyId::ToggleSplitButtonIsChecked,
+        name: "IsChecked",
+        field: "is_checked",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.Controls.IToggleSplitButton",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ToggleSplitButtonIsEnabled,
+        name: "IsEnabled",
+        field: "is_enabled",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+];
+const TOGGLE_SPLIT_BUTTON_EVENTS: &[EventDescriptor] = &[
+    EventDescriptor {
+        id: EventId::ToggleSplitButtonClick,
+        name: "Click",
+        field: "on_click",
+        payload: "Unit",
+        interface: "Microsoft.UI.Xaml.Controls.ISplitButton",
+    },
+    EventDescriptor {
+        id: EventId::ToggleSplitButtonIsCheckedChanged,
+        name: "IsCheckedChanged",
+        field: "on_is_checked_changed",
+        payload: "Bool",
+        interface: "Microsoft.UI.Xaml.Controls.IToggleSplitButton",
+    },
+];
+const TOGGLE_SPLIT_BUTTON_SLOTS: &[SlotDescriptor] = &[];
+const ITEMS_VIEW_PROPERTIES: &[PropertyDescriptor] = &[
+    PropertyDescriptor {
+        id: PropertyId::ItemsViewItemsSource,
+        name: "ItemsSource",
+        field: "items_source",
+        value: "StrList",
+        interface: "Microsoft.UI.Xaml.Controls.IItemsView",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ItemsViewLayout,
+        name: "Layout",
+        field: "layout",
+        value: "ItemsViewLayout",
+        interface: "Microsoft.UI.Xaml.Controls.IItemsView",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ItemsViewSelectionMode,
+        name: "SelectionMode",
+        field: "selection_mode",
+        value: "ItemsViewSelectionMode",
+        interface: "Microsoft.UI.Xaml.Controls.IItemsView",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+];
+const ITEMS_VIEW_EVENTS: &[EventDescriptor] = &[EventDescriptor {
+    id: EventId::ItemsViewItemInvoked,
+    name: "ItemInvoked",
+    field: "on_item_invoked",
+    payload: "Str",
+    interface: "Microsoft.UI.Xaml.Controls.IItemsView",
+}];
+const ITEMS_VIEW_SLOTS: &[SlotDescriptor] = &[];
+const MEDIA_PLAYER_ELEMENT_PROPERTIES: &[PropertyDescriptor] = &[
+    PropertyDescriptor {
+        id: PropertyId::MediaPlayerElementSource,
+        name: "Source",
+        field: "source",
+        value: "Str",
+        interface: "Microsoft.UI.Xaml.Controls.IMediaPlayerElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::MediaPlayerElementAreTransportControlsEnabled,
+        name: "AreTransportControlsEnabled",
+        field: "are_transport_controls_enabled",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.Controls.IMediaPlayerElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::MediaPlayerElementAutoPlay,
+        name: "AutoPlay",
+        field: "auto_play",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.Controls.IMediaPlayerElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+];
+const MEDIA_PLAYER_ELEMENT_EVENTS: &[EventDescriptor] = &[];
+const MEDIA_PLAYER_ELEMENT_SLOTS: &[SlotDescriptor] = &[];
+const SEMANTIC_ZOOM_PROPERTIES: &[PropertyDescriptor] = &[PropertyDescriptor {
+    id: PropertyId::SemanticZoomIsZoomedInViewActive,
+    name: "IsZoomedInViewActive",
+    field: "is_zoomed_in_view_active",
+    value: "Bool",
+    interface: "Microsoft.UI.Xaml.Controls.ISemanticZoom",
+    clearable: true,
+    feedback: None,
+    feedback_contract: None,
+    observes_feedback: false,
+}];
+const SEMANTIC_ZOOM_EVENTS: &[EventDescriptor] = &[];
+const SEMANTIC_ZOOM_SLOTS: &[SlotDescriptor] = &[
+    SlotDescriptor {
+        id: SlotId::SemanticZoomZoomedInView,
+        name: "ZoomedInView",
+        interface: "Microsoft.UI.Xaml.Controls.ISemanticZoom",
+        target: "ui_element",
+        collection: false,
+    },
+    SlotDescriptor {
+        id: SlotId::SemanticZoomZoomedOutView,
+        name: "ZoomedOutView",
+        interface: "Microsoft.UI.Xaml.Controls.ISemanticZoom",
+        target: "ui_element",
+        collection: false,
+    },
+];
+const PARALLAX_VIEW_PROPERTIES: &[PropertyDescriptor] = &[PropertyDescriptor {
+    id: PropertyId::ParallaxViewHorizontalShift,
+    name: "HorizontalShift",
+    field: "horizontal_shift",
+    value: "F64",
+    interface: "Microsoft.UI.Xaml.Controls.IParallaxView",
+    clearable: true,
+    feedback: None,
+    feedback_contract: None,
+    observes_feedback: false,
+}];
+const PARALLAX_VIEW_EVENTS: &[EventDescriptor] = &[];
+const PARALLAX_VIEW_SLOTS: &[SlotDescriptor] = &[
+    SlotDescriptor {
+        id: SlotId::ParallaxViewSource,
+        name: "Source",
+        interface: "Microsoft.UI.Xaml.Controls.IParallaxView",
+        target: "ui_element",
+        collection: false,
+    },
+    SlotDescriptor {
+        id: SlotId::ParallaxViewChild,
+        name: "Child",
+        interface: "Microsoft.UI.Xaml.Controls.IParallaxView",
+        target: "ui_element",
+        collection: false,
+    },
+];
+const ANNOTATED_SCROLL_BAR_PROPERTIES: &[PropertyDescriptor] = &[PropertyDescriptor {
+    id: PropertyId::AnnotatedScrollBarSmallChange,
+    name: "SmallChange",
+    field: "small_change",
+    value: "F64",
+    interface: "Microsoft.UI.Xaml.Controls.IAnnotatedScrollBar",
+    clearable: true,
+    feedback: None,
+    feedback_contract: None,
+    observes_feedback: false,
+}];
+const ANNOTATED_SCROLL_BAR_EVENTS: &[EventDescriptor] = &[];
+const ANNOTATED_SCROLL_BAR_SLOTS: &[SlotDescriptor] = &[];
+const MAP_CONTROL_PROPERTIES: &[PropertyDescriptor] = &[
+    PropertyDescriptor {
+        id: PropertyId::MapControlCenter,
+        name: "Center",
+        field: "center",
+        value: "Str",
+        interface: "Microsoft.UI.Xaml.Controls.IMapControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::MapControlZoomLevel,
+        name: "ZoomLevel",
+        field: "zoom_level",
+        value: "F64",
+        interface: "Microsoft.UI.Xaml.Controls.IMapControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::MapControlMapServiceToken,
+        name: "MapServiceToken",
+        field: "map_service_token",
+        value: "Str",
+        interface: "Microsoft.UI.Xaml.Controls.IMapControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::MapControlInteractiveControlsVisible,
+        name: "InteractiveControlsVisible",
+        field: "interactive_controls_visible",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.Controls.IMapControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+];
+const MAP_CONTROL_EVENTS: &[EventDescriptor] = &[];
+const MAP_CONTROL_SLOTS: &[SlotDescriptor] = &[];
+const SWIPE_CONTROL_PROPERTIES: &[PropertyDescriptor] = &[];
+const SWIPE_CONTROL_EVENTS: &[EventDescriptor] = &[];
+const SWIPE_CONTROL_SLOTS: &[SlotDescriptor] = &[SlotDescriptor {
+    id: SlotId::SwipeControlContent,
+    name: "Content",
+    interface: "Microsoft.UI.Xaml.Controls.IContentControl",
+    target: "inspectable",
+    collection: false,
+}];
+const REFRESH_CONTAINER_PROPERTIES: &[PropertyDescriptor] = &[PropertyDescriptor {
+    id: PropertyId::RefreshContainerPullDirection,
+    name: "PullDirection",
+    field: "pull_direction",
+    value: "RefreshPullDirection",
+    interface: "Microsoft.UI.Xaml.Controls.IRefreshContainer",
+    clearable: true,
+    feedback: None,
+    feedback_contract: None,
+    observes_feedback: false,
+}];
+const REFRESH_CONTAINER_EVENTS: &[EventDescriptor] = &[EventDescriptor {
+    id: EventId::RefreshContainerRefreshRequested,
+    name: "RefreshRequested",
+    field: "on_refresh_requested",
+    payload: "Unit",
+    interface: "Microsoft.UI.Xaml.Controls.IRefreshContainer",
+}];
+const REFRESH_CONTAINER_SLOTS: &[SlotDescriptor] = &[];
 pub const CONTROLS: &[ControlDescriptor] = &[
     ControlDescriptor {
         kind: MountedKind::TextBlock,
@@ -18590,7 +20886,11 @@ pub const CONTROLS: &[ControlDescriptor] = &[
         name: "ScrollViewer",
         type_name: "Microsoft.UI.Xaml.Controls.ScrollViewer",
         role: ControlRole::Content,
-        capabilities: &[Capability::Layout, Capability::Content],
+        capabilities: &[
+            Capability::Layout,
+            Capability::Content,
+            Capability::Reference,
+        ],
         properties: SCROLL_VIEWER_PROPERTIES,
         events: SCROLL_VIEWER_EVENTS,
         slots: SCROLL_VIEWER_SLOTS,
@@ -18958,6 +21258,18 @@ pub const CONTROLS: &[ControlDescriptor] = &[
         controlled_collection: None,
     },
     ControlDescriptor {
+        kind: MountedKind::AppBarToggleButton,
+        name: "AppBarToggleButton",
+        type_name: "Microsoft.UI.Xaml.Controls.AppBarToggleButton",
+        role: ControlRole::Slots,
+        capabilities: &[Capability::Layout, Capability::Enabled],
+        properties: APP_BAR_TOGGLE_BUTTON_PROPERTIES,
+        events: APP_BAR_TOGGLE_BUTTON_EVENTS,
+        slots: APP_BAR_TOGGLE_BUTTON_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
         kind: MountedKind::MenuBar,
         name: "MenuBar",
         type_name: "Microsoft.UI.Xaml.Controls.MenuBar",
@@ -19231,6 +21543,131 @@ pub const CONTROLS: &[ControlDescriptor] = &[
         properties: SWAP_CHAIN_PANEL_PROPERTIES,
         events: SWAP_CHAIN_PANEL_EVENTS,
         slots: SWAP_CHAIN_PANEL_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::PipsPager,
+        name: "PipsPager",
+        type_name: "Microsoft.UI.Xaml.Controls.PipsPager",
+        role: ControlRole::Leaf,
+        capabilities: &[Capability::Layout],
+        properties: PIPS_PAGER_PROPERTIES,
+        events: PIPS_PAGER_EVENTS,
+        slots: PIPS_PAGER_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::ToggleSplitButton,
+        name: "ToggleSplitButton",
+        type_name: "Microsoft.UI.Xaml.Controls.ToggleSplitButton",
+        role: ControlRole::Content,
+        capabilities: &[
+            Capability::Layout,
+            Capability::Content,
+            Capability::Enabled,
+            Capability::Focus,
+        ],
+        properties: TOGGLE_SPLIT_BUTTON_PROPERTIES,
+        events: TOGGLE_SPLIT_BUTTON_EVENTS,
+        slots: TOGGLE_SPLIT_BUTTON_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::ItemsView,
+        name: "ItemsView",
+        type_name: "Microsoft.UI.Xaml.Controls.ItemsView",
+        role: ControlRole::Leaf,
+        capabilities: &[Capability::Layout],
+        properties: ITEMS_VIEW_PROPERTIES,
+        events: ITEMS_VIEW_EVENTS,
+        slots: ITEMS_VIEW_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::MediaPlayerElement,
+        name: "MediaPlayerElement",
+        type_name: "Microsoft.UI.Xaml.Controls.MediaPlayerElement",
+        role: ControlRole::Leaf,
+        capabilities: &[Capability::Layout],
+        properties: MEDIA_PLAYER_ELEMENT_PROPERTIES,
+        events: MEDIA_PLAYER_ELEMENT_EVENTS,
+        slots: MEDIA_PLAYER_ELEMENT_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::SemanticZoom,
+        name: "SemanticZoom",
+        type_name: "Microsoft.UI.Xaml.Controls.SemanticZoom",
+        role: ControlRole::Slots,
+        capabilities: &[Capability::Layout],
+        properties: SEMANTIC_ZOOM_PROPERTIES,
+        events: SEMANTIC_ZOOM_EVENTS,
+        slots: SEMANTIC_ZOOM_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::ParallaxView,
+        name: "ParallaxView",
+        type_name: "Microsoft.UI.Xaml.Controls.ParallaxView",
+        role: ControlRole::Slots,
+        capabilities: &[Capability::Layout],
+        properties: PARALLAX_VIEW_PROPERTIES,
+        events: PARALLAX_VIEW_EVENTS,
+        slots: PARALLAX_VIEW_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::AnnotatedScrollBar,
+        name: "AnnotatedScrollBar",
+        type_name: "Microsoft.UI.Xaml.Controls.AnnotatedScrollBar",
+        role: ControlRole::Leaf,
+        capabilities: &[Capability::Layout],
+        properties: ANNOTATED_SCROLL_BAR_PROPERTIES,
+        events: ANNOTATED_SCROLL_BAR_EVENTS,
+        slots: ANNOTATED_SCROLL_BAR_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::MapControl,
+        name: "MapControl",
+        type_name: "Microsoft.UI.Xaml.Controls.MapControl",
+        role: ControlRole::Leaf,
+        capabilities: &[Capability::Layout],
+        properties: MAP_CONTROL_PROPERTIES,
+        events: MAP_CONTROL_EVENTS,
+        slots: MAP_CONTROL_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::SwipeControl,
+        name: "SwipeControl",
+        type_name: "Microsoft.UI.Xaml.Controls.SwipeControl",
+        role: ControlRole::Slots,
+        capabilities: &[Capability::Layout],
+        properties: SWIPE_CONTROL_PROPERTIES,
+        events: SWIPE_CONTROL_EVENTS,
+        slots: SWIPE_CONTROL_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::RefreshContainer,
+        name: "RefreshContainer",
+        type_name: "Microsoft.UI.Xaml.Controls.RefreshContainer",
+        role: ControlRole::Content,
+        capabilities: &[Capability::Layout, Capability::Content],
+        properties: REFRESH_CONTAINER_PROPERTIES,
+        events: REFRESH_CONTAINER_EVENTS,
+        slots: REFRESH_CONTAINER_SLOTS,
         selection: None,
         controlled_collection: None,
     },

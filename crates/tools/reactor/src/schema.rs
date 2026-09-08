@@ -113,6 +113,7 @@ pub(crate) enum PropertyAdapter {
     ClockIdentifier,
     ContentDialogResult,
     ImageUri,
+    ImageDecodeWidth,
     InspectableString,
     InspectableStringList,
     ImplicitOpacityTransition,
@@ -129,6 +130,10 @@ pub(crate) enum PropertyAdapter {
     DragInfo,
     DropData,
     DropPolicy,
+    MediaSource,
+    MapCenter,
+    ItemsViewLayout,
+    FontFamily,
     FontWeight,
     HorizontalContentAlignment,
     ResourceOverrides,
@@ -189,6 +194,7 @@ impl PropertyAdapter {
             Self::DropPolicy
             | Self::KeyAccelerators
             | Self::PointerCapture
+            | Self::ImageDecodeWidth
             | Self::ResourceOverrides
             | Self::RichEditText
             | Self::RichTextBlocks => PropertyAdapterCapabilities {
@@ -205,13 +211,17 @@ impl PropertyAdapter {
             | Self::ContentDialogResult
             | Self::DragInfo
             | Self::DropData
+            | Self::FontFamily
             | Self::FontWeight
+            | Self::ItemsViewLayout
+            | Self::MapCenter
             | Self::HorizontalContentAlignment
             | Self::ImageUri
             | Self::InspectableString
             | Self::InspectableStringList
             | Self::ItemTag
             | Self::ItemTags
+            | Self::MediaSource
             | Self::NavigationDisplayMode
             | Self::NumberBoxValue
             | Self::PathData
@@ -236,6 +246,9 @@ impl PropertyAdapter {
         const GRID: &str = "Microsoft.UI.Xaml.Controls.Grid";
         const IMAGE: &str = "Microsoft.UI.Xaml.Controls.Image";
         const IMAGE_ICON: &str = "Microsoft.UI.Xaml.Controls.ImageIcon";
+        const ITEMS_VIEW: &str = "Microsoft.UI.Xaml.Controls.ItemsView";
+        const MAP_CONTROL: &str = "Microsoft.UI.Xaml.Controls.MapControl";
+        const MEDIA_PLAYER_ELEMENT: &str = "Microsoft.UI.Xaml.Controls.MediaPlayerElement";
         const NUMBER_BOX: &str = "Microsoft.UI.Xaml.Controls.NumberBox";
         const PATH_ICON: &str = "Microsoft.UI.Xaml.Controls.PathIcon";
         const RATING_CONTROL: &str = "Microsoft.UI.Xaml.Controls.RatingControl";
@@ -260,6 +273,13 @@ impl PropertyAdapter {
                 "ImageValue",
                 false,
                 "image_uri requires Image.Source or ImageIcon.Source",
+            ),
+            Self::ImageDecodeWidth => property(
+                OneOf(&[(IMAGE, "DecodeWidth")]),
+                None,
+                "I32",
+                true,
+                "image_decode_width requires Image.DecodeWidth",
             ),
             Self::NumberBoxValue => property(
                 OneOf(&[(NUMBER_BOX, "Value")]),
@@ -341,6 +361,13 @@ impl PropertyAdapter {
                 true,
                 "font_weight requires TextBlock.FontWeight",
             ),
+            Self::FontFamily => property(
+                Any,
+                ParamType("Microsoft.UI.Xaml.Media.FontFamily"),
+                "Str",
+                false,
+                "font_family requires a FontFamily property",
+            ),
             Self::HorizontalContentAlignment => property(
                 OneOf(&[(BUTTON, "HorizontalContentAlignment")]),
                 ValueType("HorizontalAlignment", true),
@@ -389,6 +416,27 @@ impl PropertyAdapter {
                 "Str",
                 false,
                 "uri requires a Windows.Foundation.Uri property",
+            ),
+            Self::MediaSource => property(
+                OneOf(&[(MEDIA_PLAYER_ELEMENT, "Source")]),
+                ParamType("Windows.Media.Playback.IMediaPlaybackSource"),
+                "Str",
+                false,
+                "media_source requires MediaPlayerElement.Source",
+            ),
+            Self::MapCenter => property(
+                OneOf(&[(MAP_CONTROL, "Center")]),
+                ParamType("Windows.Devices.Geolocation.Geopoint"),
+                "Str",
+                false,
+                "map_center requires MapControl.Center",
+            ),
+            Self::ItemsViewLayout => property(
+                OneOf(&[(ITEMS_VIEW, "Layout")]),
+                ParamType("Microsoft.UI.Xaml.Controls.Layout"),
+                "ItemsViewLayout",
+                true,
+                "items_view_layout requires ItemsView.Layout",
             ),
             Self::VerticalContentAlignment => property(
                 OneOf(&[(BUTTON, "VerticalContentAlignment")]),
@@ -508,6 +556,11 @@ pub(crate) struct Slot {
     pub(crate) collection: bool,
     #[serde(default)]
     pub(crate) item_controls: Vec<String>,
+    /// For single slots whose `put_` parameter is a WinRT interface (for
+    /// example `ISemanticZoomInformation`), the expected interface path.
+    /// The mounted child is still a `UIElement`; native code casts it.
+    #[serde(default)]
+    pub(crate) interface: Option<String>,
 }
 
 #[derive(Clone, Copy, Deserialize)]
@@ -516,6 +569,7 @@ pub(crate) enum SlotTarget {
     IconElement,
     Inspectable,
     UiElement,
+    Interface,
 }
 
 #[derive(Deserialize)]
@@ -601,6 +655,9 @@ pub(crate) struct ResolvedSlot {
     pub(crate) interface: String,
     pub(crate) shape: SlotShape,
     pub(crate) item_controls: Vec<String>,
+    /// For `SlotTarget::Interface` slots, the WinRT interface the mounted
+    /// child is cast to before calling the setter.
+    pub(crate) target_interface: Option<String>,
 }
 
 pub(crate) struct ResolvedSelection {
@@ -869,6 +926,7 @@ impl Schema {
                     }
                     Some(PropertyAdapter::PointerCapture) => "add_PointerPressed".to_string(),
                     Some(PropertyAdapter::DropPolicy) => "put_AllowDrop".to_string(),
+                    Some(PropertyAdapter::ImageDecodeWidth) => "put_Source".to_string(),
                     _ => format!("put_{}", property.name),
                 };
                 let interface = metadata.resolve(&name, &method).ok_or_else(|| {
@@ -1251,6 +1309,7 @@ impl Schema {
                                     | "PointerMoved"
                                     | "PointerPressed"
                                     | "PointerReleased"
+                                    | "PointerWheelChanged"
                             )
                         {
                             return Err(format!(
@@ -1573,39 +1632,61 @@ impl Schema {
                         }
                     )
                 })?;
-                let shape = if slot.collection {
-                    SlotShape::Collection(metadata.classify_collection(&name, &method).ok_or_else(
-                        || {
-                            format!(
-                                "{}.{} collection slot must return IVector<IInspectable>, a typed \
-                                 class vector, or ItemCollection",
-                                control.type_name, slot.name
-                            )
-                        },
-                    )?)
+                let (shape, target_interface) = if slot.collection {
+                    (
+                        SlotShape::Collection(
+                            metadata.classify_collection(&name, &method).ok_or_else(|| {
+                                format!(
+                                    "{}.{} collection slot must return IVector<IInspectable>, a typed \
+                                     class vector, or ItemCollection",
+                                    control.type_name, slot.name
+                                )
+                            })?,
+                        ),
+                        None,
+                    )
                 } else {
-                    match metadata.classify_param(&name, &method) {
-                        Some(ParamClass::IInspectable) => {
-                            SlotShape::Single(SlotTarget::Inspectable)
-                        }
-                        Some(ParamClass::Complex)
-                            if metadata.param_class_name(&name, &method).as_deref()
-                                == Some("Microsoft.UI.Xaml.UIElement") =>
+                    match &slot.interface {
+                        Some(expected)
+                            if metadata.classify_param(&name, &method)
+                                == Some(ParamClass::Complex)
+                                && metadata.param_class_name(&name, &method).as_deref()
+                                    == Some(expected.as_str()) =>
                         {
-                            SlotShape::Single(SlotTarget::UiElement)
+                            (
+                                SlotShape::Single(SlotTarget::Interface),
+                                Some(expected.clone()),
+                            )
                         }
-                        Some(ParamClass::Complex)
-                            if metadata.param_class_name(&name, &method).as_deref()
-                                == Some("Microsoft.UI.Xaml.Controls.IconElement") =>
-                        {
-                            SlotShape::Single(SlotTarget::IconElement)
-                        }
-                        _ => {
+                        Some(expected) => {
                             return Err(format!(
-                                "{}.{} has an unsupported slot parameter",
-                                control.type_name, slot.name
+                                "{}.{} interface slot expects {}",
+                                control.type_name, slot.name, expected
                             ));
                         }
+                        None => match metadata.classify_param(&name, &method) {
+                            Some(ParamClass::IInspectable) => {
+                                (SlotShape::Single(SlotTarget::Inspectable), None)
+                            }
+                            Some(ParamClass::Complex)
+                                if metadata.param_class_name(&name, &method).as_deref()
+                                    == Some("Microsoft.UI.Xaml.UIElement") =>
+                            {
+                                (SlotShape::Single(SlotTarget::UiElement), None)
+                            }
+                            Some(ParamClass::Complex)
+                                if metadata.param_class_name(&name, &method).as_deref()
+                                    == Some("Microsoft.UI.Xaml.Controls.IconElement") =>
+                            {
+                                (SlotShape::Single(SlotTarget::IconElement), None)
+                            }
+                            _ => {
+                                return Err(format!(
+                                    "{}.{} has an unsupported slot parameter",
+                                    control.type_name, slot.name
+                                ));
+                            }
+                        },
                     }
                 };
                 if !slot.collection && !slot.item_controls.is_empty() {
@@ -1614,11 +1695,18 @@ impl Schema {
                         control.type_name, slot.name
                     ));
                 }
+                if slot.collection && slot.interface.is_some() {
+                    return Err(format!(
+                        "{}.{} interface requires a single slot",
+                        control.type_name, slot.name
+                    ));
+                }
                 slots.push(ResolvedSlot {
                     name: slot.name,
                     interface: interface.full_path(),
                     shape,
                     item_controls: slot.item_controls,
+                    target_interface,
                 });
             }
 
@@ -2157,6 +2245,106 @@ adapter = "uri"
     }
 
     #[test]
+    fn rejects_media_source_adapter_on_other_properties() {
+        let source = r#"
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.Image"
+capabilities = ["layout"]
+
+[[control.property]]
+name = "Source"
+adapter = "media_source"
+"#;
+        let metadata = MetadataResolver::load(&workspace_path("crates/tools/reactor/winmd"));
+        let error = Schema::parse(source)
+            .unwrap()
+            .resolve(&metadata)
+            .err()
+            .unwrap();
+        assert!(error.contains("media_source requires MediaPlayerElement.Source"));
+    }
+
+    #[test]
+    fn rejects_font_family_adapter_on_non_font_properties() {
+        let source = r#"
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.TextBlock"
+capabilities = ["layout"]
+
+[[control.property]]
+name = "Text"
+adapter = "font_family"
+"#;
+        let metadata = MetadataResolver::load(&workspace_path("crates/tools/reactor/winmd"));
+        let error = Schema::parse(source)
+            .unwrap()
+            .resolve(&metadata)
+            .err()
+            .unwrap();
+        assert!(error.contains("font_family requires a FontFamily property"));
+    }
+
+    #[test]
+    fn rejects_map_center_adapter_on_other_properties() {
+        let source = r#"
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.Image"
+capabilities = ["layout"]
+
+[[control.property]]
+name = "Source"
+adapter = "map_center"
+"#;
+        let metadata = MetadataResolver::load(&workspace_path("crates/tools/reactor/winmd"));
+        let error = Schema::parse(source)
+            .unwrap()
+            .resolve(&metadata)
+            .err()
+            .unwrap();
+        assert!(error.contains("map_center requires MapControl.Center"));
+    }
+
+    #[test]
+    fn rejects_items_view_layout_adapter_on_other_properties() {
+        let source = r#"
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.StackPanel"
+capabilities = ["layout", "children"]
+
+[[control.property]]
+name = "Orientation"
+adapter = "items_view_layout"
+"#;
+        let metadata = MetadataResolver::load(&workspace_path("crates/tools/reactor/winmd"));
+        let error = Schema::parse(source)
+            .unwrap()
+            .resolve(&metadata)
+            .err()
+            .unwrap();
+        assert!(error.contains("items_view_layout requires ItemsView.Layout"));
+    }
+
+    #[test]
+    fn rejects_image_decode_width_adapter_on_other_properties() {
+        let source = r#"
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.Image"
+capabilities = ["layout"]
+
+[[control.property]]
+name = "Stretch"
+adapter = "image_decode_width"
+"#;
+        let metadata = MetadataResolver::load(&workspace_path("crates/tools/reactor/winmd"));
+        let error = Schema::parse(source)
+            .unwrap()
+            .resolve(&metadata)
+            .err()
+            .unwrap();
+        assert!(error.contains("image_decode_width requires Image.DecodeWidth"));
+    }
+
+    #[test]
     fn rejects_string_list_adapter_on_non_object_properties() {
         let source = r#"
 [[control]]
@@ -2390,6 +2578,54 @@ name = "Header"
             .err()
             .unwrap();
         assert!(error.contains("ambiguous structural declarations"));
+    }
+
+    #[test]
+    fn accepts_interface_slot_with_matching_metadata() {
+        let source = r#"
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.SemanticZoom"
+capabilities = ["layout"]
+
+[[control.slot]]
+name = "ZoomedInView"
+interface = "Microsoft.UI.Xaml.Controls.ISemanticZoomInformation"
+"#;
+        let metadata = MetadataResolver::load(&workspace_path("crates/tools/reactor/winmd"));
+        let resolved = Schema::parse(source).unwrap().resolve(&metadata).unwrap();
+        let slot = resolved.controls[0]
+            .slots
+            .iter()
+            .find(|slot| slot.name == "ZoomedInView")
+            .unwrap();
+        assert!(matches!(
+            slot.shape,
+            SlotShape::Single(SlotTarget::Interface)
+        ));
+        assert_eq!(
+            slot.target_interface.as_deref(),
+            Some("Microsoft.UI.Xaml.Controls.ISemanticZoomInformation")
+        );
+    }
+
+    #[test]
+    fn rejects_interface_slot_with_mismatched_metadata() {
+        let source = r#"
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.SemanticZoom"
+capabilities = ["layout"]
+
+[[control.slot]]
+name = "ZoomedInView"
+interface = "Microsoft.UI.Xaml.UIElement"
+"#;
+        let metadata = MetadataResolver::load(&workspace_path("crates/tools/reactor/winmd"));
+        let error = Schema::parse(source)
+            .unwrap()
+            .resolve(&metadata)
+            .err()
+            .unwrap();
+        assert!(error.contains("interface slot expects"), "{error}");
     }
 
     #[test]

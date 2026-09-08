@@ -10,4 +10,5 @@ pub mod menus;
 pub mod navigation;
 pub mod settings;
 pub mod status;
+pub mod system;
 pub mod text;

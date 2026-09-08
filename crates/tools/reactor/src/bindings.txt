@@ -6,7 +6,7 @@ Microsoft::UI::Dispatching::IDispatcherQueue::CreateTimer
 Microsoft::UI::Dispatching::IDispatcherQueue::TryEnqueueWithPriority
 Microsoft::UI::Dispatching::IDispatcherQueueTimer::{put_Interval, put_IsRepeating, add_Tick, remove_Tick, Start, Stop}
 Microsoft::UI::Input::IPointerPoint::{get_Position, get_Properties}
-Microsoft::UI::Input::IPointerPointProperties::{get_IsLeftButtonPressed, get_IsMiddleButtonPressed, get_IsRightButtonPressed}
+Microsoft::UI::Input::IPointerPointProperties::{get_IsLeftButtonPressed, get_IsMiddleButtonPressed, get_IsRightButtonPressed, get_MouseWheelDelta}
 Microsoft::UI::Text::ITextDocument::{GetText, SetText}
 Microsoft::UI::Text::TextGetOptions::None
 Microsoft::UI::Text::TextSetOptions::None
@@ -47,10 +47,19 @@ Microsoft::UI::Xaml::Controls::IRowDefinition::{get_Height, put_Height}
 Microsoft::UI::Xaml::Controls::ISplitButton::put_Flyout
 Microsoft::UI::Xaml::Controls::ISplitView::get_IsPaneOpen
 Microsoft::UI::Xaml::Controls::ISwapChainPanel::{get_CompositionScaleX, get_CompositionScaleY, add_CompositionScaleChanged, remove_CompositionScaleChanged}
+Microsoft::UI::Xaml::Controls::IComboBox::{add_DropDownOpened, remove_DropDownOpened}
+Microsoft::UI::Xaml::Controls::Primitives::IPopup::get_Child
+Microsoft::UI::Xaml::Media::VisualTreeHelper::{GetChild, GetChildrenCount, GetOpenPopupsForXamlRoot}
+Microsoft::UI::Xaml::Controls::IScrollViewer::{get_HorizontalOffset, get_VerticalOffset, get_ZoomFactor}
+Microsoft::UI::Xaml::Controls::ISwipeControl::{put_LeftItems, put_RightItems}
+Microsoft::UI::Xaml::Controls::ISwipeItem::{put_Text, put_Background, put_Foreground, add_Invoked, remove_Invoked}
+Microsoft::UI::Xaml::Controls::SwipeItem::CreateInstance
+Microsoft::UI::Xaml::Controls::SwipeItems::CreateInstance
 Microsoft::UI::Xaml::Controls::ITeachingTip::put_IsOpen
 Microsoft::UI::Xaml::Controls::ITimePicker::put_SelectedTime
 Microsoft::UI::Xaml::Controls::ITreeView::get_RootNodes
 Microsoft::UI::Xaml::Controls::ITreeViewNode::{get_Children, get_Content, put_Content, put_IsExpanded}
+Microsoft::UI::Xaml::Controls::VariableSizedWrapGrid::{ColumnSpanProperty, RowSpanProperty, SetColumnSpan, SetRowSpan}
 Microsoft::UI::Xaml::Controls::IWebView2::{EnsureCoreWebView2Async, get_CoreWebView2, add_CoreWebView2Initialized, remove_CoreWebView2Initialized}
 Microsoft::UI::Xaml::Controls::ItemsRepeater::CreateInstance
 Microsoft::UI::Xaml::Controls::MenuFlyout::CreateInstance
@@ -97,7 +106,7 @@ Microsoft::UI::Xaml::IFrameworkElementStatics::{get_WidthProperty, get_HeightPro
 Microsoft::UI::Xaml::IResourceDictionary::get_MergedDictionaries
 Microsoft::UI::Xaml::ISizeChangedEventArgs::get_NewSize
 Microsoft::UI::Xaml::IUIElement::{CapturePointer, Focus, ReleasePointerCapture, ReleasePointerCaptures, get_XamlRoot, put_XamlRoot, put_Opacity, StartBringIntoView}
-Microsoft::UI::Xaml::IUIElement::{add_PointerEntered, add_PointerExited, add_PointerMoved, add_PointerPressed, add_PointerReleased, remove_PointerEntered, remove_PointerExited, remove_PointerMoved, remove_PointerPressed, remove_PointerReleased}
+Microsoft::UI::Xaml::IUIElement::{add_PointerEntered, add_PointerExited, add_PointerMoved, add_PointerPressed, add_PointerReleased, add_PointerWheelChanged, remove_PointerEntered, remove_PointerExited, remove_PointerMoved, remove_PointerPressed, remove_PointerReleased, remove_PointerWheelChanged}
 Microsoft::UI::Xaml::IUIElementStatics::get_OpacityProperty
 Microsoft::UI::Xaml::IWindow2::{get_AppWindow, put_SystemBackdrop}
 Microsoft::UI::Xaml::IWindow::{Activate, Close, Closed, put_Content, put_Title}

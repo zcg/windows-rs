@@ -19,7 +19,7 @@ pub use element::*;
 pub use generated::public::*;
 pub use reference::{
     CompositionHostError, CompositionHostEvent, ElementObservation, ElementRef, FocusControl,
-    FocusError, ImageSourceError, IntegrationError, ReferenceControl, SwapChainPanelError,
-    SwapChainPanelEvent, WebView2Error, WindowRef,
+    FocusError, ImageSourceError, IntegrationError, ReferenceControl, ScrollOffsets,
+    SwapChainPanelError, SwapChainPanelEvent, WebView2Error, WindowRef,
 };
 pub use windows_time::{DateTime, TimeSpan};

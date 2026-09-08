@@ -17,6 +17,10 @@ name = "FontWeight"
 adapter = "font_weight"
 
 [[control.property]]
+name = "FontFamily"
+adapter = "font_family"
+
+[[control.property]]
 name = "IsTextSelectionEnabled"
 
 [[control.property]]
@@ -201,6 +205,10 @@ name = "PointerReleased"
 adapter = "pointer_event"
 
 [[control.event]]
+name = "PointerWheelChanged"
+adapter = "pointer_event"
+
+[[control.event]]
 name = "PointerCaptureLost"
 
 [[control.event]]
@@ -240,6 +248,9 @@ validation = "finite_positive"
 [[control.property]]
 name = "ItemHeight"
 validation = "finite_positive"
+
+[[control.property]]
+name = "MaximumRowsOrColumns"
 
 [[control.property]]
 name = "Orientation"
@@ -421,9 +432,15 @@ validation = "finite_positive"
 name = "Orientation"
 
 
+[[control.property]]
+name = "IsThumbToolTipEnabled"
+
 [[control.event]]
 name = "ValueChanged"
 property = "NewValue"
+
+[[control.event]]
+name = "SizeChanged"
 
 [[control.slot]]
 name = "Header"
@@ -493,6 +510,10 @@ name = "IsPaneOpen"
 controlled = "IsPaneOpenChanged"
 feedback_contract = "synchronous_exact"
 clear_feedback = true
+
+[[control.property]]
+name = "FontFamily"
+adapter = "font_family"
 
 [[control.event]]
 name = "IsPaneOpenChanged"
@@ -762,13 +783,16 @@ name = "Initials"
 
 [[control]]
 type = "Microsoft.UI.Xaml.Controls.ScrollViewer"
-capabilities = ["layout", "content"]
+capabilities = ["layout", "content", "reference"]
 
 [[control.property]]
 name = "HorizontalScrollBarVisibility"
 
 [[control.property]]
 name = "VerticalScrollBarVisibility"
+
+[[control.event]]
+name = "ViewChanged"
 
 
 
@@ -791,6 +815,10 @@ capabilities = ["layout", "reference"]
 [[control.property]]
 name = "Source"
 adapter = "image_uri"
+
+[[control.property]]
+name = "DecodeWidth"
+adapter = "image_decode_width"
 
 
 [[control.property]]
@@ -1261,6 +1289,25 @@ type = "Microsoft.UI.Xaml.Controls.AppBarSeparator"
 capabilities = ["layout"]
 
 [[control]]
+type = "Microsoft.UI.Xaml.Controls.AppBarToggleButton"
+capabilities = ["layout", "enabled"]
+
+[[control.property]]
+name = "Label"
+
+[[control.property]]
+name = "IsChecked"
+
+[[control.property]]
+name = "IsEnabled"
+
+[[control.event]]
+name = "Click"
+
+[[control.slot]]
+name = "Icon"
+
+[[control]]
 type = "Microsoft.UI.Xaml.Controls.MenuBar"
 capabilities = ["layout"]
 
@@ -1582,6 +1629,10 @@ name = "FontSize"
 validation = "finite_positive"
 
 [[control.property]]
+name = "FontFamily"
+adapter = "font_family"
+
+[[control.property]]
 name = "IsTextSelectionEnabled"
 
 [[control.property]]
@@ -1603,3 +1654,142 @@ capabilities = ["layout", "reference"]
 [[control]]
 type = "Microsoft.UI.Xaml.Controls.SwapChainPanel"
 capabilities = ["layout", "reference"]
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.PipsPager"
+capabilities = ["layout"]
+
+[[control.property]]
+name = "NumberOfPages"
+validation = "non_negative"
+
+[[control.property]]
+name = "SelectedPageIndex"
+
+[[control.property]]
+name = "MaxVisiblePips"
+validation = "non_negative"
+
+[[control.event]]
+name = "SelectedIndexChanged"
+property = "SelectedPageIndex"
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.ToggleSplitButton"
+capabilities = ["layout", "content", "enabled", "focus"]
+
+[[control.property]]
+name = "IsChecked"
+
+[[control.property]]
+name = "IsEnabled"
+
+[[control.event]]
+name = "Click"
+
+[[control.event]]
+name = "IsCheckedChanged"
+property = "IsChecked"
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.ItemsView"
+capabilities = ["layout"]
+
+[[control.property]]
+name = "ItemsSource"
+adapter = "inspectable_string_list"
+
+[[control.property]]
+name = "Layout"
+adapter = "items_view_layout"
+
+[[control.property]]
+name = "SelectionMode"
+
+[[control.event]]
+name = "ItemInvoked"
+property = "InvokedItem"
+adapter = "inspectable_string"
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.MediaPlayerElement"
+capabilities = ["layout"]
+
+[[control.property]]
+name = "Source"
+adapter = "media_source"
+
+[[control.property]]
+name = "AreTransportControlsEnabled"
+
+[[control.property]]
+name = "AutoPlay"
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.SemanticZoom"
+capabilities = ["layout"]
+
+[[control.property]]
+name = "IsZoomedInViewActive"
+
+[[control.slot]]
+name = "ZoomedInView"
+interface = "Microsoft.UI.Xaml.Controls.ISemanticZoomInformation"
+
+[[control.slot]]
+name = "ZoomedOutView"
+interface = "Microsoft.UI.Xaml.Controls.ISemanticZoomInformation"
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.ParallaxView"
+capabilities = ["layout"]
+
+[[control.property]]
+name = "HorizontalShift"
+
+[[control.slot]]
+name = "Source"
+
+[[control.slot]]
+name = "Child"
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.AnnotatedScrollBar"
+capabilities = ["layout"]
+
+[[control.property]]
+name = "SmallChange"
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.MapControl"
+capabilities = ["layout"]
+
+[[control.property]]
+name = "Center"
+adapter = "map_center"
+
+[[control.property]]
+name = "ZoomLevel"
+
+[[control.property]]
+name = "MapServiceToken"
+
+[[control.property]]
+name = "InteractiveControlsVisible"
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.SwipeControl"
+capabilities = ["layout"]
+
+[[control.slot]]
+name = "Content"
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.RefreshContainer"
+capabilities = ["layout", "content"]
+
+[[control.property]]
+name = "PullDirection"
+
+[[control.event]]
+name = "RefreshRequested"

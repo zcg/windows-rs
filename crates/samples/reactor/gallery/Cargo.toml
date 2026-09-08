@@ -5,7 +5,25 @@ edition = "2024"
 publish = false
 
 [dependencies]
+windows-core = { workspace = true }
+windows-future = { workspace = true }
 windows-reactor = { workspace = true }
+windows-webview = { workspace = true, features = ["reactor"] }
+
+[dependencies.windows]
+workspace = true
+features = [
+    "ApplicationModel_DataTransfer",
+    "Data_Xml_Dom",
+    "Foundation",
+    "Storage",
+    "Storage_Pickers",
+    "Storage_Streams",
+    "UI_Notifications",
+    "UI_StartScreen",
+    "shobjidl_core",
+    "winuser",
+]
 
 [dev-dependencies]
 windows-reactor = { workspace = true, features = ["test"] }

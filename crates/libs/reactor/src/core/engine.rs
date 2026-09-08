@@ -22,6 +22,7 @@ pub enum NodeKind {
     Flyout(FlyoutPlacement),
     Menu(OwnedMenuKind),
     CommandBarFlyout,
+    SwipeItems,
     TreeNodes,
     ContentDialog(bool),
     Native(MountedKind),
@@ -52,6 +53,7 @@ enum NodeData {
         state: OwnedState<Vec<MenuItem>>,
     },
     CommandBarFlyout(OwnedState<(Vec<CommandBarCommand>, Vec<CommandBarCommand>)>),
+    SwipeItems(OwnedState<(Vec<SwipeItem>, Vec<SwipeItem>)>),
     TreeNodes(Rc<Vec<TreeNode>>),
     ContentDialog(bool),
     Native(NativeData),
@@ -73,6 +75,7 @@ impl NodeData {
             | NodeKind::Provider
             | NodeKind::Menu(_)
             | NodeKind::CommandBarFlyout
+            | NodeKind::SwipeItems
             | NodeKind::TreeNodes
             | NodeKind::Native(_)
             | NodeKind::VirtualCollection => panic!("node kind requires associated data: {kind:?}"),
@@ -92,6 +95,7 @@ impl NodeData {
             Self::Flyout(placement) => NodeKind::Flyout(*placement),
             Self::Menu { kind, .. } => NodeKind::Menu(*kind),
             Self::CommandBarFlyout(_) => NodeKind::CommandBarFlyout,
+            Self::SwipeItems(_) => NodeKind::SwipeItems,
             Self::TreeNodes(_) => NodeKind::TreeNodes,
             Self::ContentDialog(open) => NodeKind::ContentDialog(*open),
             Self::Native(native) => NodeKind::Native(native.kind),
@@ -498,6 +502,23 @@ impl Tree {
         )
     }
 
+    pub fn insert_swipe_items(
+        &mut self,
+        parent: Option<NodeId>,
+        key: Option<Key>,
+        swipes: SwipeItems,
+    ) -> NodeId {
+        self.insert_data(
+            parent,
+            key,
+            NodeData::SwipeItems(OwnedState {
+                callback: swipes.on_invoked,
+                revision: 1,
+                content: (swipes.left, swipes.right),
+            }),
+        )
+    }
+
     pub fn insert_tree_nodes(
         &mut self,
         parent: Option<NodeId>,
@@ -527,6 +548,7 @@ impl Tree {
         match &self.node(id).data {
             NodeData::Menu { state, .. } => state.revision,
             NodeData::CommandBarFlyout(state) => state.revision,
+            NodeData::SwipeItems(state) => state.revision,
             _ => panic!("node does not own commands"),
         }
     }
@@ -535,6 +557,7 @@ impl Tree {
         match &self.node(id).data {
             NodeData::Menu { state, .. } => &state.callback,
             NodeData::CommandBarFlyout(state) => &state.callback,
+            NodeData::SwipeItems(state) => &state.callback,
             _ => panic!("node does not own commands"),
         }
     }
@@ -543,6 +566,15 @@ impl Tree {
         match &mut self.node_mut(id).data {
             NodeData::Menu { state, .. } => state.replace(menu.on_click, menu.items),
             _ => panic!("node is not a menu"),
+        }
+    }
+
+    pub fn update_swipe_items(&mut self, id: NodeId, swipes: SwipeItems) -> u32 {
+        match &mut self.node_mut(id).data {
+            NodeData::SwipeItems(state) => {
+                state.replace(swipes.on_invoked, (swipes.left, swipes.right))
+            }
+            _ => panic!("node does not own swipe items"),
         }
     }
 
@@ -589,6 +621,13 @@ impl Tree {
         match &self.node(id).data {
             NodeData::CommandBarFlyout(state) => &state.content,
             _ => panic!("node is not a command bar flyout"),
+        }
+    }
+
+    pub fn owned_swipes(&self, id: NodeId) -> &(Vec<SwipeItem>, Vec<SwipeItem>) {
+        match &self.node(id).data {
+            NodeData::SwipeItems(state) => &state.content,
+            _ => panic!("node does not own swipe items"),
         }
     }
 

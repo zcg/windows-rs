@@ -38,6 +38,16 @@ fn validate_tree_nodes(nodes: &[TreeNode]) -> Result<(), PumpError> {
     Ok(())
 }
 
+fn validate_swipe_items(items: &[SwipeItem]) -> Result<(), PumpError> {
+    let mut keys = HashSet::new();
+    for item in items {
+        if !keys.insert(item.key()) {
+            return Err(PumpError::DuplicateKey(item.key().clone()));
+        }
+    }
+    Ok(())
+}
+
 #[derive(Clone, Copy)]
 struct ChildListTarget {
     logical_parent: NodeId,
@@ -97,10 +107,16 @@ impl<R: NativeRuntime> Pump<R> {
         }
         if matches!(
             tree.kind(node),
-            NodeKind::Menu(_) | NodeKind::CommandBarFlyout | NodeKind::TreeNodes
+            NodeKind::Menu(_)
+                | NodeKind::CommandBarFlyout
+                | NodeKind::SwipeItems
+                | NodeKind::TreeNodes
         ) && !matches!(
             view.as_kind(),
-            ViewKind::Menu { .. } | ViewKind::CommandBarFlyout { .. } | ViewKind::TreeNodes { .. }
+            ViewKind::Menu { .. }
+                | ViewKind::CommandBarFlyout { .. }
+                | ViewKind::SwipeItems { .. }
+                | ViewKind::TreeNodes { .. }
         ) {
             return Self::replace_planned_view(tree, node, view, components, changes, plan);
         }
@@ -505,6 +521,44 @@ impl<R: NativeRuntime> Pump<R> {
                 });
                 Ok(node)
             }
+            ViewKind::SwipeItems { target, swipes } => {
+                if tree.kind(node) != NodeKind::SwipeItems {
+                    return Self::replace_planned_view(
+                        tree,
+                        node,
+                        View::from_kind(ViewKind::SwipeItems { target, swipes }),
+                        components,
+                        changes,
+                        plan,
+                    );
+                }
+                let [current_target] = tree.children(node) else {
+                    return Err(PumpError::StructureUnsupported);
+                };
+                let current_target = Self::reconcile_planned_view(
+                    tree,
+                    *current_target,
+                    View::from_kind(*target),
+                    components,
+                    changes,
+                    plan,
+                )?;
+                let target = Self::native_root(tree, current_target)?;
+                if tree.kind(target) != NodeKind::Native(MountedKind::SwipeControl) {
+                    return Err(PumpError::StructureUnsupported);
+                }
+                validate_swipe_items(&swipes.left)?;
+                validate_swipe_items(&swipes.right)?;
+                let revision = tree.update_swipe_items(node, swipes.clone());
+                plan.push(Command::SetSwipeItems {
+                    owner: node,
+                    target,
+                    left: Some(swipes.left),
+                    right: swipes.right,
+                    revision,
+                });
+                Ok(node)
+            }
             ViewKind::TreeNodes {
                 tree: desired,
                 nodes,
@@ -897,6 +951,18 @@ impl<R: NativeRuntime> Pump<R> {
                 };
                 Self::node_matches_view_kind(tree, *current, target)
             }
+            ViewKind::SwipeItems { target, swipes } => {
+                if tree.kind(node) != NodeKind::SwipeItems
+                    || tree.owned_swipes(node) != &(swipes.left.clone(), swipes.right.clone())
+                    || tree.owned_callback(node) != &swipes.on_invoked
+                {
+                    return Ok(false);
+                }
+                let [current] = tree.children(node) else {
+                    return Ok(false);
+                };
+                Self::node_matches_view_kind(tree, *current, target)
+            }
             ViewKind::TreeNodes {
                 tree: desired,
                 nodes,
@@ -1263,6 +1329,7 @@ impl<R: NativeRuntime> Pump<R> {
             | ViewKind::Flyout { .. }
             | ViewKind::Menu { .. }
             | ViewKind::CommandBarFlyout { .. }
+            | ViewKind::SwipeItems { .. }
             | ViewKind::TreeNodes { .. }
             | ViewKind::ContentDialog { .. } => false,
         }
@@ -1313,6 +1380,7 @@ impl<R: NativeRuntime> Pump<R> {
                 | NodeKind::Flyout(_)
                 | NodeKind::Menu(_)
                 | NodeKind::CommandBarFlyout
+                | NodeKind::SwipeItems
                 | NodeKind::TreeNodes
                 | NodeKind::ContentDialog(_) => return false,
             }
@@ -2068,6 +2136,36 @@ impl<R: NativeRuntime> Pump<R> {
                     target: *target,
                     primary: Some(primary),
                     secondary,
+                    revision: 1,
+                });
+                Ok((node, vec![*target]))
+            }
+            ViewKind::SwipeItems { target, swipes } => {
+                validate_swipe_items(&swipes.left)?;
+                validate_swipe_items(&swipes.right)?;
+                let left = swipes.left.clone();
+                let right = swipes.right.clone();
+                let node = tree.insert_swipe_items(logical_parent, key, swipes);
+                let (_, target_native) = Self::mount_planned_view(
+                    tree,
+                    Some(node),
+                    None,
+                    View::from_kind(*target),
+                    components,
+                    changes,
+                    plan,
+                )?;
+                let [target] = target_native.as_slice() else {
+                    return Err(PumpError::StructureUnsupported);
+                };
+                if tree.kind(*target) != NodeKind::Native(MountedKind::SwipeControl) {
+                    return Err(PumpError::StructureUnsupported);
+                }
+                plan.push(Command::SetSwipeItems {
+                    owner: node,
+                    target: *target,
+                    left: Some(left),
+                    right,
                     revision: 1,
                 });
                 Ok((node, vec![*target]))

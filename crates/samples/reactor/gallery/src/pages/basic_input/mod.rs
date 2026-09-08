@@ -28,5 +28,7 @@ mod text_box;
 pub use text_box::TextBoxPage;
 mod toggle_button;
 pub use toggle_button::ToggleButtonPage;
+mod toggle_split_button;
+pub use toggle_split_button::ToggleSplitButtonPage;
 mod toggle_switch;
 pub use toggle_switch::ToggleSwitchPage;

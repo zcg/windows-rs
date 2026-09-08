@@ -126,6 +126,20 @@ impl<R: NativeRuntime> Pump<R> {
                         callback,
                     });
                 }
+                ImperativeRequest::ObserveScrollOffsets {
+                    node,
+                    observation,
+                    callback,
+                } => {
+                    if self.tree.try_native(node).is_none() {
+                        continue;
+                    }
+                    commands.push(Command::ObserveScrollOffsets {
+                        node,
+                        observation,
+                        callback,
+                    });
+                }
                 ImperativeRequest::RevokeObservation { node, observation } => {
                     commands.push(Command::RevokeObservation { node, observation });
                 }
@@ -163,7 +177,9 @@ impl<R: NativeRuntime> Pump<R> {
     pub fn event_revision(&self, node: NodeId, event: EventId) -> Option<u32> {
         if matches!(
             event,
-            EventId::OwnedCommandInvoked | EventId::OwnedMenuItemInvoked
+            EventId::OwnedCommandInvoked
+                | EventId::OwnedMenuItemInvoked
+                | EventId::OwnedSwipeInvoked
         ) {
             self.tree.try_kind(node)?;
             return Some(self.tree.owned_revision(node));
@@ -294,7 +310,9 @@ impl<R: NativeRuntime> Pump<R> {
             let event = queued.work;
             if matches!(
                 event.event,
-                EventId::OwnedCommandInvoked | EventId::OwnedMenuItemInvoked
+                EventId::OwnedCommandInvoked
+                    | EventId::OwnedMenuItemInvoked
+                    | EventId::OwnedSwipeInvoked
             ) {
                 let Some(kind) = self.tree.try_kind(event.node) else {
                     continue;
@@ -304,6 +322,7 @@ impl<R: NativeRuntime> Pump<R> {
                         NodeKind::CommandBarFlyout
                     }
                     (EventId::OwnedMenuItemInvoked, NodeKind::Menu(kind)) => NodeKind::Menu(kind),
+                    (EventId::OwnedSwipeInvoked, NodeKind::SwipeItems) => NodeKind::SwipeItems,
                     _ => continue,
                 };
                 if kind != expected_kind || self.tree.owned_revision(event.node) != event.revision {

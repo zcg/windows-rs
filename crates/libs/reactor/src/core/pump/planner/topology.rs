@@ -73,7 +73,10 @@ impl<R: NativeRuntime> Pump<R> {
                 };
                 Self::visit_native_roots(tree, *target, visit)?;
             }
-            NodeKind::Menu(_) | NodeKind::CommandBarFlyout | NodeKind::TreeNodes => {
+            NodeKind::Menu(_)
+            | NodeKind::CommandBarFlyout
+            | NodeKind::SwipeItems
+            | NodeKind::TreeNodes => {
                 let [target] = tree.children(node) else {
                     return Err(PumpError::StructureUnsupported);
                 };
@@ -132,6 +135,7 @@ impl<R: NativeRuntime> Pump<R> {
                 | NodeKind::Flyout(_)
                 | NodeKind::Menu(_)
                 | NodeKind::CommandBarFlyout
+                | NodeKind::SwipeItems
                 | NodeKind::TreeNodes
                 | NodeKind::ContentDialog(_) => {
                     current = tree
@@ -219,7 +223,10 @@ impl<R: NativeRuntime> Pump<R> {
                     }
                     current = parent;
                 }
-                NodeKind::Menu(_) | NodeKind::CommandBarFlyout | NodeKind::TreeNodes => {
+                NodeKind::Menu(_)
+                | NodeKind::CommandBarFlyout
+                | NodeKind::SwipeItems
+                | NodeKind::TreeNodes => {
                     let [target] = tree.children(parent) else {
                         return Err(PumpError::StructureUnsupported);
                     };
@@ -389,7 +396,7 @@ impl<R: NativeRuntime> Pump<R> {
         while let Some(parent) = tree.parent(current) {
             if matches!(
                 tree.kind(parent),
-                NodeKind::Menu(_) | NodeKind::CommandBarFlyout
+                NodeKind::Menu(_) | NodeKind::CommandBarFlyout | NodeKind::SwipeItems
             ) {
                 let [target] = tree.children(parent) else {
                     return Err(PumpError::StructureUnsupported);
@@ -509,6 +516,15 @@ impl<R: NativeRuntime> Pump<R> {
                     revision: tree.owned_revision(owner),
                 });
             }
+            NodeKind::SwipeItems => {
+                plan.push(Command::SetSwipeItems {
+                    owner,
+                    target,
+                    left: None,
+                    right: Vec::new(),
+                    revision: tree.owned_revision(owner),
+                });
+            }
             _ => return Err(PumpError::StructureUnsupported),
         }
         Ok(())
@@ -550,6 +566,16 @@ impl<R: NativeRuntime> Pump<R> {
                     target,
                     primary: Some(primary.clone()),
                     secondary: secondary.clone(),
+                    revision,
+                });
+            }
+            NodeKind::SwipeItems => {
+                let (left, right) = tree.owned_swipes(owner);
+                plan.push(Command::SetSwipeItems {
+                    owner,
+                    target,
+                    left: Some(left.clone()),
+                    right: right.clone(),
                     revision,
                 });
             }
@@ -681,7 +707,7 @@ impl<R: NativeRuntime> Pump<R> {
             }
             if matches!(
                 tree.kind(node),
-                NodeKind::Menu(_) | NodeKind::CommandBarFlyout
+                NodeKind::Menu(_) | NodeKind::CommandBarFlyout | NodeKind::SwipeItems
             ) {
                 Self::clear_owned_attachment(tree, node, plan)?;
             }
@@ -804,6 +830,7 @@ impl<R: NativeRuntime> Pump<R> {
                 | NodeKind::Flyout(_)
                 | NodeKind::Menu(_)
                 | NodeKind::CommandBarFlyout
+                | NodeKind::SwipeItems
                 | NodeKind::TreeNodes
                 | NodeKind::ContentDialog(_) => {}
                 NodeKind::Application | NodeKind::Window => {

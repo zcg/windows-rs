@@ -6,5 +6,7 @@ mod progress_bar;
 pub use progress_bar::ProgressBarPage;
 mod progress_ring;
 pub use progress_ring::ProgressRingPage;
+mod refresh_container;
+pub use refresh_container::RefreshContainerPage;
 mod tool_tip;
 pub use tool_tip::ToolTipPage;

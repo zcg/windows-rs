@@ -8,6 +8,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use super::*;
+use crate::Brush as ReactorBrush;
+use crate::SwipeItem as SwipeItemDef;
 use windows_core::Interface;
 
 windows_core::link!("kernel32.dll" "system" fn FindResourceW(module: *mut std::ffi::c_void, name: *const u16, resource_type: *const u16) -> *mut std::ffi::c_void);
@@ -72,6 +74,8 @@ impl<'a> PropertyTarget<'a> {
             | PropertyId::GridColumn
             | PropertyId::GridRowSpan
             | PropertyId::GridColumnSpan
+            | PropertyId::WrapGridRowSpan
+            | PropertyId::WrapGridColumnSpan
             | PropertyId::RelativeAlignLeft
             | PropertyId::RelativeAlignTop
             | PropertyId::RelativeAlignRight
@@ -161,6 +165,7 @@ pub struct WinUiRuntime {
     pointer_capture: Rc<RefCell<HashMap<NodeId, bool>>>,
     resource_override_keys: HashMap<NodeId, HashSet<String>>,
     command_bar_flyouts: HashMap<NodeId, NativeCommandBarFlyout>,
+    swipe_attachments: HashMap<NodeId, NativeSwipeItems>,
     identity: Rc<Cell<Option<WindowToken>>>,
     selection_items: Rc<RefCell<Vec<(NodeId, windows_core::IInspectable)>>>,
     selection_owners: HashMap<NodeId, (NodeId, SlotId)>,
@@ -224,6 +229,10 @@ enum ObservationSubscription {
     CompositionHost {
         _root: XamlRootScaleSubscriptions,
         _size: windows_core::EventRevoker,
+    },
+    ScrollOffsets {
+        _anchor: Option<windows_core::EventRevoker>,
+        _view: Rc<RefCell<Option<windows_core::EventRevoker>>>,
     },
 }
 
@@ -311,6 +320,128 @@ struct NativeCommandBarFlyout {
     target: NodeId,
     _flyout: bindings::CommandBarFlyout,
     _revokers: Vec<windows_core::EventRevoker>,
+}
+
+struct NativeSwipeItems {
+    target: NodeId,
+    _revokers: Vec<windows_core::EventRevoker>,
+}
+
+fn scroll_offsets_of(viewer: &bindings::ScrollViewer) -> ScrollOffsets {
+    ScrollOffsets {
+        horizontal: viewer.HorizontalOffset().unwrap_or(0.0),
+        vertical: viewer.VerticalOffset().unwrap_or(0.0),
+        zoom: viewer.ZoomFactor().unwrap_or(1.0),
+    }
+}
+
+fn emit_scroll_offsets(viewer: &bindings::ScrollViewer, callback: &Callback<ScrollOffsets>) {
+    invoke_callback(callback, scroll_offsets_of(viewer));
+}
+
+fn subscribe_scroll_offsets(
+    viewer: &bindings::ScrollViewer,
+    callback: &Callback<ScrollOffsets>,
+    late: &Rc<RefCell<Option<windows_core::EventRevoker>>>,
+) -> Result<(), RuntimeError> {
+    emit_scroll_offsets(viewer, callback);
+    let scoped = viewer.clone();
+    let callback = callback.clone();
+    let revoker = viewer
+        .ViewChanged(move |_, _| {
+            emit_scroll_offsets(&scoped, &callback);
+        })
+        .map_err(native_error)?;
+    *late.borrow_mut() = Some(revoker);
+    Ok(())
+}
+
+/// Finds the drop-down list viewer of a combo box through its open popup.
+///
+/// Template part names are an implementation detail, so resolution walks the
+/// visual tree of open popups instead of looking names up.
+fn combo_box_scroll_viewer(
+    control: &bindings::ComboBox,
+) -> windows_core::Result<Option<bindings::ScrollViewer>> {
+    let root = control.cast::<IUIElement>()?.XamlRoot()?;
+    let popups = VisualTreeHelper::GetOpenPopupsForXamlRoot(&root)?;
+    // The opening drop-down is the freshest popup; walk newest first.
+    let count = popups.Size()?;
+    for index in (0..count).rev() {
+        let child: DependencyObject = popups.GetAt(index)?.Child()?.cast()?;
+        if let Some(viewer) = find_scroll_viewer(&child) {
+            return Ok(Some(viewer));
+        }
+    }
+    Ok(None)
+}
+
+fn find_scroll_viewer(object: &DependencyObject) -> Option<bindings::ScrollViewer> {
+    if let Ok(viewer) = object.cast::<bindings::ScrollViewer>() {
+        return Some(viewer);
+    }
+    let count = VisualTreeHelper::GetChildrenCount(object).ok()?;
+    for index in 0..count {
+        let child = VisualTreeHelper::GetChild(object, index).ok()?;
+        if let Some(viewer) = find_scroll_viewer(&child) {
+            return Some(viewer);
+        }
+    }
+    None
+}
+
+fn build_swipe_items(
+    items: &[SwipeItemDef],
+    owner: NodeId,
+    revision: u32,
+    sink: &EventSink,
+    output: &windows_collections::IVector<bindings::SwipeItem>,
+    revokers: &mut Vec<windows_core::EventRevoker>,
+) -> Result<(), RuntimeError> {
+    for item in items {
+        let native = bindings::SwipeItem::new().map_err(native_error)?;
+        native.SetText(&item.text).map_err(native_error)?;
+        if let Some(ReactorBrush::Solid(color)) = item.background {
+            let brush = SolidColorBrush::new().map_err(native_error)?;
+            brush
+                .SetColor(bindings::Color {
+                    a: color.a,
+                    r: color.r,
+                    g: color.g,
+                    b: color.b,
+                })
+                .map_err(native_error)?;
+            native.SetBackground(&brush).map_err(native_error)?;
+        }
+        if let Some(ReactorBrush::Solid(color)) = item.foreground {
+            let brush = SolidColorBrush::new().map_err(native_error)?;
+            brush
+                .SetColor(bindings::Color {
+                    a: color.a,
+                    r: color.r,
+                    g: color.g,
+                    b: color.b,
+                })
+                .map_err(native_error)?;
+            native.SetForeground(&brush).map_err(native_error)?;
+        }
+        let text = item.text.clone();
+        let sink = sink.clone();
+        revokers.push(
+            native
+                .Invoked(move |_, _| {
+                    sink.enqueue(
+                        owner,
+                        EventId::OwnedSwipeInvoked,
+                        revision,
+                        EventPayload::String(text.clone()),
+                    );
+                })
+                .map_err(native_error)?,
+        );
+        output.Append(&native).map_err(native_error)?;
+    }
+    Ok(())
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -486,6 +617,65 @@ fn set_rich_edit_text(control: &bindings::RichEditBox, value: &str) -> Result<()
         Ok(())
     };
     write.and(restore)
+}
+
+/// Applies a `"latitude,longitude"` center to a `MapControl`: moves the
+/// camera and attaches a marker layer at the point, mirroring the previous
+/// hand-written backend. A fresh marker layer is appended on every apply.
+fn set_map_center(control: &bindings::MapControl, value: &str) -> Result<(), RuntimeError> {
+    let (latitude, longitude) = value
+        .split_once(',')
+        .and_then(|(latitude, longitude)| {
+            Some((
+                latitude.trim().parse::<f64>().ok()?,
+                longitude.trim().parse::<f64>().ok()?,
+            ))
+        })
+        .ok_or(RuntimeError::UnsupportedKind)?;
+    let position = BasicGeoposition {
+        latitude,
+        longitude,
+        altitude: 0.0,
+    };
+    let point = Geopoint::Create(position).map_err(native_error)?;
+    control.SetCenter(&point).map_err(native_error)?;
+    let icon = MapIcon::new().map_err(native_error)?;
+    icon.SetLocation(&point).map_err(native_error)?;
+    let layer = MapElementsLayer::new().map_err(native_error)?;
+    layer
+        .MapElements()
+        .map_err(native_error)?
+        .Append(&icon)
+        .map_err(native_error)?;
+    control
+        .Layers()
+        .map_err(native_error)?
+        .Append(&layer)
+        .map_err(native_error)?;
+    Ok(())
+}
+
+/// Applies a decode width to the current bitmap source of an `Image`:
+/// downsamples at decode time (physical pixels) and re-sets the URI source
+/// to retrigger the decode. A width of zero resets to natural-size decoding.
+/// Missing sources, non-bitmap sources, and negative widths are a no-op.
+fn apply_image_decode_width(control: &bindings::Image, width: i32) -> Result<(), RuntimeError> {
+    if width < 0 {
+        return Ok(());
+    }
+    let Ok(source) = control.Source() else {
+        return Ok(());
+    };
+    let Ok(bitmap) = source.cast::<BitmapImage>() else {
+        return Ok(());
+    };
+    bitmap
+        .SetDecodePixelType(DecodePixelType::Physical)
+        .map_err(native_error)?;
+    bitmap.SetDecodePixelWidth(width).map_err(native_error)?;
+    let uri = bitmap.UriSource().map_err(native_error)?;
+    bitmap.SetUriSource(&uri).map_err(native_error)?;
+    Ok(())
 }
 
 fn build_tree_node(definition: &TreeNode) -> Result<TreeViewNode, RuntimeError> {
@@ -1464,6 +1654,10 @@ impl WinUiRuntime {
                         .command_bar_flyouts
                         .values()
                         .any(|flyout| flyout.target == *node)
+                    || self
+                        .swipe_attachments
+                        .values()
+                        .any(|swipes| swipes.target == *node)
                 {
                     return Err(RuntimeError::StillParented(*node));
                 }
@@ -1818,6 +2012,61 @@ impl WinUiRuntime {
                     ObservationSubscription::CompositionHost {
                         _root: root,
                         _size: size,
+                    },
+                );
+            }
+            Command::ObserveScrollOffsets {
+                node,
+                observation,
+                callback,
+            } => {
+                let late: Rc<RefCell<Option<windows_core::EventRevoker>>> =
+                    Rc::new(RefCell::new(None));
+                let anchor = match self.handles.get(node) {
+                    Some(Handle::ScrollViewer(control)) => {
+                        subscribe_scroll_offsets(control, callback, &late)?;
+                        None
+                    }
+                    Some(Handle::ComboBox(control)) => {
+                        // Resolve now in case the template is ready; the open
+                        // hook below re-resolves on every drop-down, which also
+                        // covers lazily materialized popup content.
+                        if let Ok(viewer) = combo_box_scroll_viewer(control)
+                            && let Some(viewer) = viewer
+                        {
+                            subscribe_scroll_offsets(&viewer, callback, &late)?;
+                        }
+                        let opened_control = control.clone();
+                        let opened_callback = callback.clone();
+                        let opened_late = Rc::clone(&late);
+                        let scoped = opened_control.clone();
+                        let opened = opened_control
+                            .DropDownOpened(move |_, _| {
+                                if let Ok(Some(viewer)) = combo_box_scroll_viewer(&scoped) {
+                                    let _ = subscribe_scroll_offsets(
+                                        &viewer,
+                                        &opened_callback,
+                                        &opened_late,
+                                    );
+                                }
+                            })
+                            .map_err(native_error)?;
+                        Some(opened)
+                    }
+                    Some(_) => {
+                        return Err(if self.contains(*node) {
+                            RuntimeError::UnsupportedKind
+                        } else {
+                            RuntimeError::MissingNode(*node)
+                        });
+                    }
+                    None => return Err(RuntimeError::MissingNode(*node)),
+                };
+                self.observation_subscriptions.insert(
+                    (*node, *observation),
+                    ObservationSubscription::ScrollOffsets {
+                        _anchor: anchor,
+                        _view: late,
                     },
                 );
             }
@@ -2329,6 +2578,51 @@ impl WinUiRuntime {
                     let node = build_tree_node(node)?;
                     roots.Append(&node).map_err(native_error)?;
                 }
+            }
+            Command::SetSwipeItems {
+                owner,
+                target,
+                left,
+                right,
+                revision,
+            } => {
+                self.swipe_attachments.remove(owner);
+                let Some(left) = left else {
+                    return Ok(());
+                };
+                let sink = self.event_sink()?;
+                let Some(Handle::SwipeControl(control)) = self.handles.get(target) else {
+                    return Err(RuntimeError::UnsupportedKind);
+                };
+                // A fresh SwipeControl reports null for its item collections, so
+                // assign populated collections instead of mutating in place.
+                let left_items = bindings::SwipeItems::new().map_err(native_error)?;
+                let left_vector = left_items
+                    .cast::<windows_collections::IVector<bindings::SwipeItem>>()
+                    .map_err(native_error)?;
+                let right_items = bindings::SwipeItems::new().map_err(native_error)?;
+                let right_vector = right_items
+                    .cast::<windows_collections::IVector<bindings::SwipeItem>>()
+                    .map_err(native_error)?;
+                let mut revokers = Vec::new();
+                build_swipe_items(left, *owner, *revision, &sink, &left_vector, &mut revokers)?;
+                build_swipe_items(
+                    right,
+                    *owner,
+                    *revision,
+                    &sink,
+                    &right_vector,
+                    &mut revokers,
+                )?;
+                control.SetLeftItems(&left_items).map_err(native_error)?;
+                control.SetRightItems(&right_items).map_err(native_error)?;
+                self.swipe_attachments.insert(
+                    *owner,
+                    NativeSwipeItems {
+                        target: *target,
+                        _revokers: revokers,
+                    },
+                );
             }
             Command::SetContentDialogOpen { node, owner, open } => {
                 let owner = if *open {
@@ -3488,6 +3782,23 @@ fn native_selection_index(value: Option<usize>) -> Result<i32, RuntimeError> {
     })
 }
 
+/// FontFamily objects cached by name: a FontFamily is a WinRT COM object, and
+/// rebuilding one per text control on every render would churn allocations on
+/// text-heavy pages. The cache only runs on the UI thread; the mutex guards
+/// insertion.
+fn cached_font_family(name: &str) -> windows_core::Result<FontFamily> {
+    static CACHE: std::sync::OnceLock<Mutex<HashMap<String, FontFamily>>> =
+        std::sync::OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut guard = cache.lock().unwrap();
+    if let Some(family) = guard.get(name) {
+        return Ok(family.clone());
+    }
+    let family = FontFamily::CreateInstanceWithName(name)?;
+    guard.insert(name.to_string(), family.clone());
+    Ok(family)
+}
+
 fn selection_index(value: i32) -> Result<Option<usize>, RuntimeError> {
     match value {
         -1 => Ok(None),
@@ -3585,6 +3896,7 @@ impl NativeRuntime for WinUiRuntime {
         self.observation_subscriptions.clear();
         self.owned_menus.clear();
         self.command_bar_flyouts.clear();
+        self.swipe_attachments.clear();
         content_dialog::reset(&self.content_dialogs);
         for (target, (flyout, _)) in self.flyouts.drain() {
             _ = flyout.SetContent(None::<&UIElement>);

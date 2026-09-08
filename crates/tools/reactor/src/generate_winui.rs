@@ -110,7 +110,12 @@ pub(crate) fn generate_control_bindings_filter(schema: &ResolvedSchema) -> Strin
                 | Some(PropertyAdapter::SelectionIndex)
                 | Some(PropertyAdapter::TreeNodeContent)
                 | Some(PropertyAdapter::Uri)
+                | Some(PropertyAdapter::MediaSource)
+                | Some(PropertyAdapter::MapCenter)
+                | Some(PropertyAdapter::FontFamily)
                 | Some(PropertyAdapter::VerticalContentAlignment)
+                | Some(PropertyAdapter::ImageDecodeWidth)
+                | Some(PropertyAdapter::ItemsViewLayout)
                 | None => {}
             }
             if property
@@ -181,6 +186,53 @@ pub(crate) fn generate_control_bindings_filter(schema: &ResolvedSchema) -> Strin
                      WriteBytes, StoreAsync, DetachStream}"
                         .to_string(),
                 );
+            }
+            if property.adapter == Some(PropertyAdapter::MediaSource) {
+                entries.insert("Windows::Foundation::Uri::CreateUri".to_string());
+                entries.insert("Windows::Media::Core::MediaSource::CreateFromUri".to_string());
+            }
+            if property.adapter == Some(PropertyAdapter::FontFamily) {
+                entries.insert(
+                    "Microsoft::UI::Xaml::Media::FontFamily::CreateInstanceWithName".to_string(),
+                );
+            }
+            if property.adapter == Some(PropertyAdapter::ItemsViewLayout) {
+                entries.insert(
+                    "Microsoft::UI::Xaml::Controls::StackLayout::CreateInstance".to_string(),
+                );
+                entries.insert(
+                    "Microsoft::UI::Xaml::Controls::IStackLayout::{put_Orientation, put_Spacing}"
+                        .to_string(),
+                );
+                entries.insert(
+                    "Microsoft::UI::Xaml::Controls::UniformGridLayout::CreateInstance".to_string(),
+                );
+                entries.insert(
+                    "Microsoft::UI::Xaml::Controls::IUniformGridLayout::{put_MinItemWidth, put_MinItemHeight, put_MinRowSpacing, put_MinColumnSpacing}"
+                        .to_string(),
+                );
+            }
+            if property.adapter == Some(PropertyAdapter::MapCenter) {
+                entries.insert("Windows::Devices::Geolocation::Geopoint::Create".to_string());
+                entries
+                    .insert("Microsoft::UI::Xaml::Controls::MapIcon::CreateInstance".to_string());
+                entries.insert("Microsoft::UI::Xaml::Controls::IMapIcon::put_Location".to_string());
+                entries.insert(
+                    "Microsoft::UI::Xaml::Controls::MapElementsLayer::CreateInstance".to_string(),
+                );
+                entries.insert(
+                    "Microsoft::UI::Xaml::Controls::IMapElementsLayer::get_MapElements".to_string(),
+                );
+                entries
+                    .insert("Microsoft::UI::Xaml::Controls::IMapControl::get_Layers".to_string());
+            }
+            if property.adapter == Some(PropertyAdapter::ImageDecodeWidth) {
+                entries.insert(
+                    "Microsoft::UI::Xaml::Media::Imaging::IBitmapImage::{put_DecodePixelWidth, put_DecodePixelType, get_UriSource}"
+                        .to_string(),
+                );
+                entries.insert("Microsoft::UI::Xaml::Media::Imaging::DecodePixelType".to_string());
+                entries.insert("Microsoft::UI::Xaml::Controls::IImage::get_Source".to_string());
             }
         }
         for event in &control.events {
@@ -267,6 +319,10 @@ pub(crate) fn generate_control_bindings_filter(schema: &ResolvedSchema) -> Strin
                 accessor,
                 slot.name
             ));
+            // NOTE: no filter entry for `target_interface` on purpose. The
+            // setter signature already pulls the interface in as a
+            // dependency shell (name-only, no methods). An explicit entry
+            // would project every method and trip `-D warnings` dead_code.
         }
     }
 
@@ -864,6 +920,11 @@ fn generate_set_content(
                 None => control.#setter(None::<&UIElement>).map_err(native_error),
             }
         },
+        SlotTarget::Interface => {
+            quote! {
+                unreachable!("content parameters are never interface-typed")
+            }
+        }
     };
     let set = if is_default_interface(control, &content.interface) {
         value
@@ -960,6 +1021,21 @@ fn generate_set_slot(control: &ResolvedControl, slot: &crate::schema::ResolvedSl
                 None => control.#setter(None::<&UIElement>).map_err(native_error),
             }
         },
+        SlotTarget::Interface => {
+            let Some(target) = slot.target_interface.as_deref() else {
+                unreachable!("interface slots always carry a target interface")
+            };
+            let target = path_ident(target);
+            quote! {
+                match child {
+                    Some(child) => {
+                        let child = child.cast::<#target>().map_err(native_error)?;
+                        control.#setter(&child).map_err(native_error)
+                    }
+                    None => control.#setter(None::<&#target>).map_err(native_error),
+                }
+            }
+        }
     };
     let set = if is_default_interface(control, &slot.interface) {
         value
@@ -1518,6 +1594,8 @@ fn generate_event_arm(control: &ResolvedControl, event: &ResolvedEvent) -> Token
                                     properties.IsRightButtonPressed().unwrap_or(false);
                                 info.is_middle_button_pressed =
                                     properties.IsMiddleButtonPressed().unwrap_or(false);
+                                info.mouse_wheel_delta =
+                                    properties.MouseWheelDelta().unwrap_or(0);
                             }
                         }
                         if let Ok(point) = args.GetCurrentPoint(None::<&UIElement>)
@@ -2086,6 +2164,80 @@ fn generate_set_property(control: &ResolvedControl, property: &ResolvedProperty)
             }
         };
     }
+    if property.adapter == Some(PropertyAdapter::MediaSource) {
+        return quote! {
+            (
+                Handle::#control_name(control),
+                PropertyId::#property_id,
+                PropertyValue::Str(value),
+            ) => {
+                let uri = Uri::CreateUri(value).map_err(native_error)?;
+                let source = MediaSource::CreateFromUri(&uri).map_err(native_error)?;
+                let source: IMediaPlaybackSource =
+                    source.cast().map_err(native_error)?;
+                #receiver.#setter(&source).map_err(native_error)
+            }
+        };
+    }
+    if property.adapter == Some(PropertyAdapter::FontFamily) {
+        return quote! {
+            (
+                Handle::#control_name(control),
+                PropertyId::#property_id,
+                PropertyValue::Str(value),
+            ) => {
+                let family = cached_font_family(value).map_err(native_error)?;
+                #receiver.#setter(&family).map_err(native_error)
+            }
+        };
+    }
+    if property.adapter == Some(PropertyAdapter::ItemsViewLayout) {
+        return quote! {
+            (
+                Handle::#control_name(control),
+                PropertyId::#property_id,
+                PropertyValue::ItemsViewLayout(value),
+            ) => {
+                let layout: Layout = match value {
+                    crate::ItemsViewLayout::Stack => {
+                        let layout = StackLayout::new().map_err(native_error)?;
+                        layout.SetSpacing(8.0).map_err(native_error)?;
+                        layout
+                            .SetOrientation(bindings::Orientation::Vertical)
+                            .map_err(native_error)?;
+                        layout.cast().map_err(native_error)?
+                    }
+                    crate::ItemsViewLayout::Grid => {
+                        let layout = UniformGridLayout::new().map_err(native_error)?;
+                        layout.SetMinItemWidth(120.0).map_err(native_error)?;
+                        layout.SetMinItemHeight(48.0).map_err(native_error)?;
+                        layout.SetMinRowSpacing(8.0).map_err(native_error)?;
+                        layout.SetMinColumnSpacing(8.0).map_err(native_error)?;
+                        layout.cast().map_err(native_error)?
+                    }
+                };
+                #receiver.#setter(&layout).map_err(native_error)
+            }
+        };
+    }
+    if property.adapter == Some(PropertyAdapter::MapCenter) {
+        return quote! {
+            (
+                Handle::#control_name(control),
+                PropertyId::#property_id,
+                PropertyValue::Str(value),
+            ) => set_map_center(control, value)
+        };
+    }
+    if property.adapter == Some(PropertyAdapter::ImageDecodeWidth) {
+        return quote! {
+            (
+                Handle::#control_name(control),
+                PropertyId::#property_id,
+                PropertyValue::I32(value),
+            ) => apply_image_decode_width(control, *value)
+        };
+    }
     if property.adapter == Some(PropertyAdapter::ResourceStyle) {
         let value_type = ident(&property.value);
         let variants = property.resource_style_variants.iter().map(|variant| {
@@ -2258,6 +2410,13 @@ fn generate_clear_property(control: &ResolvedControl, property: &ResolvedPropert
         return quote! {
             (Handle::#control_name(_), PropertyId::#property_id) => {
                 Err(RuntimeError::UnsupportedKind)
+            }
+        };
+    }
+    if property.adapter == Some(PropertyAdapter::ImageDecodeWidth) {
+        return quote! {
+            (Handle::#control_name(control), PropertyId::#property_id) => {
+                apply_image_decode_width(control, 0)
             }
         };
     }

@@ -145,6 +145,44 @@ fn composition_integration_uses_the_typed_imperative_paths() {
 }
 
 #[test]
+fn scroll_viewer_observation_uses_the_typed_imperative_path() {
+    let reference = ElementRef::<ScrollViewer>::new();
+    let _observation = reference.observe_scroll_offsets(|_| {});
+
+    let mut pump = Pump::new(RecordingRuntime::default());
+    pump.mount(ScrollViewer::new().element_ref(&reference).into())
+        .unwrap();
+
+    assert_eq!(pump.process_imperatives(), Ok(1));
+    assert!(
+        pump.runtime()
+            .commands()
+            .iter()
+            .flatten()
+            .any(|command| matches!(command, Command::ObserveScrollOffsets { .. }))
+    );
+}
+
+#[test]
+fn combo_box_observation_uses_the_typed_imperative_path() {
+    let reference = ElementRef::<ComboBox>::new();
+    let _observation = reference.observe_scroll_offsets(|_| {});
+
+    let mut pump = Pump::new(RecordingRuntime::default());
+    pump.mount(ComboBox::new().element_ref(&reference).into())
+        .unwrap();
+
+    assert_eq!(pump.process_imperatives(), Ok(1));
+    assert!(
+        pump.runtime()
+            .commands()
+            .iter()
+            .flatten()
+            .any(|command| matches!(command, Command::ObserveScrollOffsets { .. }))
+    );
+}
+
+#[test]
 fn accepted_one_shot_requests_complete_when_targets_are_removed() {
     let focus = ElementRef::<TextBox>::new();
     let webview = ElementRef::<WebView2>::new();

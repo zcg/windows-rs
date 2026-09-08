@@ -441,6 +441,47 @@ impl ElementRef<crate::Grid> {
     }
 }
 
+/// Scroll position reported by scroll-offset observations.
+///
+/// Offsets are in device-independent pixels (DIPs). `zoom` is the current
+/// zoom factor, `1.0` when zooming is disabled.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ScrollOffsets {
+    pub horizontal: f64,
+    pub vertical: f64,
+    pub zoom: f32,
+}
+
+impl ElementRef<crate::ScrollViewer> {
+    /// Observes scroll offsets across the scroll viewer's published bindings.
+    ///
+    /// Registration is accepted before publication. The callback fires once
+    /// with the current offsets when the native subscription starts, then on
+    /// every view change.
+    #[must_use = "the observation stops when the handle is dropped"]
+    pub fn observe_scroll_offsets(
+        &self,
+        callback: impl Fn(ScrollOffsets) + 'static,
+    ) -> ElementObservation {
+        self.register_observation(ReferenceObservation::ScrollOffsets(Callback::new(callback)))
+    }
+}
+
+impl ElementRef<crate::ComboBox> {
+    /// Observes scroll offsets of the combo box drop-down list.
+    ///
+    /// The drop-down content scrolls inside a template `ScrollViewer`; the
+    /// callback fires with its offsets on every view change once the native
+    /// subscription starts. Templates without that viewer report nothing.
+    #[must_use = "the observation stops when the handle is dropped"]
+    pub fn observe_scroll_offsets(
+        &self,
+        callback: impl Fn(ScrollOffsets) + 'static,
+    ) -> ElementObservation {
+        self.register_observation(ReferenceObservation::ScrollOffsets(Callback::new(callback)))
+    }
+}
+
 /// Layout and compositor events from a composition host.
 ///
 /// Width and height are in device-independent pixels (DIPs). Scale converts DIPs to pixels.
@@ -656,6 +697,7 @@ enum ReferenceObservation {
     SwapChainPanel(Callback<SwapChainPanelEvent>),
     ImageScale(Callback<f64>),
     CompositionHost(Callback<CompositionHostEvent>),
+    ScrollOffsets(Callback<ScrollOffsets>),
 }
 
 struct ObservationRegistration {
@@ -701,6 +743,19 @@ impl ObservationRegistration {
             },
             ReferenceObservation::CompositionHost(callback) => {
                 ImperativeRequest::ObserveCompositionHost {
+                    node,
+                    observation: this.id,
+                    callback: current_binding_callback(
+                        target,
+                        registration,
+                        identity,
+                        node,
+                        callback.clone(),
+                    ),
+                }
+            }
+            ReferenceObservation::ScrollOffsets(callback) => {
+                ImperativeRequest::ObserveScrollOffsets {
                     node,
                     observation: this.id,
                     callback: current_binding_callback(
@@ -840,6 +895,11 @@ pub(crate) enum ImperativeRequest {
         observation: u64,
         callback: Callback<CompositionHostEvent>,
     },
+    ObserveScrollOffsets {
+        node: NodeId,
+        observation: u64,
+        callback: Callback<ScrollOffsets>,
+    },
     RevokeObservation {
         node: NodeId,
         observation: u64,
@@ -874,6 +934,7 @@ impl ImperativeRequest {
             Self::ObserveSwapChainPanel { .. }
             | Self::ObserveImageScale { .. }
             | Self::ObserveCompositionHost { .. }
+            | Self::ObserveScrollOffsets { .. }
             | Self::RevokeObservation { .. } => {}
         }
     }

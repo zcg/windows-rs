@@ -152,6 +152,7 @@ pub fn category_icon(category: &str) -> Symbol {
         "Media" => Symbol::Camera,
         "Navigation" => Symbol::World,
         "Status and Info" => Symbol::Flag,
+        "System" => Symbol::Setting,
         _ => Symbol::Help,
     }
 }

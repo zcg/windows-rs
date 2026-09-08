@@ -729,6 +729,12 @@ fn structural_child(
         SlotTarget::UiElement | SlotTarget::Inspectable => {
             quote! { TextBlock::new().text(#text) }
         }
+        // Interface-typed view slots (for example SemanticZoom views) only
+        // accept controls implementing the target interface; surface tests
+        // mount for real, so use a ListView instead of a TextBlock.
+        SlotTarget::Interface => {
+            quote! { ListView::new() }
+        }
         SlotTarget::IconElement if alternate => {
             quote! { SymbolIcon::new().symbol(Symbol::Accept) }
         }
@@ -954,7 +960,7 @@ fn apply_property(
     let field = ident(&property.field);
     let builder = if matches!(
         property.adapter,
-        Some(PropertyAdapter::ImageUri | PropertyAdapter::Uri)
+        Some(PropertyAdapter::ImageUri | PropertyAdapter::Uri | PropertyAdapter::MediaSource)
     ) {
         quote! { #control_name::new().#field(#value).unwrap() }
     } else {
@@ -1025,6 +1031,15 @@ fn property_values(
         Some(PropertyAdapter::Uri) => (
             quote! { "https://example.com/a" },
             quote! { "https://example.com/b" },
+        ),
+        Some(PropertyAdapter::MediaSource) => (
+            quote! { "https://example.com/a.mp4" },
+            quote! { "https://example.com/b.mp4" },
+        ),
+        // Two-argument builder: the pair splices directly into `center(lat, lon)`.
+        Some(PropertyAdapter::MapCenter) => (
+            quote! { -30.034647, -51.217659 },
+            quote! { 47.6062, -122.3321 },
         ),
         Some(PropertyAdapter::PathData) => (
             quote! { "M 0 0 L 10 10 Z" },
@@ -1118,6 +1133,10 @@ fn direct_property_values(
             Some(ValueValidation::ZeroToFiftyNine) => (quote! { 5 }, quote! { 15 }),
             _ => (quote! { 1 }, quote! { 2 }),
         },
+        "ItemsViewLayout" => (
+            quote! { ItemsViewLayout::Stack },
+            quote! { ItemsViewLayout::Grid },
+        ),
         "OptionalF64" if property.adapter == Some(PropertyAdapter::RatingValue) => {
             (quote! { Some(3.0) }, quote! { Some(4.0) })
         }

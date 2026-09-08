@@ -357,12 +357,52 @@ problems:
 | --- | --- |
 | `use_effect` | Starting and cleaning up an external subscription |
 | `Context<T>` | Sharing app-wide data such as a theme with distant descendants |
-| `ElementRef<T>` | Focus or another operation that cannot be expressed as state |
+| `ElementRef<T>` | Focus, scroll-offset observation, or another operation that cannot be expressed as state |
 | `open_window` | Opening an independent secondary window |
 | `ItemsRepeater` | Virtualizing a large collection |
+| `SwipeItems` | Left/right swipe actions on content, with the invoked text routed back |
+| `VirtualSource` | Building `ItemsRepeater` rows lazily by index |
 
 Prefer component input over context for normal parent-to-child data, and prefer properties and
 messages over `ElementRef`. The declarative path is usually shorter and easier to maintain.
+
+`observe_scroll_offsets` reports the scroller position where no declarative event reaches it.
+`ScrollViewer` reports its own view; `ComboBox` reports its drop-down list viewer. The callback
+fires once on subscribe, then on every view change; dropping the handle stops delivery:
+
+```rust,ignore
+struct Reader {
+    viewer: ElementRef<ScrollViewer>,
+    _offsets: Option<ElementObservation>,
+}
+
+// On mount:
+let _offsets = self.viewer.observe_scroll_offsets(|offsets| {
+    // offsets.horizontal, offsets.vertical, offsets.zoom
+});
+ScrollViewer::new().element_ref(&self.viewer).content(content)
+```
+
+Media, maps, and text styling follow the same builder pattern:
+
+```rust,ignore
+MediaPlayerElement::new()
+    .source("https://example.com/video.mp4")
+    .unwrap()
+    .are_transport_controls_enabled(true);
+
+MapControl::new().center(-30.034647, -51.217659).zoom_level(4.0);
+
+TextBlock::new()
+    .text("Styled")
+    .font_family("Segoe UI")
+    .font_weight(FontWeight::SEMI_BOLD);
+
+Image::new()
+    .source_file(path)
+    .unwrap()
+    .decode_width(320);
+```
 
 ## Deployment
 

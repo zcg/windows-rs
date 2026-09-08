@@ -45,6 +45,7 @@ pub struct RecordingRuntime {
     owned_menus: HashMap<NodeId, (NodeId, OwnedMenuKind, Vec<MenuItem>, u32)>,
     command_bar_flyouts:
         HashMap<NodeId, (NodeId, Vec<CommandBarCommand>, Vec<CommandBarCommand>, u32)>,
+    swipe_attachments: HashMap<NodeId, (NodeId, Vec<SwipeItem>, Vec<SwipeItem>, u32)>,
     tree_nodes: HashMap<NodeId, Vec<TreeNode>>,
     window_titles: HashMap<NodeId, String>,
     window_title_bars: HashMap<NodeId, (NodeId, WindowTitleBarHeight)>,
@@ -79,6 +80,7 @@ impl Default for RecordingRuntime {
             flyouts: HashMap::new(),
             owned_menus: HashMap::new(),
             command_bar_flyouts: HashMap::new(),
+            swipe_attachments: HashMap::new(),
             tree_nodes: HashMap::new(),
             window_titles: HashMap::new(),
             window_title_bars: HashMap::new(),
@@ -240,6 +242,26 @@ impl RecordingRuntime {
         owner: NodeId,
     ) -> Option<&(NodeId, Vec<CommandBarCommand>, Vec<CommandBarCommand>, u32)> {
         self.command_bar_flyouts.get(&owner)
+    }
+
+    pub fn swipe_attachments(
+        &self,
+        owner: NodeId,
+    ) -> Option<&(NodeId, Vec<SwipeItem>, Vec<SwipeItem>, u32)> {
+        self.swipe_attachments.get(&owner)
+    }
+
+    pub fn queue_swipe_invoked(&mut self, owner: NodeId, text: impl Into<String>) {
+        let (_, _, _, revision) = self.swipe_attachments[&owner];
+        self.events.push(NativeWork {
+            identity: self.identity.unwrap(),
+            work: QueuedEvent::new(
+                owner,
+                EventId::OwnedSwipeInvoked,
+                revision,
+                EventPayload::String(text.into()),
+            ),
+        });
     }
 
     pub fn tree_nodes(&self, target: NodeId) -> Option<&[TreeNode]> {
@@ -777,6 +799,18 @@ impl RecordingRuntime {
                     return Err(RuntimeError::UnsupportedKind);
                 }
             }
+            Command::ObserveScrollOffsets { node, .. } => {
+                let recorded = self
+                    .nodes
+                    .get(node)
+                    .ok_or(RuntimeError::MissingNode(*node))?;
+                if !matches!(
+                    recorded.kind,
+                    Some(MountedKind::ScrollViewer) | Some(MountedKind::ComboBox)
+                ) {
+                    return Err(RuntimeError::UnsupportedKind);
+                }
+            }
             Command::RevokeObservation { .. } => {}
             Command::SetCompositionChildVisual {
                 node, completion, ..
@@ -1019,6 +1053,29 @@ impl RecordingRuntime {
                     return Err(RuntimeError::UnsupportedKind);
                 }
                 self.tree_nodes.insert(*target, nodes.clone());
+            }
+            Command::SetSwipeItems {
+                owner,
+                target,
+                left,
+                right,
+                revision,
+            } => {
+                if self
+                    .nodes
+                    .get(target)
+                    .ok_or(RuntimeError::MissingNode(*target))?
+                    .kind
+                    != Some(MountedKind::SwipeControl)
+                {
+                    return Err(RuntimeError::UnsupportedKind);
+                }
+                if let Some(left) = left {
+                    self.swipe_attachments
+                        .insert(*owner, (*target, left.clone(), right.clone(), *revision));
+                } else {
+                    self.swipe_attachments.remove(owner);
+                }
             }
             Command::SetContentDialogOpen { node, owner, open } => {
                 if self.nodes.get(node).and_then(|node| node.kind)

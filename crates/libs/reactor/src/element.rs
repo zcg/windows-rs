@@ -281,6 +281,7 @@ pub struct PointerEventInfo {
     pub is_left_button_pressed: bool,
     pub is_right_button_pressed: bool,
     pub is_middle_button_pressed: bool,
+    pub mouse_wheel_delta: i32,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -290,6 +291,14 @@ pub enum NavigationViewDisplayMode {
     Expanded,
 }
 
+/// Layout used by an [`ItemsView`].
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum ItemsViewLayout {
+    /// Vertical stack of items.
+    Stack,
+    /// Uniform grid of items.
+    Grid,
+}
 impl Brush {
     pub(crate) const fn theme(self) -> Option<ThemeBrush> {
         match self {
@@ -473,6 +482,10 @@ pub(crate) enum ViewKind {
     TreeNodes {
         tree: Box<Self>,
         nodes: Rc<Vec<TreeNode>>,
+    },
+    SwipeItems {
+        target: Box<Self>,
+        swipes: SwipeItems,
     },
     ContentDialog {
         dialog: Box<Self>,
@@ -852,6 +865,80 @@ pub trait CommandBarFlyoutExt: Into<View> + Sized {
 }
 
 impl<T> CommandBarFlyoutExt for T where T: Into<View> {}
+
+/// A keyed action revealed by swiping content left or right.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SwipeItem {
+    pub(crate) key: Key,
+    pub(crate) text: String,
+    pub(crate) background: Option<Brush>,
+    pub(crate) foreground: Option<Brush>,
+}
+
+impl SwipeItem {
+    /// Creates a swipe action with the given key and display text.
+    pub fn new(key: impl Into<Key>, text: impl Into<String>) -> Self {
+        Self {
+            key: key.into(),
+            text: text.into(),
+            background: None,
+            foreground: None,
+        }
+    }
+
+    /// Sets a solid background color shown behind the action text.
+    pub fn background(mut self, background: impl Into<Brush>) -> Self {
+        self.background = Some(background.into());
+        self
+    }
+
+    /// Sets a solid foreground color for the action text.
+    pub fn foreground(mut self, foreground: impl Into<Brush>) -> Self {
+        self.foreground = Some(foreground.into());
+        self
+    }
+
+    pub(crate) fn key(&self) -> &Key {
+        &self.key
+    }
+}
+
+/// Swipe actions attached to content; the invoked callback receives the
+/// invoked action's text.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SwipeItems {
+    pub(crate) left: Vec<SwipeItem>,
+    pub(crate) right: Vec<SwipeItem>,
+    pub(crate) on_invoked: Callback<String>,
+}
+
+impl SwipeItems {
+    /// Creates left/right swipe actions and a callback that receives the
+    /// invoked action's text.
+    pub fn new(
+        left: impl IntoIterator<Item = SwipeItem>,
+        right: impl IntoIterator<Item = SwipeItem>,
+        on_invoked: impl IntoPayloadCallback<String>,
+    ) -> Self {
+        Self {
+            left: left.into_iter().collect(),
+            right: right.into_iter().collect(),
+            on_invoked: on_invoked.into_payload_callback(),
+        }
+    }
+}
+
+/// Adds swipe actions to a view.
+pub trait SwipeExt: Into<View> + Sized {
+    fn swipe_items(self, swipes: SwipeItems) -> View {
+        View(ViewKind::SwipeItems {
+            target: Box::new(self.into().into_kind()),
+            swipes,
+        })
+    }
+}
+
+impl<T> SwipeExt for T where T: Into<View> {}
 
 /// Paragraph content for a [`RichTextBlock`].
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -1901,6 +1988,8 @@ pub(crate) struct ElementState {
     column: Option<i32>,
     row_span: Option<i32>,
     column_span: Option<i32>,
+    wrap_grid_row_span: Option<i32>,
+    wrap_grid_column_span: Option<i32>,
     relative_align_left: bool,
     relative_align_top: bool,
     relative_align_right: bool,
@@ -2549,6 +2638,31 @@ pub trait GridChildExt: LayoutControl + Sized {
 
 impl<T: LayoutControl> GridChildExt for T {}
 
+/// Row/column spans for children of a `VariableSizedWrapGrid`.
+pub trait WrapGridChildExt: LayoutControl + Sized {
+    fn wrap_grid_row_span(mut self, span: i32) -> Self {
+        assert!(span > 0, "WrapGrid row span must be positive");
+        Rc::make_mut(
+            self.element_state_mut()
+                .get_or_insert_with(|| Rc::new(ElementState::default())),
+        )
+        .wrap_grid_row_span = Some(span);
+        self
+    }
+
+    fn wrap_grid_column_span(mut self, span: i32) -> Self {
+        assert!(span > 0, "WrapGrid column span must be positive");
+        Rc::make_mut(
+            self.element_state_mut()
+                .get_or_insert_with(|| Rc::new(ElementState::default())),
+        )
+        .wrap_grid_column_span = Some(span);
+        self
+    }
+}
+
+impl<T: LayoutControl> WrapGridChildExt for T {}
+
 /// Places a concrete native control in its parent RelativePanel.
 pub trait RelativePanelChildExt: LayoutControl + Sized {
     fn relative_align_left(mut self) -> Self {
@@ -2754,6 +2868,14 @@ pub(crate) fn visit_element_state(
     visit(
         PropertyId::GridColumnSpan,
         value(placement.and_then(|value| value.column_span)),
+    );
+    visit(
+        PropertyId::WrapGridRowSpan,
+        value(placement.and_then(|value| value.wrap_grid_row_span)),
+    );
+    visit(
+        PropertyId::WrapGridColumnSpan,
+        value(placement.and_then(|value| value.wrap_grid_column_span)),
     );
     let relative = |value: bool| value.then_some(PropertyValueRef::Bool(true));
     visit(

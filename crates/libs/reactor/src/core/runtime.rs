@@ -333,6 +333,11 @@ pub enum Command {
         observation: u64,
         callback: Callback<CompositionHostEvent>,
     },
+    ObserveScrollOffsets {
+        node: NodeId,
+        observation: u64,
+        callback: Callback<ScrollOffsets>,
+    },
     RevokeObservation {
         node: NodeId,
         observation: u64,
@@ -387,6 +392,13 @@ pub enum Command {
         target: NodeId,
         primary: Option<Vec<CommandBarCommand>>,
         secondary: Vec<CommandBarCommand>,
+        revision: u32,
+    },
+    SetSwipeItems {
+        owner: NodeId,
+        target: NodeId,
+        left: Option<Vec<SwipeItem>>,
+        right: Vec<SwipeItem>,
         revision: u32,
     },
     SetTreeViewNodes {

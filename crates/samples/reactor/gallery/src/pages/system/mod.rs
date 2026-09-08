@@ -1,0 +1,12 @@
+mod clipboard;
+pub use clipboard::ClipboardPage;
+mod jump_list;
+pub use jump_list::JumpListPage;
+mod multiple_windows;
+pub use multiple_windows::MultipleWindowsPage;
+mod notifications;
+pub use notifications::NotificationsPage;
+mod storage_pickers;
+pub use storage_pickers::StoragePickersPage;
+mod transitions;
+pub use transitions::TransitionsPage;

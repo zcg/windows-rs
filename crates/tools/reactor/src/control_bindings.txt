@@ -1,6 +1,10 @@
+Microsoft::UI::Xaml::Controls::AnnotatedScrollBar::CreateInstance
+Microsoft::UI::Xaml::Controls::AnnotatedScrollBar::SmallChangeProperty
 Microsoft::UI::Xaml::Controls::AppBarButton::CreateInstance
 Microsoft::UI::Xaml::Controls::AppBarButton::LabelProperty
 Microsoft::UI::Xaml::Controls::AppBarSeparator::CreateInstance
+Microsoft::UI::Xaml::Controls::AppBarToggleButton::CreateInstance
+Microsoft::UI::Xaml::Controls::AppBarToggleButton::LabelProperty
 Microsoft::UI::Xaml::Controls::AutoSuggestBox::CreateInstance
 Microsoft::UI::Xaml::Controls::AutoSuggestBox::PlaceholderTextProperty
 Microsoft::UI::Xaml::Controls::AutoSuggestBox::TextProperty
@@ -45,6 +49,7 @@ Microsoft::UI::Xaml::Controls::ContentDialog::TitleProperty
 Microsoft::UI::Xaml::Controls::Control::BackgroundProperty
 Microsoft::UI::Xaml::Controls::Control::BorderBrushProperty
 Microsoft::UI::Xaml::Controls::Control::BorderThicknessProperty
+Microsoft::UI::Xaml::Controls::Control::FontFamilyProperty
 Microsoft::UI::Xaml::Controls::Control::HorizontalContentAlignmentProperty
 Microsoft::UI::Xaml::Controls::Control::IsEnabledProperty
 Microsoft::UI::Xaml::Controls::Control::VerticalContentAlignmentProperty
@@ -65,8 +70,11 @@ Microsoft::UI::Xaml::Controls::GridView::CreateInstance
 Microsoft::UI::Xaml::Controls::GridViewItem::CreateInstance
 Microsoft::UI::Xaml::Controls::HyperlinkButton::CreateInstance
 Microsoft::UI::Xaml::Controls::HyperlinkButton::NavigateUriProperty
+Microsoft::UI::Xaml::Controls::IAnnotatedScrollBar::put_SmallChange
 Microsoft::UI::Xaml::Controls::IAppBarButton::put_Icon
 Microsoft::UI::Xaml::Controls::IAppBarButton::put_Label
+Microsoft::UI::Xaml::Controls::IAppBarToggleButton::put_Icon
+Microsoft::UI::Xaml::Controls::IAppBarToggleButton::put_Label
 Microsoft::UI::Xaml::Controls::IAutoSuggestBox::get_Text
 Microsoft::UI::Xaml::Controls::IAutoSuggestBox::put_Header
 Microsoft::UI::Xaml::Controls::IAutoSuggestBox::put_PlaceholderText
@@ -118,6 +126,7 @@ Microsoft::UI::Xaml::Controls::IContentDialogClosedEventArgs::get_Result
 Microsoft::UI::Xaml::Controls::IControl::put_Background
 Microsoft::UI::Xaml::Controls::IControl::put_BorderBrush
 Microsoft::UI::Xaml::Controls::IControl::put_BorderThickness
+Microsoft::UI::Xaml::Controls::IControl::put_FontFamily
 Microsoft::UI::Xaml::Controls::IControl::put_HorizontalContentAlignment
 Microsoft::UI::Xaml::Controls::IControl::put_IsEnabled
 Microsoft::UI::Xaml::Controls::IControl::put_VerticalContentAlignment
@@ -134,6 +143,7 @@ Microsoft::UI::Xaml::Controls::IFontIcon::put_Glyph
 Microsoft::UI::Xaml::Controls::IGrid::put_ColumnSpacing
 Microsoft::UI::Xaml::Controls::IGrid::put_RowSpacing
 Microsoft::UI::Xaml::Controls::IHyperlinkButton::put_NavigateUri
+Microsoft::UI::Xaml::Controls::IImage::get_Source
 Microsoft::UI::Xaml::Controls::IImage::put_Source
 Microsoft::UI::Xaml::Controls::IImage::put_Stretch
 Microsoft::UI::Xaml::Controls::IImage::{add_ImageFailed, remove_ImageFailed}
@@ -150,10 +160,25 @@ Microsoft::UI::Xaml::Controls::IItemContainer::get_IsSelected
 Microsoft::UI::Xaml::Controls::IItemContainer::put_IsSelected
 Microsoft::UI::Xaml::Controls::IItemsControl::get_Items
 Microsoft::UI::Xaml::Controls::IItemsControl::put_ItemsSource
+Microsoft::UI::Xaml::Controls::IItemsView::put_ItemsSource
+Microsoft::UI::Xaml::Controls::IItemsView::put_Layout
+Microsoft::UI::Xaml::Controls::IItemsView::put_SelectionMode
+Microsoft::UI::Xaml::Controls::IItemsView::{add_ItemInvoked, remove_ItemInvoked}
+Microsoft::UI::Xaml::Controls::IItemsViewItemInvokedEventArgs::get_InvokedItem
 Microsoft::UI::Xaml::Controls::IListViewBase::put_CanDragItems
 Microsoft::UI::Xaml::Controls::IListViewBase::put_CanReorderItems
 Microsoft::UI::Xaml::Controls::IListViewBase::put_SelectionMode
 Microsoft::UI::Xaml::Controls::IListViewBase::{add_DragItemsCompleted, remove_DragItemsCompleted}
+Microsoft::UI::Xaml::Controls::IMapControl::get_Layers
+Microsoft::UI::Xaml::Controls::IMapControl::put_Center
+Microsoft::UI::Xaml::Controls::IMapControl::put_InteractiveControlsVisible
+Microsoft::UI::Xaml::Controls::IMapControl::put_MapServiceToken
+Microsoft::UI::Xaml::Controls::IMapControl::put_ZoomLevel
+Microsoft::UI::Xaml::Controls::IMapElementsLayer::get_MapElements
+Microsoft::UI::Xaml::Controls::IMapIcon::put_Location
+Microsoft::UI::Xaml::Controls::IMediaPlayerElement::put_AreTransportControlsEnabled
+Microsoft::UI::Xaml::Controls::IMediaPlayerElement::put_AutoPlay
+Microsoft::UI::Xaml::Controls::IMediaPlayerElement::put_Source
 Microsoft::UI::Xaml::Controls::IMenuBar::get_Items
 Microsoft::UI::Xaml::Controls::IMenuBarItem::put_Title
 Microsoft::UI::Xaml::Controls::INavigationView2::put_IsBackButtonVisible
@@ -188,6 +213,9 @@ Microsoft::UI::Xaml::Controls::INumberBox::{add_ValueChanged, remove_ValueChange
 Microsoft::UI::Xaml::Controls::INumberBoxValueChangedEventArgs::get_NewValue
 Microsoft::UI::Xaml::Controls::IPanel::Children
 Microsoft::UI::Xaml::Controls::IPanel::put_Background
+Microsoft::UI::Xaml::Controls::IParallaxView::put_Child
+Microsoft::UI::Xaml::Controls::IParallaxView::put_HorizontalShift
+Microsoft::UI::Xaml::Controls::IParallaxView::put_Source
 Microsoft::UI::Xaml::Controls::IPasswordBox::get_Password
 Microsoft::UI::Xaml::Controls::IPasswordBox::put_Header
 Microsoft::UI::Xaml::Controls::IPasswordBox::put_Password
@@ -197,6 +225,11 @@ Microsoft::UI::Xaml::Controls::IPasswordBox::{add_PasswordChanged, remove_Passwo
 Microsoft::UI::Xaml::Controls::IPathIcon::put_Data
 Microsoft::UI::Xaml::Controls::IPersonPicture::put_DisplayName
 Microsoft::UI::Xaml::Controls::IPersonPicture::put_Initials
+Microsoft::UI::Xaml::Controls::IPipsPager::get_SelectedPageIndex
+Microsoft::UI::Xaml::Controls::IPipsPager::put_MaxVisiblePips
+Microsoft::UI::Xaml::Controls::IPipsPager::put_NumberOfPages
+Microsoft::UI::Xaml::Controls::IPipsPager::put_SelectedPageIndex
+Microsoft::UI::Xaml::Controls::IPipsPager::{add_SelectedIndexChanged, remove_SelectedIndexChanged}
 Microsoft::UI::Xaml::Controls::IPivot::get_SelectedIndex
 Microsoft::UI::Xaml::Controls::IPivot::put_SelectedIndex
 Microsoft::UI::Xaml::Controls::IPivot::put_Title
@@ -223,11 +256,14 @@ Microsoft::UI::Xaml::Controls::IRatingControl::put_IsReadOnly
 Microsoft::UI::Xaml::Controls::IRatingControl::put_MaxRating
 Microsoft::UI::Xaml::Controls::IRatingControl::put_Value
 Microsoft::UI::Xaml::Controls::IRatingControl::{add_ValueChanged, remove_ValueChanged}
+Microsoft::UI::Xaml::Controls::IRefreshContainer::put_PullDirection
+Microsoft::UI::Xaml::Controls::IRefreshContainer::{add_RefreshRequested, remove_RefreshRequested}
 Microsoft::UI::Xaml::Controls::IRichEditBox::get_Document
 Microsoft::UI::Xaml::Controls::IRichEditBox::put_Header
 Microsoft::UI::Xaml::Controls::IRichEditBox::put_IsReadOnly
 Microsoft::UI::Xaml::Controls::IRichEditBox::put_PlaceholderText
 Microsoft::UI::Xaml::Controls::IRichEditBox::{add_TextChanged, remove_TextChanged}
+Microsoft::UI::Xaml::Controls::IRichTextBlock::put_FontFamily
 Microsoft::UI::Xaml::Controls::IRichTextBlock::put_FontSize
 Microsoft::UI::Xaml::Controls::IRichTextBlock::put_IsTextSelectionEnabled
 Microsoft::UI::Xaml::Controls::IRichTextBlock::put_TextWrapping
@@ -236,6 +272,7 @@ Microsoft::UI::Xaml::Controls::IScrollView::put_HorizontalScrollBarVisibility
 Microsoft::UI::Xaml::Controls::IScrollView::put_VerticalScrollBarVisibility
 Microsoft::UI::Xaml::Controls::IScrollViewer::put_HorizontalScrollBarVisibility
 Microsoft::UI::Xaml::Controls::IScrollViewer::put_VerticalScrollBarVisibility
+Microsoft::UI::Xaml::Controls::IScrollViewer::{add_ViewChanged, remove_ViewChanged}
 Microsoft::UI::Xaml::Controls::ISelectorBar::get_Items
 Microsoft::UI::Xaml::Controls::ISelectorBar::get_SelectedItem
 Microsoft::UI::Xaml::Controls::ISelectorBar::{add_SelectionChanged, remove_SelectionChanged}
@@ -243,7 +280,11 @@ Microsoft::UI::Xaml::Controls::ISelectorBar::{get_SelectedItem, put_SelectedItem
 Microsoft::UI::Xaml::Controls::ISelectorBarItem::get_Text
 Microsoft::UI::Xaml::Controls::ISelectorBarItem::put_Icon
 Microsoft::UI::Xaml::Controls::ISelectorBarItem::put_Text
+Microsoft::UI::Xaml::Controls::ISemanticZoom::put_IsZoomedInViewActive
+Microsoft::UI::Xaml::Controls::ISemanticZoom::put_ZoomedInView
+Microsoft::UI::Xaml::Controls::ISemanticZoom::put_ZoomedOutView
 Microsoft::UI::Xaml::Controls::ISlider::put_Header
+Microsoft::UI::Xaml::Controls::ISlider::put_IsThumbToolTipEnabled
 Microsoft::UI::Xaml::Controls::ISlider::put_Orientation
 Microsoft::UI::Xaml::Controls::ISlider::put_StepFrequency
 Microsoft::UI::Xaml::Controls::ISplitButton::{add_Click, remove_Click}
@@ -254,6 +295,7 @@ Microsoft::UI::Xaml::Controls::ISplitView::put_DisplayMode
 Microsoft::UI::Xaml::Controls::ISplitView::put_IsPaneOpen
 Microsoft::UI::Xaml::Controls::ISplitView::put_OpenPaneLength
 Microsoft::UI::Xaml::Controls::ISplitView::put_Pane
+Microsoft::UI::Xaml::Controls::IStackLayout::{put_Orientation, put_Spacing}
 Microsoft::UI::Xaml::Controls::IStackPanel::put_Orientation
 Microsoft::UI::Xaml::Controls::IStackPanel::put_Spacing
 Microsoft::UI::Xaml::Controls::ISymbolIcon::put_Symbol
@@ -278,6 +320,7 @@ Microsoft::UI::Xaml::Controls::ITeachingTip::put_Subtitle
 Microsoft::UI::Xaml::Controls::ITeachingTip::put_Title
 Microsoft::UI::Xaml::Controls::ITeachingTip::{add_ActionButtonClick, remove_ActionButtonClick}
 Microsoft::UI::Xaml::Controls::ITeachingTip::{add_Closed, remove_Closed}
+Microsoft::UI::Xaml::Controls::ITextBlock::put_FontFamily
 Microsoft::UI::Xaml::Controls::ITextBlock::put_FontSize
 Microsoft::UI::Xaml::Controls::ITextBlock::put_FontWeight
 Microsoft::UI::Xaml::Controls::ITextBlock::put_Foreground
@@ -307,6 +350,9 @@ Microsoft::UI::Xaml::Controls::ITitleBar::put_Subtitle
 Microsoft::UI::Xaml::Controls::ITitleBar::put_Title
 Microsoft::UI::Xaml::Controls::ITitleBar::{add_BackRequested, remove_BackRequested}
 Microsoft::UI::Xaml::Controls::ITitleBar::{add_PaneToggleRequested, remove_PaneToggleRequested}
+Microsoft::UI::Xaml::Controls::IToggleSplitButton::get_IsChecked
+Microsoft::UI::Xaml::Controls::IToggleSplitButton::put_IsChecked
+Microsoft::UI::Xaml::Controls::IToggleSplitButton::{add_IsCheckedChanged, remove_IsCheckedChanged}
 Microsoft::UI::Xaml::Controls::IToggleSwitch::get_IsOn
 Microsoft::UI::Xaml::Controls::IToggleSwitch::put_Header
 Microsoft::UI::Xaml::Controls::IToggleSwitch::put_IsOn
@@ -317,8 +363,10 @@ Microsoft::UI::Xaml::Controls::ITreeView::put_SelectionMode
 Microsoft::UI::Xaml::Controls::ITreeView::{add_ItemInvoked, remove_ItemInvoked}
 Microsoft::UI::Xaml::Controls::ITreeViewItemInvokedEventArgs::get_InvokedItem
 Microsoft::UI::Xaml::Controls::IUIElementCollection::Move
+Microsoft::UI::Xaml::Controls::IUniformGridLayout::{put_MinItemWidth, put_MinItemHeight, put_MinRowSpacing, put_MinColumnSpacing}
 Microsoft::UI::Xaml::Controls::IVariableSizedWrapGrid::put_ItemHeight
 Microsoft::UI::Xaml::Controls::IVariableSizedWrapGrid::put_ItemWidth
+Microsoft::UI::Xaml::Controls::IVariableSizedWrapGrid::put_MaximumRowsOrColumns
 Microsoft::UI::Xaml::Controls::IVariableSizedWrapGrid::put_Orientation
 Microsoft::UI::Xaml::Controls::IViewbox::put_Child
 Microsoft::UI::Xaml::Controls::IViewbox::put_Stretch
@@ -338,6 +386,11 @@ Microsoft::UI::Xaml::Controls::InfoBar::TitleProperty
 Microsoft::UI::Xaml::Controls::InfoBarSeverity
 Microsoft::UI::Xaml::Controls::ItemContainer::IsSelectedProperty
 Microsoft::UI::Xaml::Controls::ItemsControl::ItemsSourceProperty
+Microsoft::UI::Xaml::Controls::ItemsView::CreateInstance
+Microsoft::UI::Xaml::Controls::ItemsView::ItemsSourceProperty
+Microsoft::UI::Xaml::Controls::ItemsView::LayoutProperty
+Microsoft::UI::Xaml::Controls::ItemsView::SelectionModeProperty
+Microsoft::UI::Xaml::Controls::ItemsViewSelectionMode
 Microsoft::UI::Xaml::Controls::ListBox::CreateInstance
 Microsoft::UI::Xaml::Controls::ListBoxItem::CreateInstance
 Microsoft::UI::Xaml::Controls::ListView::CreateInstance
@@ -346,6 +399,17 @@ Microsoft::UI::Xaml::Controls::ListViewBase::CanReorderItemsProperty
 Microsoft::UI::Xaml::Controls::ListViewBase::SelectionModeProperty
 Microsoft::UI::Xaml::Controls::ListViewItem::CreateInstance
 Microsoft::UI::Xaml::Controls::ListViewSelectionMode
+Microsoft::UI::Xaml::Controls::MapControl::CenterProperty
+Microsoft::UI::Xaml::Controls::MapControl::CreateInstance
+Microsoft::UI::Xaml::Controls::MapControl::InteractiveControlsVisibleProperty
+Microsoft::UI::Xaml::Controls::MapControl::MapServiceTokenProperty
+Microsoft::UI::Xaml::Controls::MapControl::ZoomLevelProperty
+Microsoft::UI::Xaml::Controls::MapElementsLayer::CreateInstance
+Microsoft::UI::Xaml::Controls::MapIcon::CreateInstance
+Microsoft::UI::Xaml::Controls::MediaPlayerElement::AreTransportControlsEnabledProperty
+Microsoft::UI::Xaml::Controls::MediaPlayerElement::AutoPlayProperty
+Microsoft::UI::Xaml::Controls::MediaPlayerElement::CreateInstance
+Microsoft::UI::Xaml::Controls::MediaPlayerElement::SourceProperty
 Microsoft::UI::Xaml::Controls::MenuBar::CreateInstance
 Microsoft::UI::Xaml::Controls::MenuBarItem::CreateInstance
 Microsoft::UI::Xaml::Controls::MenuBarItem::TitleProperty
@@ -370,6 +434,8 @@ Microsoft::UI::Xaml::Controls::NumberBox::MinimumProperty
 Microsoft::UI::Xaml::Controls::NumberBox::ValueProperty
 Microsoft::UI::Xaml::Controls::Orientation
 Microsoft::UI::Xaml::Controls::Panel::BackgroundProperty
+Microsoft::UI::Xaml::Controls::ParallaxView::CreateInstance
+Microsoft::UI::Xaml::Controls::ParallaxView::HorizontalShiftProperty
 Microsoft::UI::Xaml::Controls::PasswordBox::CreateInstance
 Microsoft::UI::Xaml::Controls::PasswordBox::PasswordProperty
 Microsoft::UI::Xaml::Controls::PasswordBox::PasswordRevealModeProperty
@@ -380,6 +446,10 @@ Microsoft::UI::Xaml::Controls::PathIcon::DataProperty
 Microsoft::UI::Xaml::Controls::PersonPicture::CreateInstance
 Microsoft::UI::Xaml::Controls::PersonPicture::DisplayNameProperty
 Microsoft::UI::Xaml::Controls::PersonPicture::InitialsProperty
+Microsoft::UI::Xaml::Controls::PipsPager::CreateInstance
+Microsoft::UI::Xaml::Controls::PipsPager::MaxVisiblePipsProperty
+Microsoft::UI::Xaml::Controls::PipsPager::NumberOfPagesProperty
+Microsoft::UI::Xaml::Controls::PipsPager::SelectedPageIndexProperty
 Microsoft::UI::Xaml::Controls::Pivot::CreateInstance
 Microsoft::UI::Xaml::Controls::Pivot::SelectedIndexProperty
 Microsoft::UI::Xaml::Controls::Pivot::TitleProperty
@@ -433,11 +503,15 @@ Microsoft::UI::Xaml::Controls::RatingControl::CreateInstance
 Microsoft::UI::Xaml::Controls::RatingControl::IsReadOnlyProperty
 Microsoft::UI::Xaml::Controls::RatingControl::MaxRatingProperty
 Microsoft::UI::Xaml::Controls::RatingControl::ValueProperty
+Microsoft::UI::Xaml::Controls::RefreshContainer::CreateInstance
+Microsoft::UI::Xaml::Controls::RefreshContainer::PullDirectionProperty
+Microsoft::UI::Xaml::Controls::RefreshPullDirection
 Microsoft::UI::Xaml::Controls::RelativePanel::CreateInstance
 Microsoft::UI::Xaml::Controls::RichEditBox::CreateInstance
 Microsoft::UI::Xaml::Controls::RichEditBox::IsReadOnlyProperty
 Microsoft::UI::Xaml::Controls::RichEditBox::PlaceholderTextProperty
 Microsoft::UI::Xaml::Controls::RichTextBlock::CreateInstance
+Microsoft::UI::Xaml::Controls::RichTextBlock::FontFamilyProperty
 Microsoft::UI::Xaml::Controls::RichTextBlock::FontSizeProperty
 Microsoft::UI::Xaml::Controls::RichTextBlock::IsTextSelectionEnabledProperty
 Microsoft::UI::Xaml::Controls::RichTextBlock::TextWrappingProperty
@@ -452,7 +526,10 @@ Microsoft::UI::Xaml::Controls::ScrollingScrollBarVisibility
 Microsoft::UI::Xaml::Controls::SelectorBar::CreateInstance
 Microsoft::UI::Xaml::Controls::SelectorBarItem::CreateInstance
 Microsoft::UI::Xaml::Controls::SelectorBarItem::TextProperty
+Microsoft::UI::Xaml::Controls::SemanticZoom::CreateInstance
+Microsoft::UI::Xaml::Controls::SemanticZoom::IsZoomedInViewActiveProperty
 Microsoft::UI::Xaml::Controls::Slider::CreateInstance
+Microsoft::UI::Xaml::Controls::Slider::IsThumbToolTipEnabledProperty
 Microsoft::UI::Xaml::Controls::Slider::OrientationProperty
 Microsoft::UI::Xaml::Controls::Slider::StepFrequencyProperty
 Microsoft::UI::Xaml::Controls::SplitButton::CreateInstance
@@ -462,10 +539,12 @@ Microsoft::UI::Xaml::Controls::SplitView::DisplayModeProperty
 Microsoft::UI::Xaml::Controls::SplitView::IsPaneOpenProperty
 Microsoft::UI::Xaml::Controls::SplitView::OpenPaneLengthProperty
 Microsoft::UI::Xaml::Controls::SplitViewDisplayMode
+Microsoft::UI::Xaml::Controls::StackLayout::CreateInstance
 Microsoft::UI::Xaml::Controls::StackPanel::CreateInstance
 Microsoft::UI::Xaml::Controls::StackPanel::OrientationProperty
 Microsoft::UI::Xaml::Controls::StackPanel::SpacingProperty
 Microsoft::UI::Xaml::Controls::SwapChainPanel::CreateInstance
+Microsoft::UI::Xaml::Controls::SwipeControl::CreateInstance
 Microsoft::UI::Xaml::Controls::Symbol
 Microsoft::UI::Xaml::Controls::SymbolIcon::CreateInstance
 Microsoft::UI::Xaml::Controls::SymbolIcon::SymbolProperty
@@ -486,6 +565,7 @@ Microsoft::UI::Xaml::Controls::TeachingTip::SubtitleProperty
 Microsoft::UI::Xaml::Controls::TeachingTip::TitleProperty
 Microsoft::UI::Xaml::Controls::TeachingTipPlacementMode
 Microsoft::UI::Xaml::Controls::TextBlock::CreateInstance
+Microsoft::UI::Xaml::Controls::TextBlock::FontFamilyProperty
 Microsoft::UI::Xaml::Controls::TextBlock::FontSizeProperty
 Microsoft::UI::Xaml::Controls::TextBlock::FontWeightProperty
 Microsoft::UI::Xaml::Controls::TextBlock::ForegroundProperty
@@ -508,6 +588,8 @@ Microsoft::UI::Xaml::Controls::TitleBar::IsBackButtonVisibleProperty
 Microsoft::UI::Xaml::Controls::TitleBar::IsPaneToggleButtonVisibleProperty
 Microsoft::UI::Xaml::Controls::TitleBar::SubtitleProperty
 Microsoft::UI::Xaml::Controls::TitleBar::TitleProperty
+Microsoft::UI::Xaml::Controls::ToggleSplitButton::CreateInstance
+Microsoft::UI::Xaml::Controls::ToggleSplitButton::IsCheckedProperty
 Microsoft::UI::Xaml::Controls::ToggleSwitch::CreateInstance
 Microsoft::UI::Xaml::Controls::ToggleSwitch::IsOnProperty
 Microsoft::UI::Xaml::Controls::ToolTip::CreateInstance
@@ -515,9 +597,11 @@ Microsoft::UI::Xaml::Controls::TreeView::CreateInstance
 Microsoft::UI::Xaml::Controls::TreeView::SelectionModeProperty
 Microsoft::UI::Xaml::Controls::TreeViewSelectionMode
 Microsoft::UI::Xaml::Controls::UIElementCollection::{}
+Microsoft::UI::Xaml::Controls::UniformGridLayout::CreateInstance
 Microsoft::UI::Xaml::Controls::VariableSizedWrapGrid::CreateInstance
 Microsoft::UI::Xaml::Controls::VariableSizedWrapGrid::ItemHeightProperty
 Microsoft::UI::Xaml::Controls::VariableSizedWrapGrid::ItemWidthProperty
+Microsoft::UI::Xaml::Controls::VariableSizedWrapGrid::MaximumRowsOrColumnsProperty
 Microsoft::UI::Xaml::Controls::VariableSizedWrapGrid::OrientationProperty
 Microsoft::UI::Xaml::Controls::Viewbox::CreateInstance
 Microsoft::UI::Xaml::Controls::Viewbox::StretchProperty
@@ -533,6 +617,7 @@ Microsoft::UI::Xaml::IFrameworkElement::get_ActualHeight
 Microsoft::UI::Xaml::IFrameworkElement::get_ActualWidth
 Microsoft::UI::Xaml::IFrameworkElement::get_Tag
 Microsoft::UI::Xaml::IFrameworkElement::put_Tag
+Microsoft::UI::Xaml::IFrameworkElement::{add_SizeChanged, remove_SizeChanged}
 Microsoft::UI::Xaml::IScalarTransition::put_Duration
 Microsoft::UI::Xaml::IUIElement::put_AllowDrop
 Microsoft::UI::Xaml::IUIElement::put_CenterPoint
@@ -550,15 +635,19 @@ Microsoft::UI::Xaml::IUIElement::{add_PointerExited, remove_PointerExited}
 Microsoft::UI::Xaml::IUIElement::{add_PointerMoved, remove_PointerMoved}
 Microsoft::UI::Xaml::IUIElement::{add_PointerPressed, remove_PointerPressed}
 Microsoft::UI::Xaml::IUIElement::{add_PointerReleased, remove_PointerReleased}
+Microsoft::UI::Xaml::IUIElement::{add_PointerWheelChanged, remove_PointerWheelChanged}
 Microsoft::UI::Xaml::IUIElement::{get_KeyboardAccelerators, put_KeyboardAcceleratorPlacementMode}
 Microsoft::UI::Xaml::IVector3Transition::put_Duration
 Microsoft::UI::Xaml::Input::IKeyboardAccelerator::{put_Key, put_Modifiers, Invoked}
 Microsoft::UI::Xaml::Input::IKeyboardAcceleratorInvokedEventArgs::put_Handled
 Microsoft::UI::Xaml::Input::KeyboardAccelerator::CreateInstance
+Microsoft::UI::Xaml::Media::FontFamily::CreateInstanceWithName
 Microsoft::UI::Xaml::Media::ISolidColorBrush::put_Color
 Microsoft::UI::Xaml::Media::ImageSource
 Microsoft::UI::Xaml::Media::Imaging::BitmapImage::CreateInstance
+Microsoft::UI::Xaml::Media::Imaging::DecodePixelType
 Microsoft::UI::Xaml::Media::Imaging::IBitmapImage::put_UriSource
+Microsoft::UI::Xaml::Media::Imaging::IBitmapImage::{put_DecodePixelWidth, put_DecodePixelType, get_UriSource}
 Microsoft::UI::Xaml::Media::Imaging::IBitmapSource::SetSourceAsync
 Microsoft::UI::Xaml::Media::Imaging::ISvgImageSource::put_UriSource
 Microsoft::UI::Xaml::Media::Imaging::SvgImageSource::CreateInstance
@@ -591,7 +680,9 @@ Microsoft::UI::Xaml::TextWrapping
 Microsoft::UI::Xaml::UIElement::AllowDropProperty
 Microsoft::UI::Xaml::Vector3Transition::CreateInstance
 Windows::ApplicationModel::DataTransfer::IDataPackageView::{Contains, GetTextAsync, GetStorageItemsAsync}
+Windows::Devices::Geolocation::Geopoint::Create
 Windows::Foundation::Uri::CreateUri
+Windows::Media::Core::MediaSource::CreateFromUri
 Windows::Storage::IStorageItem::{get_Name, get_Path}
 Windows::Storage::Streams::DataWriter::CreateDataWriter
 Windows::Storage::Streams::IDataWriter::{WriteBytes, StoreAsync, DetachStream}

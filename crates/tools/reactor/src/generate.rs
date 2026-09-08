@@ -17,7 +17,17 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
     let elements = schema.controls.iter().map(generate_element);
     let element_variants = schema.controls.iter().map(|control| {
         let name = ident(&control.name);
-        quote! { #name(std::rc::Rc<#name>) }
+        // Controls whose names end in `Element` (for example
+        // `MediaPlayerElement`) trip `clippy::enum_variant_names` against the
+        // `Element` enum; the naming convention is intentional.
+        if control.name.ends_with("Element") {
+            quote! {
+                #[allow(clippy::enum_variant_names)]
+                #name(std::rc::Rc<#name>)
+            }
+        } else {
+            quote! { #name(std::rc::Rc<#name>) }
+        }
     });
     let element_conversions = schema.controls.iter().map(|control| {
         let name = ident(&control.name);
@@ -369,6 +379,8 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
             GridColumn,
             GridRowSpan,
             GridColumnSpan,
+            WrapGridRowSpan,
+            WrapGridColumnSpan,
             GridRows,
             GridColumns,
             RelativeAlignLeft,
@@ -389,6 +401,7 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
         pub enum EventId {
             OwnedCommandInvoked,
             OwnedMenuItemInvoked,
+            OwnedSwipeInvoked,
             #(#event_ids),*
         }
 
@@ -1610,7 +1623,10 @@ fn generate_element(control: &ResolvedControl) -> TokenStream {
                     self
                 }
             }
-        } else if property.adapter == Some(PropertyAdapter::Uri) {
+        } else if matches!(
+            property.adapter,
+            Some(PropertyAdapter::Uri | PropertyAdapter::MediaSource)
+        ) {
             let optional = ident(&format!("{}_optional", property.field));
             quote! {
                 pub fn #field(
@@ -1639,6 +1655,24 @@ fn generate_element(control: &ResolvedControl) -> TokenStream {
                         None => Property::Inherited,
                     };
                     Ok(self)
+                }
+            }
+        } else if property.adapter == Some(PropertyAdapter::MapCenter) {
+            let optional = ident(&format!("{}_optional", property.field));
+            quote! {
+                pub fn #field(mut self, latitude: f64, longitude: f64) -> Self {
+                    self.#field = Property::Set(format!("{latitude},{longitude}"));
+                    self
+                }
+
+                pub fn #optional(mut self, value: Option<(f64, f64)>) -> Self {
+                    self.#field = match value {
+                        Some((latitude, longitude)) => {
+                            Property::Set(format!("{latitude},{longitude}"))
+                        }
+                        None => Property::Inherited,
+                    };
+                    self
                 }
             }
         } else if property.adapter == Some(PropertyAdapter::InspectableStringList) {
@@ -2213,6 +2247,9 @@ fn generate_descriptors(control: &ResolvedControl) -> TokenStream {
                 ("icon_element", false)
             }
             crate::schema::SlotShape::Single(crate::schema::SlotTarget::UiElement) => {
+                ("ui_element", false)
+            }
+            crate::schema::SlotShape::Single(crate::schema::SlotTarget::Interface) => {
                 ("ui_element", false)
             }
             crate::schema::SlotShape::Collection(_) => ("inspectable", true),

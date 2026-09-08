@@ -20,6 +20,12 @@ pub(super) fn set_attached(
         (PropertyId::GridColumnSpan, PropertyValue::I32(value)) => {
             bindings::Grid::SetColumnSpan(&element, *value).map_err(native_error)
         }
+        (PropertyId::WrapGridRowSpan, PropertyValue::I32(value)) => {
+            bindings::VariableSizedWrapGrid::SetRowSpan(&element, *value).map_err(native_error)
+        }
+        (PropertyId::WrapGridColumnSpan, PropertyValue::I32(value)) => {
+            bindings::VariableSizedWrapGrid::SetColumnSpan(&element, *value).map_err(native_error)
+        }
         (PropertyId::RelativeAlignLeft, PropertyValue::Bool(value)) => {
             bindings::RelativePanel::SetAlignLeftWithPanel(&element, *value).map_err(native_error)
         }
@@ -101,6 +107,8 @@ pub(super) fn clear_attached(
         PropertyId::GridColumn => bindings::Grid::ColumnProperty(),
         PropertyId::GridRowSpan => bindings::Grid::RowSpanProperty(),
         PropertyId::GridColumnSpan => bindings::Grid::ColumnSpanProperty(),
+        PropertyId::WrapGridRowSpan => bindings::VariableSizedWrapGrid::RowSpanProperty(),
+        PropertyId::WrapGridColumnSpan => bindings::VariableSizedWrapGrid::ColumnSpanProperty(),
         PropertyId::RelativeAlignLeft => bindings::RelativePanel::AlignLeftWithPanelProperty(),
         PropertyId::RelativeAlignTop => bindings::RelativePanel::AlignTopWithPanelProperty(),
         PropertyId::RelativeAlignRight => bindings::RelativePanel::AlignRightWithPanelProperty(),

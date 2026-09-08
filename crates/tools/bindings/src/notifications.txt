@@ -1,0 +1,16 @@
+--in crates/libs/default/Windows.winmd
+--in crates/tools/reactor/winmd/Microsoft.Windows.AppNotifications.winmd
+--in crates/tools/reactor/winmd/Microsoft.Windows.BadgeNotifications.winmd
+--out crates/samples/reactor/gallery/src/notifications_bindings.rs
+--flat --minimal --dead-code
+
+--filter
+    Microsoft::Windows::AppNotifications::AppNotificationManager::IsSupported
+    Microsoft::Windows::AppNotifications::AppNotificationManager::Default
+    Microsoft::Windows::AppNotifications::IAppNotificationManager::Register
+    Microsoft::Windows::AppNotifications::IAppNotificationManager::Show
+    Microsoft::Windows::AppNotifications::IAppNotificationFactory::CreateInstance
+    Microsoft::Windows::BadgeNotifications::BadgeNotificationManager::Current
+    Microsoft::Windows::BadgeNotifications::IBadgeNotificationManager::SetBadgeAsCount
+    Microsoft::Windows::BadgeNotifications::IBadgeNotificationManager::SetBadgeAsGlyph
+    Microsoft::Windows::BadgeNotifications::IBadgeNotificationManager::ClearBadge

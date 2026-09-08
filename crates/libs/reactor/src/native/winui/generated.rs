@@ -58,6 +58,7 @@ pub enum Handle {
     CommandBar(bindings::CommandBar),
     AppBarButton(bindings::AppBarButton),
     AppBarSeparator(bindings::AppBarSeparator),
+    AppBarToggleButton(bindings::AppBarToggleButton),
     MenuBar(bindings::MenuBar),
     MenuBarItem(bindings::MenuBarItem),
     SplitButton(bindings::SplitButton),
@@ -80,6 +81,16 @@ pub enum Handle {
     Viewbox(bindings::Viewbox),
     WebView2(bindings::WebView2),
     SwapChainPanel(bindings::SwapChainPanel),
+    PipsPager(bindings::PipsPager),
+    ToggleSplitButton(bindings::ToggleSplitButton),
+    ItemsView(bindings::ItemsView),
+    MediaPlayerElement(bindings::MediaPlayerElement),
+    SemanticZoom(bindings::SemanticZoom),
+    ParallaxView(bindings::ParallaxView),
+    AnnotatedScrollBar(bindings::AnnotatedScrollBar),
+    MapControl(bindings::MapControl),
+    SwipeControl(bindings::SwipeControl),
+    RefreshContainer(bindings::RefreshContainer),
 }
 pub enum SlotCollection {
     Inspectable(windows_collections::IVector<windows_core::IInspectable>),
@@ -292,6 +303,9 @@ impl Handle {
             MountedKind::AppBarSeparator => {
                 Self::AppBarSeparator(bindings::AppBarSeparator::new().map_err(native_error)?)
             }
+            MountedKind::AppBarToggleButton => {
+                Self::AppBarToggleButton(bindings::AppBarToggleButton::new().map_err(native_error)?)
+            }
             MountedKind::MenuBar => Self::MenuBar(bindings::MenuBar::new().map_err(native_error)?),
             MountedKind::MenuBarItem => {
                 Self::MenuBarItem(bindings::MenuBarItem::new().map_err(native_error)?)
@@ -349,6 +363,36 @@ impl Handle {
             }
             MountedKind::SwapChainPanel => {
                 Self::SwapChainPanel(bindings::SwapChainPanel::new().map_err(native_error)?)
+            }
+            MountedKind::PipsPager => {
+                Self::PipsPager(bindings::PipsPager::new().map_err(native_error)?)
+            }
+            MountedKind::ToggleSplitButton => {
+                Self::ToggleSplitButton(bindings::ToggleSplitButton::new().map_err(native_error)?)
+            }
+            MountedKind::ItemsView => {
+                Self::ItemsView(bindings::ItemsView::new().map_err(native_error)?)
+            }
+            MountedKind::MediaPlayerElement => {
+                Self::MediaPlayerElement(bindings::MediaPlayerElement::new().map_err(native_error)?)
+            }
+            MountedKind::SemanticZoom => {
+                Self::SemanticZoom(bindings::SemanticZoom::new().map_err(native_error)?)
+            }
+            MountedKind::ParallaxView => {
+                Self::ParallaxView(bindings::ParallaxView::new().map_err(native_error)?)
+            }
+            MountedKind::AnnotatedScrollBar => {
+                Self::AnnotatedScrollBar(bindings::AnnotatedScrollBar::new().map_err(native_error)?)
+            }
+            MountedKind::MapControl => {
+                Self::MapControl(bindings::MapControl::new().map_err(native_error)?)
+            }
+            MountedKind::SwipeControl => {
+                Self::SwipeControl(bindings::SwipeControl::new().map_err(native_error)?)
+            }
+            MountedKind::RefreshContainer => {
+                Self::RefreshContainer(bindings::RefreshContainer::new().map_err(native_error)?)
             }
             MountedKind::ItemsRepeater => return Err(RuntimeError::UnsupportedKind),
         })
@@ -411,6 +455,7 @@ impl Handle {
             Self::CommandBar(value) => value.cast(),
             Self::AppBarButton(value) => value.cast(),
             Self::AppBarSeparator(value) => value.cast(),
+            Self::AppBarToggleButton(value) => value.cast(),
             Self::MenuBar(value) => value.cast(),
             Self::MenuBarItem(value) => value.cast(),
             Self::SplitButton(value) => value.cast(),
@@ -433,6 +478,16 @@ impl Handle {
             Self::Viewbox(value) => value.cast(),
             Self::WebView2(value) => value.cast(),
             Self::SwapChainPanel(value) => value.cast(),
+            Self::PipsPager(value) => value.cast(),
+            Self::ToggleSplitButton(value) => value.cast(),
+            Self::ItemsView(value) => value.cast(),
+            Self::MediaPlayerElement(value) => value.cast(),
+            Self::SemanticZoom(value) => value.cast(),
+            Self::ParallaxView(value) => value.cast(),
+            Self::AnnotatedScrollBar(value) => value.cast(),
+            Self::MapControl(value) => value.cast(),
+            Self::SwipeControl(value) => value.cast(),
+            Self::RefreshContainer(value) => value.cast(),
         }
     }
     pub fn dependency_object(&self) -> windows_core::Result<IDependencyObject> {
@@ -493,6 +548,7 @@ impl Handle {
             Self::CommandBar(value) => value.cast(),
             Self::AppBarButton(value) => value.cast(),
             Self::AppBarSeparator(value) => value.cast(),
+            Self::AppBarToggleButton(value) => value.cast(),
             Self::MenuBar(value) => value.cast(),
             Self::MenuBarItem(value) => value.cast(),
             Self::SplitButton(value) => value.cast(),
@@ -515,6 +571,16 @@ impl Handle {
             Self::Viewbox(value) => value.cast(),
             Self::WebView2(value) => value.cast(),
             Self::SwapChainPanel(value) => value.cast(),
+            Self::PipsPager(value) => value.cast(),
+            Self::ToggleSplitButton(value) => value.cast(),
+            Self::ItemsView(value) => value.cast(),
+            Self::MediaPlayerElement(value) => value.cast(),
+            Self::SemanticZoom(value) => value.cast(),
+            Self::ParallaxView(value) => value.cast(),
+            Self::AnnotatedScrollBar(value) => value.cast(),
+            Self::MapControl(value) => value.cast(),
+            Self::SwipeControl(value) => value.cast(),
+            Self::RefreshContainer(value) => value.cast(),
         }
     }
     pub fn kind(&self) -> MountedKind {
@@ -575,6 +641,7 @@ impl Handle {
             Self::CommandBar(_) => MountedKind::CommandBar,
             Self::AppBarButton(_) => MountedKind::AppBarButton,
             Self::AppBarSeparator(_) => MountedKind::AppBarSeparator,
+            Self::AppBarToggleButton(_) => MountedKind::AppBarToggleButton,
             Self::MenuBar(_) => MountedKind::MenuBar,
             Self::MenuBarItem(_) => MountedKind::MenuBarItem,
             Self::SplitButton(_) => MountedKind::SplitButton,
@@ -597,6 +664,16 @@ impl Handle {
             Self::Viewbox(_) => MountedKind::Viewbox,
             Self::WebView2(_) => MountedKind::WebView2,
             Self::SwapChainPanel(_) => MountedKind::SwapChainPanel,
+            Self::PipsPager(_) => MountedKind::PipsPager,
+            Self::ToggleSplitButton(_) => MountedKind::ToggleSplitButton,
+            Self::ItemsView(_) => MountedKind::ItemsView,
+            Self::MediaPlayerElement(_) => MountedKind::MediaPlayerElement,
+            Self::SemanticZoom(_) => MountedKind::SemanticZoom,
+            Self::ParallaxView(_) => MountedKind::ParallaxView,
+            Self::AnnotatedScrollBar(_) => MountedKind::AnnotatedScrollBar,
+            Self::MapControl(_) => MountedKind::MapControl,
+            Self::SwipeControl(_) => MountedKind::SwipeControl,
+            Self::RefreshContainer(_) => MountedKind::RefreshContainer,
         }
     }
     pub fn is_content(&self) -> bool {
@@ -620,6 +697,8 @@ impl Handle {
                 | Self::ContentDialog(_)
                 | Self::ListViewItem(_)
                 | Self::GridViewItem(_)
+                | Self::ToggleSplitButton(_)
+                | Self::RefreshContainer(_)
         )
     }
     pub fn child_collection(&self) -> Result<Option<UIElementCollection>, RuntimeError> {
@@ -817,6 +896,24 @@ pub fn set_content(handle: &Handle, child: Option<&UIElement>) -> Result<(), Run
                     .map_err(native_error),
             }
         }
+        Handle::ToggleSplitButton(control) => {
+            let control = control.cast::<IContentControl>().map_err(native_error)?;
+            match child {
+                Some(child) => control.SetContent(child).map_err(native_error),
+                None => control
+                    .SetContent(None::<&windows_core::IInspectable>)
+                    .map_err(native_error),
+            }
+        }
+        Handle::RefreshContainer(control) => {
+            let control = control.cast::<IContentControl>().map_err(native_error)?;
+            match child {
+                Some(child) => control.SetContent(child).map_err(native_error),
+                None => control
+                    .SetContent(None::<&windows_core::IInspectable>)
+                    .map_err(native_error),
+            }
+        }
         _ => Err(RuntimeError::UnsupportedKind),
     }
 }
@@ -852,6 +949,14 @@ pub fn set_property(
                 weight: value.get(),
             })
             .map_err(native_error),
+        (
+            Handle::TextBlock(control),
+            PropertyId::TextBlockFontFamily,
+            PropertyValue::Str(value),
+        ) => {
+            let family = cached_font_family(value).map_err(native_error)?;
+            control.SetFontFamily(&family).map_err(native_error)
+        }
         (
             Handle::TextBlock(control),
             PropertyId::TextBlockIsTextSelectionEnabled,
@@ -1148,6 +1253,13 @@ pub fn set_property(
         ) => control.SetItemHeight(*value).map_err(native_error),
         (
             Handle::VariableSizedWrapGrid(control),
+            PropertyId::VariableSizedWrapGridMaximumRowsOrColumns,
+            PropertyValue::I32(value),
+        ) => control
+            .SetMaximumRowsOrColumns(*value)
+            .map_err(native_error),
+        (
+            Handle::VariableSizedWrapGrid(control),
             PropertyId::VariableSizedWrapGridOrientation,
             PropertyValue::Orientation(value),
         ) => control
@@ -1397,6 +1509,13 @@ pub fn set_property(
                 crate::Orientation::Horizontal => bindings::Orientation::Horizontal,
             })
             .map_err(native_error),
+        (
+            Handle::Slider(control),
+            PropertyId::SliderIsThumbToolTipEnabled,
+            PropertyValue::Bool(value),
+        ) => control
+            .SetIsThumbToolTipEnabled(*value)
+            .map_err(native_error),
         (Handle::TitleBar(control), PropertyId::TitleBarTitle, PropertyValue::Str(value)) => {
             control.SetTitle(value).map_err(native_error)
         }
@@ -1509,6 +1628,18 @@ pub fn set_property(
             PropertyId::NavigationViewIsPaneOpen,
             PropertyValue::Bool(value),
         ) => control.SetIsPaneOpen(*value).map_err(native_error),
+        (
+            Handle::NavigationView(control),
+            PropertyId::NavigationViewFontFamily,
+            PropertyValue::Str(value),
+        ) => {
+            let family = cached_font_family(value).map_err(native_error)?;
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetFontFamily(&family)
+                .map_err(native_error)
+        }
         (
             Handle::NavigationViewItem(control),
             PropertyId::NavigationViewItemTag,
@@ -1826,6 +1957,9 @@ pub fn set_property(
                 source.cast().map_err(native_error)?
             };
             control.SetSource(&source).map_err(native_error)
+        }
+        (Handle::Image(control), PropertyId::ImageDecodeWidth, PropertyValue::I32(value)) => {
+            apply_image_decode_width(control, *value)
         }
         (Handle::Image(control), PropertyId::ImageStretch, PropertyValue::Stretch(value)) => {
             control
@@ -2537,6 +2671,29 @@ pub fn set_property(
             .map_err(native_error)?
             .SetIsEnabled(*value)
             .map_err(native_error),
+        (
+            Handle::AppBarToggleButton(control),
+            PropertyId::AppBarToggleButtonLabel,
+            PropertyValue::Str(value),
+        ) => control.SetLabel(value).map_err(native_error),
+        (
+            Handle::AppBarToggleButton(control),
+            PropertyId::AppBarToggleButtonIsChecked,
+            PropertyValue::Bool(value),
+        ) => control
+            .cast::<IToggleButton>()
+            .map_err(native_error)?
+            .SetIsChecked(Some(*value))
+            .map_err(native_error),
+        (
+            Handle::AppBarToggleButton(control),
+            PropertyId::AppBarToggleButtonIsEnabled,
+            PropertyValue::Bool(value),
+        ) => control
+            .cast::<IControl>()
+            .map_err(native_error)?
+            .SetIsEnabled(*value)
+            .map_err(native_error),
         (Handle::MenuBarItem(control), PropertyId::MenuBarItemTitle, PropertyValue::Str(value)) => {
             control.SetTitle(value).map_err(native_error)
         }
@@ -2928,6 +3085,14 @@ pub fn set_property(
         ) => control.SetFontSize(*value).map_err(native_error),
         (
             Handle::RichTextBlock(control),
+            PropertyId::RichTextBlockFontFamily,
+            PropertyValue::Str(value),
+        ) => {
+            let family = cached_font_family(value).map_err(native_error)?;
+            control.SetFontFamily(&family).map_err(native_error)
+        }
+        (
+            Handle::RichTextBlock(control),
             PropertyId::RichTextBlockIsTextSelectionEnabled,
             PropertyValue::Bool(value),
         ) => control
@@ -2954,6 +3119,167 @@ pub fn set_property(
                 })
                 .map_err(native_error)
         }
+        (
+            Handle::PipsPager(control),
+            PropertyId::PipsPagerNumberOfPages,
+            PropertyValue::I32(value),
+        ) => control.SetNumberOfPages(*value).map_err(native_error),
+        (
+            Handle::PipsPager(control),
+            PropertyId::PipsPagerSelectedPageIndex,
+            PropertyValue::I32(value),
+        ) => control.SetSelectedPageIndex(*value).map_err(native_error),
+        (
+            Handle::PipsPager(control),
+            PropertyId::PipsPagerMaxVisiblePips,
+            PropertyValue::I32(value),
+        ) => control.SetMaxVisiblePips(*value).map_err(native_error),
+        (
+            Handle::ToggleSplitButton(control),
+            PropertyId::ToggleSplitButtonIsChecked,
+            PropertyValue::Bool(value),
+        ) => control.SetIsChecked(*value).map_err(native_error),
+        (
+            Handle::ToggleSplitButton(control),
+            PropertyId::ToggleSplitButtonIsEnabled,
+            PropertyValue::Bool(value),
+        ) => control
+            .cast::<IControl>()
+            .map_err(native_error)?
+            .SetIsEnabled(*value)
+            .map_err(native_error),
+        (
+            Handle::ItemsView(control),
+            PropertyId::ItemsViewItemsSource,
+            PropertyValue::StrList(value),
+        ) => {
+            let values: Vec<Option<windows_core::IInspectable>> = value
+                .iter()
+                .map(|value| Some(windows_reference::IReference::from(value.as_str()).into()))
+                .collect();
+            let values: windows_collections::IVector<windows_core::IInspectable> = values.into();
+            control.SetItemsSource(&values).map_err(native_error)
+        }
+        (
+            Handle::ItemsView(control),
+            PropertyId::ItemsViewLayout,
+            PropertyValue::ItemsViewLayout(value),
+        ) => {
+            let layout: Layout = match value {
+                crate::ItemsViewLayout::Stack => {
+                    let layout = StackLayout::new().map_err(native_error)?;
+                    layout.SetSpacing(8.0).map_err(native_error)?;
+                    layout
+                        .SetOrientation(bindings::Orientation::Vertical)
+                        .map_err(native_error)?;
+                    layout.cast().map_err(native_error)?
+                }
+                crate::ItemsViewLayout::Grid => {
+                    let layout = UniformGridLayout::new().map_err(native_error)?;
+                    layout.SetMinItemWidth(120.0).map_err(native_error)?;
+                    layout.SetMinItemHeight(48.0).map_err(native_error)?;
+                    layout.SetMinRowSpacing(8.0).map_err(native_error)?;
+                    layout.SetMinColumnSpacing(8.0).map_err(native_error)?;
+                    layout.cast().map_err(native_error)?
+                }
+            };
+            control.SetLayout(&layout).map_err(native_error)
+        }
+        (
+            Handle::ItemsView(control),
+            PropertyId::ItemsViewSelectionMode,
+            PropertyValue::ItemsViewSelectionMode(value),
+        ) => control
+            .SetSelectionMode(match value {
+                crate::ItemsViewSelectionMode::None => bindings::ItemsViewSelectionMode::None,
+                crate::ItemsViewSelectionMode::Single => bindings::ItemsViewSelectionMode::Single,
+                crate::ItemsViewSelectionMode::Multiple => {
+                    bindings::ItemsViewSelectionMode::Multiple
+                }
+                crate::ItemsViewSelectionMode::Extended => {
+                    bindings::ItemsViewSelectionMode::Extended
+                }
+            })
+            .map_err(native_error),
+        (
+            Handle::MediaPlayerElement(control),
+            PropertyId::MediaPlayerElementSource,
+            PropertyValue::Str(value),
+        ) => {
+            let uri = Uri::CreateUri(value).map_err(native_error)?;
+            let source = MediaSource::CreateFromUri(&uri).map_err(native_error)?;
+            let source: IMediaPlaybackSource = source.cast().map_err(native_error)?;
+            control.SetSource(&source).map_err(native_error)
+        }
+        (
+            Handle::MediaPlayerElement(control),
+            PropertyId::MediaPlayerElementAreTransportControlsEnabled,
+            PropertyValue::Bool(value),
+        ) => control
+            .SetAreTransportControlsEnabled(*value)
+            .map_err(native_error),
+        (
+            Handle::MediaPlayerElement(control),
+            PropertyId::MediaPlayerElementAutoPlay,
+            PropertyValue::Bool(value),
+        ) => control.SetAutoPlay(*value).map_err(native_error),
+        (
+            Handle::SemanticZoom(control),
+            PropertyId::SemanticZoomIsZoomedInViewActive,
+            PropertyValue::Bool(value),
+        ) => control
+            .SetIsZoomedInViewActive(*value)
+            .map_err(native_error),
+        (
+            Handle::ParallaxView(control),
+            PropertyId::ParallaxViewHorizontalShift,
+            PropertyValue::F64(value),
+        ) => control.SetHorizontalShift(*value).map_err(native_error),
+        (
+            Handle::AnnotatedScrollBar(control),
+            PropertyId::AnnotatedScrollBarSmallChange,
+            PropertyValue::F64(value),
+        ) => control.SetSmallChange(*value).map_err(native_error),
+        (Handle::MapControl(control), PropertyId::MapControlCenter, PropertyValue::Str(value)) => {
+            set_map_center(control, value)
+        }
+        (
+            Handle::MapControl(control),
+            PropertyId::MapControlZoomLevel,
+            PropertyValue::F64(value),
+        ) => control.SetZoomLevel(*value).map_err(native_error),
+        (
+            Handle::MapControl(control),
+            PropertyId::MapControlMapServiceToken,
+            PropertyValue::Str(value),
+        ) => control.SetMapServiceToken(value).map_err(native_error),
+        (
+            Handle::MapControl(control),
+            PropertyId::MapControlInteractiveControlsVisible,
+            PropertyValue::Bool(value),
+        ) => control
+            .SetInteractiveControlsVisible(*value)
+            .map_err(native_error),
+        (
+            Handle::RefreshContainer(control),
+            PropertyId::RefreshContainerPullDirection,
+            PropertyValue::RefreshPullDirection(value),
+        ) => control
+            .SetPullDirection(match value {
+                crate::RefreshPullDirection::LeftToRight => {
+                    bindings::RefreshPullDirection::LeftToRight
+                }
+                crate::RefreshPullDirection::TopToBottom => {
+                    bindings::RefreshPullDirection::TopToBottom
+                }
+                crate::RefreshPullDirection::RightToLeft => {
+                    bindings::RefreshPullDirection::RightToLeft
+                }
+                crate::RefreshPullDirection::BottomToTop => {
+                    bindings::RefreshPullDirection::BottomToTop
+                }
+            })
+            .map_err(native_error),
         _ => Err(RuntimeError::UnsupportedKind),
     }
 }
@@ -2971,6 +3297,9 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
             .map_err(native_error),
         (Handle::TextBlock(_), PropertyId::TextBlockFontWeight) => dependency_object
             .ClearValue(&bindings::TextBlock::FontWeightProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::TextBlock(_), PropertyId::TextBlockFontFamily) => dependency_object
+            .ClearValue(&bindings::TextBlock::FontFamilyProperty().map_err(native_error)?)
             .map_err(native_error),
         (Handle::TextBlock(_), PropertyId::TextBlockIsTextSelectionEnabled) => dependency_object
             .ClearValue(
@@ -3082,6 +3411,15 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
                 )
                 .map_err(native_error)
         }
+        (
+            Handle::VariableSizedWrapGrid(_),
+            PropertyId::VariableSizedWrapGridMaximumRowsOrColumns,
+        ) => dependency_object
+            .ClearValue(
+                &bindings::VariableSizedWrapGrid::MaximumRowsOrColumnsProperty()
+                    .map_err(native_error)?,
+            )
+            .map_err(native_error),
         (Handle::VariableSizedWrapGrid(_), PropertyId::VariableSizedWrapGridOrientation) => {
             dependency_object
                 .ClearValue(
@@ -3180,6 +3518,9 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
         (Handle::Slider(_), PropertyId::SliderOrientation) => dependency_object
             .ClearValue(&bindings::Slider::OrientationProperty().map_err(native_error)?)
             .map_err(native_error),
+        (Handle::Slider(_), PropertyId::SliderIsThumbToolTipEnabled) => dependency_object
+            .ClearValue(&bindings::Slider::IsThumbToolTipEnabledProperty().map_err(native_error)?)
+            .map_err(native_error),
         (Handle::TitleBar(_), PropertyId::TitleBarTitle) => dependency_object
             .ClearValue(&bindings::TitleBar::TitleProperty().map_err(native_error)?)
             .map_err(native_error),
@@ -3241,6 +3582,9 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
             .map_err(native_error),
         (Handle::NavigationView(_), PropertyId::NavigationViewIsPaneOpen) => dependency_object
             .ClearValue(&bindings::NavigationView::IsPaneOpenProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::NavigationView(_), PropertyId::NavigationViewFontFamily) => dependency_object
+            .ClearValue(&bindings::Control::FontFamilyProperty().map_err(native_error)?)
             .map_err(native_error),
         (Handle::NavigationViewItem(_), PropertyId::NavigationViewItemTag) => dependency_object
             .ClearValue(&bindings::FrameworkElement::TagProperty().map_err(native_error)?)
@@ -3396,6 +3740,9 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
         (Handle::Image(_), PropertyId::ImageSource) => dependency_object
             .ClearValue(&bindings::Image::SourceProperty().map_err(native_error)?)
             .map_err(native_error),
+        (Handle::Image(control), PropertyId::ImageDecodeWidth) => {
+            apply_image_decode_width(control, 0)
+        }
         (Handle::Image(_), PropertyId::ImageStretch) => dependency_object
             .ClearValue(&bindings::Image::StretchProperty().map_err(native_error)?)
             .map_err(native_error),
@@ -3586,6 +3933,19 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
         (Handle::AppBarButton(_), PropertyId::AppBarButtonIsEnabled) => dependency_object
             .ClearValue(&bindings::Control::IsEnabledProperty().map_err(native_error)?)
             .map_err(native_error),
+        (Handle::AppBarToggleButton(_), PropertyId::AppBarToggleButtonLabel) => dependency_object
+            .ClearValue(&bindings::AppBarToggleButton::LabelProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::AppBarToggleButton(_), PropertyId::AppBarToggleButtonIsChecked) => {
+            dependency_object
+                .ClearValue(&bindings::ToggleButton::IsCheckedProperty().map_err(native_error)?)
+                .map_err(native_error)
+        }
+        (Handle::AppBarToggleButton(_), PropertyId::AppBarToggleButtonIsEnabled) => {
+            dependency_object
+                .ClearValue(&bindings::Control::IsEnabledProperty().map_err(native_error)?)
+                .map_err(native_error)
+        }
         (Handle::MenuBarItem(_), PropertyId::MenuBarItemTitle) => dependency_object
             .ClearValue(&bindings::MenuBarItem::TitleProperty().map_err(native_error)?)
             .map_err(native_error),
@@ -3771,6 +4131,9 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
         (Handle::RichTextBlock(_), PropertyId::RichTextBlockFontSize) => dependency_object
             .ClearValue(&bindings::RichTextBlock::FontSizeProperty().map_err(native_error)?)
             .map_err(native_error),
+        (Handle::RichTextBlock(_), PropertyId::RichTextBlockFontFamily) => dependency_object
+            .ClearValue(&bindings::RichTextBlock::FontFamilyProperty().map_err(native_error)?)
+            .map_err(native_error),
         (Handle::RichTextBlock(_), PropertyId::RichTextBlockIsTextSelectionEnabled) => {
             dependency_object
                 .ClearValue(
@@ -3785,6 +4148,91 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
         (Handle::Viewbox(_), PropertyId::ViewboxStretch) => dependency_object
             .ClearValue(&bindings::Viewbox::StretchProperty().map_err(native_error)?)
             .map_err(native_error),
+        (Handle::PipsPager(_), PropertyId::PipsPagerNumberOfPages) => dependency_object
+            .ClearValue(&bindings::PipsPager::NumberOfPagesProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::PipsPager(_), PropertyId::PipsPagerSelectedPageIndex) => dependency_object
+            .ClearValue(&bindings::PipsPager::SelectedPageIndexProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::PipsPager(_), PropertyId::PipsPagerMaxVisiblePips) => dependency_object
+            .ClearValue(&bindings::PipsPager::MaxVisiblePipsProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::ToggleSplitButton(_), PropertyId::ToggleSplitButtonIsChecked) => dependency_object
+            .ClearValue(&bindings::ToggleSplitButton::IsCheckedProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::ToggleSplitButton(_), PropertyId::ToggleSplitButtonIsEnabled) => dependency_object
+            .ClearValue(&bindings::Control::IsEnabledProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::ItemsView(_), PropertyId::ItemsViewItemsSource) => dependency_object
+            .ClearValue(&bindings::ItemsView::ItemsSourceProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::ItemsView(_), PropertyId::ItemsViewLayout) => dependency_object
+            .ClearValue(&bindings::ItemsView::LayoutProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::ItemsView(_), PropertyId::ItemsViewSelectionMode) => dependency_object
+            .ClearValue(&bindings::ItemsView::SelectionModeProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::MediaPlayerElement(_), PropertyId::MediaPlayerElementSource) => dependency_object
+            .ClearValue(&bindings::MediaPlayerElement::SourceProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (
+            Handle::MediaPlayerElement(_),
+            PropertyId::MediaPlayerElementAreTransportControlsEnabled,
+        ) => dependency_object
+            .ClearValue(
+                &bindings::MediaPlayerElement::AreTransportControlsEnabledProperty()
+                    .map_err(native_error)?,
+            )
+            .map_err(native_error),
+        (Handle::MediaPlayerElement(_), PropertyId::MediaPlayerElementAutoPlay) => {
+            dependency_object
+                .ClearValue(
+                    &bindings::MediaPlayerElement::AutoPlayProperty().map_err(native_error)?,
+                )
+                .map_err(native_error)
+        }
+        (Handle::SemanticZoom(_), PropertyId::SemanticZoomIsZoomedInViewActive) => {
+            dependency_object
+                .ClearValue(
+                    &bindings::SemanticZoom::IsZoomedInViewActiveProperty()
+                        .map_err(native_error)?,
+                )
+                .map_err(native_error)
+        }
+        (Handle::ParallaxView(_), PropertyId::ParallaxViewHorizontalShift) => dependency_object
+            .ClearValue(&bindings::ParallaxView::HorizontalShiftProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::AnnotatedScrollBar(_), PropertyId::AnnotatedScrollBarSmallChange) => {
+            dependency_object
+                .ClearValue(
+                    &bindings::AnnotatedScrollBar::SmallChangeProperty().map_err(native_error)?,
+                )
+                .map_err(native_error)
+        }
+        (Handle::MapControl(_), PropertyId::MapControlCenter) => dependency_object
+            .ClearValue(&bindings::MapControl::CenterProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::MapControl(_), PropertyId::MapControlZoomLevel) => dependency_object
+            .ClearValue(&bindings::MapControl::ZoomLevelProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::MapControl(_), PropertyId::MapControlMapServiceToken) => dependency_object
+            .ClearValue(&bindings::MapControl::MapServiceTokenProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::MapControl(_), PropertyId::MapControlInteractiveControlsVisible) => {
+            dependency_object
+                .ClearValue(
+                    &bindings::MapControl::InteractiveControlsVisibleProperty()
+                        .map_err(native_error)?,
+                )
+                .map_err(native_error)
+        }
+        (Handle::RefreshContainer(_), PropertyId::RefreshContainerPullDirection) => {
+            dependency_object
+                .ClearValue(
+                    &bindings::RefreshContainer::PullDirectionProperty().map_err(native_error)?,
+                )
+                .map_err(native_error)
+        }
         _ => Err(RuntimeError::UnsupportedKind),
     }
 }
@@ -3947,6 +4395,13 @@ pub fn set_slot(
             }
             None => control.SetIcon(None::<&IconElement>).map_err(native_error),
         },
+        (Handle::AppBarToggleButton(control), SlotId::AppBarToggleButtonIcon) => match child {
+            Some(child) => {
+                let child = child.cast::<IconElement>().map_err(native_error)?;
+                control.SetIcon(&child).map_err(native_error)
+            }
+            None => control.SetIcon(None::<&IconElement>).map_err(native_error),
+        },
         (Handle::DatePicker(control), SlotId::DatePickerHeader) => match child {
             Some(child) => control.SetHeader(child).map_err(native_error),
             None => control
@@ -3975,6 +4430,45 @@ pub fn set_slot(
             Some(child) => control.SetChild(child).map_err(native_error),
             None => control.SetChild(None::<&UIElement>).map_err(native_error),
         },
+        (Handle::SemanticZoom(control), SlotId::SemanticZoomZoomedInView) => match child {
+            Some(child) => {
+                let child = child
+                    .cast::<ISemanticZoomInformation>()
+                    .map_err(native_error)?;
+                control.SetZoomedInView(&child).map_err(native_error)
+            }
+            None => control
+                .SetZoomedInView(None::<&ISemanticZoomInformation>)
+                .map_err(native_error),
+        },
+        (Handle::SemanticZoom(control), SlotId::SemanticZoomZoomedOutView) => match child {
+            Some(child) => {
+                let child = child
+                    .cast::<ISemanticZoomInformation>()
+                    .map_err(native_error)?;
+                control.SetZoomedOutView(&child).map_err(native_error)
+            }
+            None => control
+                .SetZoomedOutView(None::<&ISemanticZoomInformation>)
+                .map_err(native_error),
+        },
+        (Handle::ParallaxView(control), SlotId::ParallaxViewSource) => match child {
+            Some(child) => control.SetSource(child).map_err(native_error),
+            None => control.SetSource(None::<&UIElement>).map_err(native_error),
+        },
+        (Handle::ParallaxView(control), SlotId::ParallaxViewChild) => match child {
+            Some(child) => control.SetChild(child).map_err(native_error),
+            None => control.SetChild(None::<&UIElement>).map_err(native_error),
+        },
+        (Handle::SwipeControl(control), SlotId::SwipeControlContent) => {
+            let control = control.cast::<IContentControl>().map_err(native_error)?;
+            match child {
+                Some(child) => control.SetContent(child).map_err(native_error),
+                None => control
+                    .SetContent(None::<&windows_core::IInspectable>)
+                    .map_err(native_error),
+            }
+        }
         _ => Err(RuntimeError::UnsupportedKind),
     }
 }
@@ -4717,6 +5211,7 @@ pub fn subscribe_event(
                                     properties.IsRightButtonPressed().unwrap_or(false);
                                 info.is_middle_button_pressed =
                                     properties.IsMiddleButtonPressed().unwrap_or(false);
+                                info.mouse_wheel_delta = properties.MouseWheelDelta().unwrap_or(0);
                             }
                         }
                         if let Ok(point) = args.GetCurrentPoint(None::<&UIElement>)
@@ -4767,6 +5262,7 @@ pub fn subscribe_event(
                                     properties.IsRightButtonPressed().unwrap_or(false);
                                 info.is_middle_button_pressed =
                                     properties.IsMiddleButtonPressed().unwrap_or(false);
+                                info.mouse_wheel_delta = properties.MouseWheelDelta().unwrap_or(0);
                             }
                         }
                         if let Ok(point) = args.GetCurrentPoint(None::<&UIElement>)
@@ -4809,6 +5305,7 @@ pub fn subscribe_event(
                                     properties.IsRightButtonPressed().unwrap_or(false);
                                 info.is_middle_button_pressed =
                                     properties.IsMiddleButtonPressed().unwrap_or(false);
+                                info.mouse_wheel_delta = properties.MouseWheelDelta().unwrap_or(0);
                             }
                         }
                         if let Ok(point) = args.GetCurrentPoint(None::<&UIElement>)
@@ -4851,6 +5348,7 @@ pub fn subscribe_event(
                                     properties.IsRightButtonPressed().unwrap_or(false);
                                 info.is_middle_button_pressed =
                                     properties.IsMiddleButtonPressed().unwrap_or(false);
+                                info.mouse_wheel_delta = properties.MouseWheelDelta().unwrap_or(0);
                             }
                         }
                         if let Ok(point) = args.GetCurrentPoint(None::<&UIElement>)
@@ -4893,6 +5391,7 @@ pub fn subscribe_event(
                                     properties.IsRightButtonPressed().unwrap_or(false);
                                 info.is_middle_button_pressed =
                                     properties.IsMiddleButtonPressed().unwrap_or(false);
+                                info.mouse_wheel_delta = properties.MouseWheelDelta().unwrap_or(0);
                             }
                         }
                         if let Ok(point) = args.GetCurrentPoint(None::<&UIElement>)
@@ -4909,6 +5408,49 @@ pub fn subscribe_event(
                     sink.enqueue(
                         node,
                         EventId::BorderPointerReleased,
+                        revision,
+                        EventPayload::PointerEventInfo(info),
+                    );
+                }
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::Border(value), EventId::BorderPointerWheelChanged) => {
+            let source = value.cast::<IUIElement>().map_err(native_error)?;
+            source.PointerWheelChanged({
+                let element = value.cast::<UIElement>().map_err(native_error)?;
+                move |_, args| {
+                    let mut info = crate::PointerEventInfo::default();
+                    if let Some(args) = args.as_ref() {
+                        if let Ok(point) = args.GetCurrentPoint(&element) {
+                            if let Ok(position) = point.Position() {
+                                info.x = f64::from(position.x);
+                                info.y = f64::from(position.y);
+                            }
+                            if let Ok(properties) = point.Properties() {
+                                info.is_left_button_pressed =
+                                    properties.IsLeftButtonPressed().unwrap_or(false);
+                                info.is_right_button_pressed =
+                                    properties.IsRightButtonPressed().unwrap_or(false);
+                                info.is_middle_button_pressed =
+                                    properties.IsMiddleButtonPressed().unwrap_or(false);
+                                info.mouse_wheel_delta = properties.MouseWheelDelta().unwrap_or(0);
+                            }
+                        }
+                        if let Ok(point) = args.GetCurrentPoint(None::<&UIElement>)
+                            && let Ok(position) = point.Position()
+                        {
+                            info.window_x = f64::from(position.x);
+                            info.window_y = f64::from(position.y);
+                        }
+                    }
+                    sink.enqueue(
+                        node,
+                        EventId::BorderPointerWheelChanged,
                         revision,
                         EventPayload::PointerEventInfo(info),
                     );
@@ -5130,6 +5672,22 @@ pub fn subscribe_event(
                         ),
                     }
                 }
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::Slider(value), EventId::SliderSizeChanged) => {
+            let source = value.cast::<IFrameworkElement>().map_err(native_error)?;
+            source.SizeChanged(move |_, _| {
+                sink.enqueue(
+                    node,
+                    EventId::SliderSizeChanged,
+                    revision,
+                    EventPayload::Unit,
+                );
             })
         }
         .map(|revoker| NativeSubscription::Event {
@@ -5463,6 +6021,21 @@ pub fn subscribe_event(
         (Handle::InfoBar(value), EventId::InfoBarClosed) => {
             value.Closed(move |_, _| {
                 sink.enqueue(node, EventId::InfoBarClosed, revision, EventPayload::Unit);
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::ScrollViewer(value), EventId::ScrollViewerViewChanged) => {
+            value.ViewChanged(move |_, _| {
+                sink.enqueue(
+                    node,
+                    EventId::ScrollViewerViewChanged,
+                    revision,
+                    EventPayload::Unit,
+                );
             })
         }
         .map(|revoker| NativeSubscription::Event {
@@ -5950,6 +6523,22 @@ pub fn subscribe_event(
             revision,
         })
         .map_err(native_error),
+        (Handle::AppBarToggleButton(value), EventId::AppBarToggleButtonClick) => {
+            let source = value.cast::<IButtonBase>().map_err(native_error)?;
+            source.Click(move |_, _| {
+                sink.enqueue(
+                    node,
+                    EventId::AppBarToggleButtonClick,
+                    revision,
+                    EventPayload::Unit,
+                );
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
         (Handle::SplitButton(value), EventId::SplitButtonClick) => {
             value.Click(move |_, _| {
                 sink.enqueue(
@@ -6354,6 +6943,116 @@ pub fn subscribe_event(
                         ),
                     }
                 }
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::PipsPager(value), EventId::PipsPagerSelectedIndexChanged) => {
+            let event_source = (*value).clone();
+            value.SelectedIndexChanged({
+                move |_, _| match event_source.SelectedPageIndex() {
+                    Ok(value) => sink.enqueue(
+                        node,
+                        EventId::PipsPagerSelectedIndexChanged,
+                        revision,
+                        EventPayload::I32(value),
+                    ),
+                    Err(error) => sink.error(
+                        node,
+                        EventId::PipsPagerSelectedIndexChanged,
+                        revision,
+                        native_error(error),
+                    ),
+                }
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::ToggleSplitButton(value), EventId::ToggleSplitButtonClick) => {
+            let source = value.cast::<ISplitButton>().map_err(native_error)?;
+            source.Click(move |_, _| {
+                sink.enqueue(
+                    node,
+                    EventId::ToggleSplitButtonClick,
+                    revision,
+                    EventPayload::Unit,
+                );
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::ToggleSplitButton(value), EventId::ToggleSplitButtonIsCheckedChanged) => {
+            let event_source = (*value).clone();
+            value.IsCheckedChanged({
+                move |_, _| match event_source.IsChecked() {
+                    Ok(value) => sink.enqueue(
+                        node,
+                        EventId::ToggleSplitButtonIsCheckedChanged,
+                        revision,
+                        EventPayload::Bool(value),
+                    ),
+                    Err(error) => sink.error(
+                        node,
+                        EventId::ToggleSplitButtonIsCheckedChanged,
+                        revision,
+                        native_error(error),
+                    ),
+                }
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::ItemsView(value), EventId::ItemsViewItemInvoked) => {
+            value.ItemInvoked(move |_, args| {
+                if let Some(args) = args.as_ref() {
+                    match args
+                        .InvokedItem()
+                        .and_then(|value| {
+                            value.cast::<windows_reference::IReference<windows_core::HSTRING>>()
+                        })
+                        .and_then(|value| value.Value())
+                    {
+                        Ok(value) => sink.enqueue(
+                            node,
+                            EventId::ItemsViewItemInvoked,
+                            revision,
+                            EventPayload::Str(value.to_string_lossy()),
+                        ),
+                        Err(error) => sink.error(
+                            node,
+                            EventId::ItemsViewItemInvoked,
+                            revision,
+                            native_error(error),
+                        ),
+                    }
+                }
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::RefreshContainer(value), EventId::RefreshContainerRefreshRequested) => {
+            value.RefreshRequested(move |_, _| {
+                sink.enqueue(
+                    node,
+                    EventId::RefreshContainerRefreshRequested,
+                    revision,
+                    EventPayload::Unit,
+                );
             })
         }
         .map(|revoker| NativeSubscription::Event {
