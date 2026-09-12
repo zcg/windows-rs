@@ -59,12 +59,11 @@ fn send_toast(title: &str, body: &str) -> Result<(), windows_core::Error> {
     manager.Show(&notification)
 }
 
-/// Sets the taskbar badge through the Windows App SDK badge manager
+/// Sets the taskbar badge through the official Windows App SDK badge manager
 /// (`Microsoft.Windows.BadgeNotifications.BadgeNotificationManager`), the
-/// same API the official WinUI Gallery uses. It requires a packaged
-/// (MSIX-set) app identity: BadgeNotificationManager is unavailable in
-/// unpackaged mode, and the gallery must run from an installed MSIX (not
-/// merely an in-place registration) for the count to render.
+/// same API the official WinUI Gallery uses. The manager requires a packaged
+/// app identity, which `main` sets up by packing and installing the build
+/// output before the window opens.
 fn set_badge(mode: BadgeMode, count: u32) -> windows::core::Result<()> {
     use crate::notifications_bindings::{BadgeNotificationGlyph, BadgeNotificationManager};
 
@@ -178,7 +177,8 @@ impl Component for NotificationsPage {
                                 )),
                             TextBlock::new()
                                 .text(
-                                    "System badge via BadgeUpdateManager (requires package identity).",
+                                    "Official Windows App SDK badge manager; requires the \
+                                     packaged install that `cargo run` sets up.",
                                 )
                                 .opacity(0.6),
                             TextBlock::new().text(self.status.clone()).opacity(0.6),

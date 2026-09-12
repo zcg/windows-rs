@@ -21,17 +21,13 @@ mod shell;
 mod tests;
 
 fn main() {
-    // The default run is self-contained: the Windows App Runtime files sit
-    // beside the executable and nothing outside the build output is touched.
-    //
-    // The badge and toast APIs on the Notifications page additionally need a
-    // packaged app identity, which only a package activation provides. That
-    // flow is opt-in through `--packaged`: it registers the build output in
-    // place (or activates the installed MSIX) and relaunches packaged. On a
-    // Windows Insider build (26340) every packaged launch currently
-    // fail-fasts in CoreMessagingXP regardless of packaging style, so the
-    // flag stays opt-in until that is resolved.
-    if std::env::args().any(|argument| argument == "--packaged") && packaging::ensure_packaged() {
+    // The badge and toast APIs on the Notifications page are the official
+    // Windows App SDK ones and require a packaged app identity. A direct
+    // executable launch therefore packs the current build into the MSIX
+    // (installed on first run, refreshed when the build changed) and
+    // relaunches through the package; an already-current install is
+    // activated without reinstalling.
+    if packaging::ensure_packaged() {
         return;
     }
     windows_reactor::App::run_component::<shell::Gallery>(()).unwrap();

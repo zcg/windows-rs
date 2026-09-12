@@ -304,14 +304,13 @@ changes (the `gen` workflow enforces this).
 
 ### gallery: packaged launch fail-fasts on Insider builds (2026-09)
 
-Every packaged launch of the gallery (MSIX framework-dependent, MSIX with
-self-contained runtime files, or an in-place `Add-AppxPackage -Register`)
-fail-fasts in `CoreMessagingXP` 10.0.27200 (`0xC0000602`) on a Windows Insider
-build 26340 host, before any window appears. The identical unpackaged
-executable runs fine, and WinAppSDK self-contained deployment is documented as
-unpackaged-only, so the packaged route is framework-dependent
+Earlier packaged launches of the gallery (MSIX, in-place registration,
+self-contained or framework-dependent) fail-fasted in `CoreMessagingXP`
+10.0.27200 (`0xC0000602`) on a Windows Insider build 26340 host before any
+window appeared, while the identical unpackaged executable ran fine. After
+background DLL-injection tooling (Windhawk) was removed from the system, the
+framework-dependent MSIX launched normally, so injection was the likely
+trigger, not the packaging style. The MSIX remains framework-dependent
 (`build-msix.ps1` stages no runtime files; the manifest declares the
-`Microsoft.WindowsAppRuntime.2` 2.4.0 dependency). The identity flow is opt-in
-through `reactor-gallery --packaged`; the default run stays self-contained
-unpackaged. Revisit when the OS or the Windows App SDK fixes the packaged
-CoreMessaging path.
+`Microsoft.WindowsAppRuntime.2` 2.4.0 dependency). If packaged launches fail
+the same way again, check for injecting tools before blaming the packaging.

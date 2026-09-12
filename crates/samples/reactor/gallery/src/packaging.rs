@@ -2,17 +2,19 @@
 //!
 //! The badge and toast APIs on the Notifications page require a packaged app
 //! identity. Starting the executable directly grants none, so `main` calls
-//! [`ensure_packaged`]: when an identity-bearing registration for this package
-//! already exists it is activated through the shell, otherwise the build output
-//! is registered in place (`Add-AppxPackage -Register` with the manifest staged
-//! next to the executable) and the packaged replacement launches through
-//! `shell:AppsFolder\<PFN>!App`. Launching the executable directly again would
-//! loop forever: register, relaunch unpackaged, register again.
+//! [`ensure_packaged`]: an installed package with the current build is
+//! activated through the shell as-is, while a missing or outdated package is
+//! packed from the build output (`packaging/build-msix.ps1`) and installed
+//! first. The packaged replacement launches through `shell:AppsFolder\<PFN>!App`;
+//! launching the executable directly again would loop forever: activate,
+//! relaunch unpackaged, activate again.
 //!
-//! When the system cannot provide an identity (no trusted publisher certificate,
-//! CI), the gallery keeps running unpackaged and the Notifications page reports
-//! the API error. A packaged process resolves its own package full name; an
-//! unpackaged one does not.
+//! The MSIX is framework-dependent - the build script stages no Windows App
+//! Runtime files, and the manifest declares the `Microsoft.WindowsAppRuntime.2`
+//! dependency. Shipping self-contained runtime files in a packaged process
+//! fail-fasts in CoreMessagingXP. When packaging or installation cannot run
+//! (no trusted publisher certificate, SDK tools off PATH, CI), the gallery
+//! keeps running unpackaged and the Notifications page reports the API error.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -30,27 +32,90 @@ pub fn ensure_packaged() -> bool {
     let Ok(text) = std::fs::read_to_string(&manifest) else {
         return false;
     };
-    let Ok(name) = attribute(&text, "<Identity", "Name=") else {
+    let (Ok(name), Ok(app_id)) = (
+        attribute(&text, "<Identity", "Name="),
+        attribute(&text, "<Application", "Id="),
+    ) else {
         return false;
     };
-    let Ok(app_id) = attribute(&text, "<Application", "Id=") else {
-        return false;
-    };
-    // Prefer activating an existing registration: an installed MSIX carries a
-    // full self-contained layout, and an in-place registration launched from a
-    // build whose runtime DLLs crash under identity on some systems. Both are
-    // identity-bearing; only fall back to a fresh registration when none
-    // exists yet.
-    if let Some(family) = installed_family(&name) {
-        return activate(&family, &app_id);
-    }
-    match register_in_place() {
-        Ok((family, app_id)) => activate(&family, &app_id),
+    match activation_target(&name) {
+        Ok(Some(family)) => activate(&family, &app_id),
+        Ok(None) => false,
         Err(error) => {
-            eprintln!("windows-reactor gallery: package registration skipped: {error}");
+            eprintln!("windows-reactor gallery: package activation skipped: {error}");
             false
         }
     }
+}
+
+/// Makes an identity-bearing package available and returns its family name: an
+/// installed package with the current build is reused as-is, while a missing
+/// or outdated one is packed from the build output and installed again. The
+/// executable is newer than the packed MSIX after every code change, which is
+/// the signal to repackage.
+fn activation_target(name: &str) -> std::io::Result<Option<String>> {
+    if let Some(family) = installed_family(name)
+        && !executable_newer_than_package(name)
+    {
+        return Ok(Some(family));
+    }
+    build_and_install(name)?;
+    let family = installed_family(name).ok_or_else(|| {
+        std::io::Error::other("installation succeeded but the package is not registered")
+    })?;
+    Ok(Some(family))
+}
+
+/// Compares the built executable against the packed MSIX: `true` when the
+/// executable changed after the last packaging run, or when no MSIX exists.
+fn executable_newer_than_package(name: &str) -> bool {
+    let Ok(exe) = std::env::current_exe() else {
+        return false;
+    };
+    let Ok(exe_modified) = exe.metadata().and_then(|meta| meta.modified()) else {
+        return false;
+    };
+    let msix = workspace_root().join(format!("packaging/output/{name}.msix"));
+    let Ok(msix_modified) = msix.metadata().and_then(|meta| meta.modified()) else {
+        return true;
+    };
+    exe_modified > msix_modified
+}
+
+/// Packs the build output into the MSIX and installs it, replacing any prior
+/// registration (a same-version reinstall is rejected by deployment).
+fn build_and_install(name: &str) -> std::io::Result<()> {
+    let script = workspace_root().join("packaging/build-msix.ps1");
+    let output = Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+        ])
+        .arg(&script)
+        .output()?;
+    if !output.status.success() {
+        return Err(std::io::Error::other(
+            String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        ));
+    }
+    let msix = workspace_root().join(format!("packaging/output/{name}.msix"));
+    let script = format!(
+        "Get-AppxPackage -Name '{name}' | Remove-AppxPackage -ErrorAction Stop; \
+         Add-AppxPackage -Path '{}' -ErrorAction Stop",
+        msix.display()
+    );
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .output()?;
+    if !output.status.success() {
+        return Err(std::io::Error::other(
+            String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        ));
+    }
+    Ok(())
 }
 
 /// Queries the package family name registered for `name`, or `None` when the
@@ -72,6 +137,8 @@ fn installed_family(name: &str) -> Option<String> {
     }
 }
 
+/// Whether this process carries a packaged app identity. Exposed so feature
+/// code can pick between the system API and its unpackaged fallback.
 fn has_package_identity() -> bool {
     #[link(name = "kernel32")]
     unsafe extern "system" {
@@ -88,53 +155,6 @@ fn has_package_identity() -> bool {
         let result = GetCurrentPackageFullName(&mut length, std::ptr::null_mut());
         result != APPMODEL_ERROR_NO_PACKAGE
     }
-}
-
-/// Registers the build output in place with a package identity and returns
-/// the package family name and application id needed to activate it.
-fn register_in_place() -> std::io::Result<(String, String)> {
-    let root = workspace_root();
-    let manifest = root.join(MANIFEST);
-    if !manifest.is_file() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            format!("missing manifest at {}", manifest.display()),
-        ));
-    }
-    let text = std::fs::read_to_string(&manifest)?;
-    let name = attribute(&text, "<Identity", "Name=")?;
-    let app_id = attribute(&text, "<Application", "Id=")?;
-    // `Add-AppxPackage -Register` registers a loose-layout package from the
-    // manifest's directory: the AppxManifest.xml must sit next to the
-    // executable, and its `Executable` attribute names that executable.
-    // The packaging manifest lives in this repo, so copy it beside the exe.
-    let output = build_output_dir();
-    let staged = output.join("AppxManifest.xml");
-    std::fs::copy(&manifest, &staged)?;
-    let script = format!(
-        "Add-AppxPackage -Register \"{}\"; (Get-AppxPackage -Name '{}').PackageFamilyName",
-        staged.display(),
-        name
-    );
-    let output_result = Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-        .output()?;
-    if !output_result.status.success() {
-        return Err(std::io::Error::other(
-            String::from_utf8_lossy(&output_result.stderr)
-                .trim()
-                .to_string(),
-        ));
-    }
-    let family = String::from_utf8_lossy(&output_result.stdout)
-        .trim()
-        .to_string();
-    if family.is_empty() {
-        return Err(std::io::Error::other(
-            "registration succeeded but the package family name is empty",
-        ));
-    }
-    Ok((family, app_id))
 }
 
 /// Launches the registered application through the shell so AppModel assigns
@@ -168,18 +188,6 @@ fn attribute(text: &str, element: &str, key: &str) -> std::io::Result<String> {
     let quote_start = after.find('"').ok_or_else(|| missing(key))? + 1;
     let quote_end = after[quote_start..].find('"').ok_or_else(|| missing(key))?;
     Ok(after[quote_start..quote_start + quote_end].to_string())
-}
-
-/// The directory containing the built executable, resolved from the current
-/// executable path (`target/debug` or `target/release`).
-fn build_output_dir() -> PathBuf {
-    std::env::current_exe()
-        .and_then(|exe| {
-            exe.parent()
-                .map(Path::to_path_buf)
-                .ok_or_else(|| std::io::Error::other("exe has no parent"))
-        })
-        .unwrap_or_else(|_| PathBuf::from("."))
 }
 
 /// Resolves the repo root from the manifest path convention: the gallery keeps

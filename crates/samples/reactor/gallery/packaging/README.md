@@ -1,31 +1,25 @@
 # Packaging Reactor WinUI Gallery (MSIX)
 
-The gallery normally runs unpackaged via `cargo run -p reactor-gallery`, fully
-self-contained: the Windows App Runtime 2.4 files sit beside the executable and
-nothing outside the build output is touched, so a clean system needs no
-Windows App SDK install.
+The gallery runs packaged: `cargo run -p reactor-gallery` packs the build
+output into this MSIX, installs it (first run only - an installed package with
+the current build is activated as-is) and relaunches through
+`shell:AppsFolder\<PFN>!App` so the process carries a package identity. When
+the executable is newer than the packed MSIX (any code change), the package is
+built and installed again; a plain `cargo build` without changes keeps the
+fast activate-only path.
 
 ## Taskbar badge and toasts
 
-The Notifications page sets the badge through the Windows App SDK badge manager
-(`Microsoft.Windows.BadgeNotifications.BadgeNotificationManager`) and sends
-toasts through `AppNotificationManager`. Both APIs require a packaged app
-identity, which a plain executable launch never has.
+The Notifications page uses the official Windows App SDK APIs - the badge
+through `Microsoft.Windows.BadgeNotifications.BadgeNotificationManager` and
+toasts through `AppNotificationManager` - the same ones the official WinUI
+Gallery uses. Both require the packaged identity that the flow above
+provides; there is no self-drawn fallback.
 
-Identity is opt-in: `reactor-gallery --packaged` registers the build output in
-place (or activates the installed MSIX) and relaunches packaged. Known issue on
-Windows Insider builds (26340): every packaged launch fail-fasts in
-`CoreMessagingXP` 10.0.27200 regardless of packaging style - self-contained
-files, a framework-dependent package, or an in-place registration all crash
-before the window appears, so on those builds the flag stays unused and the
-Notifications page reports the missing identity instead.
-
-To register the build output by hand:
-
-1. Copy `Package.appxmanifest` to `target/debug/AppxManifest.xml` (next to the
-   executable, matching its `Executable` name).
-2. `Add-AppxPackage -Register <manifest>` gives the in-place process an
-   identity without installing or copying anything.
+The MSIX is framework-dependent: `build-msix.ps1` stages no Windows App
+Runtime files, and the manifest declares the `Microsoft.WindowsAppRuntime.2`
+dependency. Shipping self-contained runtime files in a packaged process
+fail-fasts in CoreMessagingXP.
 
 The manifest `Publisher` must match a trusted code-signing cert on the machine.
 Create one once and trust it (`CN=ReactorGalleryDev` is the default):
@@ -56,12 +50,16 @@ $store.Open('ReadWrite'); $store.Add($cert); $store.Close()
 
 ## Packaging steps (maintainer/CI)
 
-1. `MakeAppx pack /d <this dir with assets> /p ReactorWinUIGallery.msix`
-2. `signtool sign /fd SHA256 /a ReactorWinUIGallery.msix`
-3. `Add-AppxPackage ReactorWinUIGallery.msix`
-4. Run the gallery, then check Settings > Privacy & security > Camera for
-   the app entry.
+`packaging/build-msix.ps1` does everything `cargo run` triggers on demand:
+it stages the manifest, executable, and non-framework files, generates the
+placeholder logo assets, packs with MakeAppx, and signs with the
+`ReactorGalleryDev` certificate:
 
-`Executable` must match the built binary name (`reactor-gallery.exe`);
-the Assets folder needs `StoreLogo.png`, `Square150x150Logo.png`,
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging/build-msix.ps1
+Add-AppxPackage -Path packaging/output/ReactorWinUIGallery.msix
+```
+
+`Executable` must match the built binary name (`reactor-gallery.exe`); the
+generated Assets folder provides `StoreLogo.png`, `Square150x150Logo.png`,
 `Square44x44Logo.png`.
