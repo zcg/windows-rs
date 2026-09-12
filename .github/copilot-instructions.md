@@ -317,9 +317,9 @@ packaging. Application packages cannot carry the framework's
 `windows.activatableClass` declarations either (schema rejects them at
 application level; mirroring them at package level routes classic-COM
 activation and fails with the same `NOAGGREGATION`). The gallery therefore
-runs unpackaged by default with everything working, the Notifications page
-shows a banner for the packaged-only badge, and `packaging/build-msix.ps1
--Install` remains the manual full flow for when the OS or the Windows App SDK
-fixes packaged XAML on Insider builds. Crash dumps for the analysis live in
-`%TEMP%\gallery-msix-stage`-adjacent WER reports; enable WER LocalDumps for
-`reactor-gallery.exe` to recapture.
+runs unpackaged by default with everything working, and the Notifications
+page shows a banner for the packaged-only badge. The in-repo packaging
+assets were removed at the maintainer's request; when packaged testing is
+needed again, write the appx manifest fresh (framework-dependent,
+`PackageDependency` on `Microsoft.WindowsAppRuntime.2` 2.4.0, exe +
+non-runtime files staged) and pack with MakeAppx.

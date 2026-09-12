@@ -21,10 +21,9 @@ mod tests;
 
 fn main() {
     // Development runs unpackaged and self-contained: the Windows App Runtime
-    // files sit beside the executable and startup does no packaging work.
-    // Toasts work for any desktop process; the badge additionally needs a
-    // packaged app identity, which `packaging/build-msix.ps1 -Install`
-    // provides on demand - the Notifications page shows a banner pointing
-    // there while the badge reports the identity error.
+    // files sit beside the executable. Toasts work for any desktop process;
+    // the badge additionally needs a packaged app identity, which only an
+    // MSIX install provides - the Notifications page shows a banner while
+    // the badge reports the identity error.
     windows_reactor::App::run_component::<shell::Gallery>(()).unwrap();
 }

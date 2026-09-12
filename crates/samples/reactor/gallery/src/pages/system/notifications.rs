@@ -136,11 +136,10 @@ impl Component for NotificationsPage {
                             .severity(InfoBarSeverity::Warning)
                             .title("The badge needs the packaged install")
                             .message(
-                                "The badge manager is a packaged-only API. Run \
-                                 `powershell -File \
-                                 crates/samples/reactor/gallery/packaging/build-msix.ps1 \
-                                 -Install`, then launch Reactor WinUI Gallery from the \
-                                 Start Menu. Toasts work without the install.",
+                                "The badge manager is a packaged-only API: it needs the \
+                                 app to be installed as an MSIX with a package identity, \
+                                 then launched from the Start Menu. Toasts work without \
+                                 the install.",
                             )
                             .is_open(true),
                         "BadgeNotificationManager requires a package identity",
