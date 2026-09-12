@@ -1,25 +1,26 @@
 # Packaging Reactor WinUI Gallery (MSIX)
 
-The gallery normally runs unpackaged via `cargo run -p sample-reactor-gallery`
-(self-contained Windows App Runtime). To get an installed, identity-bearing
-app with per-app privacy entries, package it as an MSIX.
+The gallery normally runs unpackaged via `cargo run -p reactor-gallery`, fully
+self-contained: the Windows App Runtime 2.4 files sit beside the executable and
+nothing outside the build output is touched, so a clean system needs no
+Windows App SDK install.
 
-## Taskbar badge without package identity
+## Taskbar badge and toasts
 
-The taskbar badge uses `ITaskbarList3::SetOverlayIcon` (`src/taskbar_badge.rs`),
-which needs no packaged app identity: the gallery runs unpackaged and never
-registers a package. Both the count and the dot badge are drawn by the gallery,
-so the packaged badge manager (`Microsoft.Windows.BadgeNotifications`) is not
-used.
+The Notifications page sets the badge through the Windows App SDK badge manager
+(`Microsoft.Windows.BadgeNotifications.BadgeNotificationManager`) and sends
+toasts through `AppNotificationManager`. Both APIs require a packaged app
+identity, which a plain executable launch never has.
 
-The `Package.appxmanifest` and `build-msix.ps1` in this folder remain as the
-optional MSIX packaging path for an identity-bearing install (per-app privacy
-entries, Store distribution). They are not required for the badge.
+Identity is opt-in: `reactor-gallery --packaged` registers the build output in
+place (or activates the installed MSIX) and relaunches packaged. Known issue on
+Windows Insider builds (26340): every packaged launch fail-fasts in
+`CoreMessagingXP` 10.0.27200 regardless of packaging style - self-contained
+files, a framework-dependent package, or an in-place registration all crash
+before the window appears, so on those builds the flag stays unused and the
+Notifications page reports the missing identity instead.
 
-## Development identity (not required for badges)
-
-The package registration flow was removed from startup; `src/packaging.rs`
-remains as a reference implementation. To register the build output in place:
+To register the build output by hand:
 
 1. Copy `Package.appxmanifest` to `target/debug/AppxManifest.xml` (next to the
    executable, matching its `Executable` name).
@@ -61,6 +62,6 @@ $store.Open('ReadWrite'); $store.Add($cert); $store.Close()
 4. Run the gallery, then check Settings > Privacy & security > Camera for
    the app entry.
 
-`Executable` must match the built binary name (`sample-reactor-gallery.exe`);
+`Executable` must match the built binary name (`reactor-gallery.exe`);
 the Assets folder needs `StoreLogo.png`, `Square150x150Logo.png`,
 `Square44x44Logo.png`.

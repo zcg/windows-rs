@@ -301,3 +301,17 @@ changes (the `gen` workflow enforces this).
 | `metadata` `Remapper` (`merge/remap.rs`) | No tests anywhere; routing/`split_apis` logic is exercised only in the live build, so a regression yields a malformed namespaced winmd with no failing test. |
 | webview | `process-failed`, download, and deferral paths untested. |
 | `reactor` `items_view` widget + Windows App SDK 2.3.1 | Setting `ItemsView.ItemTemplate` to any `IElementFactory` (reproduced with an official `DataTemplate`) crashes the runtime during layout (`0xC000027B`). The widget intentionally leaves `ItemTemplate` unset; the gallery demonstrates the data-driven model through `ItemsRepeater`. Revisit when the runtime is fixed or upgraded. |
+
+### gallery: packaged launch fail-fasts on Insider builds (2026-09)
+
+Every packaged launch of the gallery (MSIX framework-dependent, MSIX with
+self-contained runtime files, or an in-place `Add-AppxPackage -Register`)
+fail-fasts in `CoreMessagingXP` 10.0.27200 (`0xC0000602`) on a Windows Insider
+build 26340 host, before any window appears. The identical unpackaged
+executable runs fine, and WinAppSDK self-contained deployment is documented as
+unpackaged-only, so the packaged route is framework-dependent
+(`build-msix.ps1` stages no runtime files; the manifest declares the
+`Microsoft.WindowsAppRuntime.2` 2.4.0 dependency). The identity flow is opt-in
+through `reactor-gallery --packaged`; the default run stays self-contained
+unpackaged. Revisit when the OS or the Windows App SDK fixes the packaged
+CoreMessaging path.

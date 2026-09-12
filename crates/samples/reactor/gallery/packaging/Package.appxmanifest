@@ -15,14 +15,19 @@
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   <Dependencies>
-    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+    <!-- Framework-dependent packaging: the runtime files are NOT shipped in
+         the package (see build-msix.ps1); a packaged process loads them from
+         this framework. Shipping them beside the executable as well makes a
+         packaged process load two copies of the runtime, which fail-fasts in
+         CoreMessagingXP. -->
     <PackageDependency Name="Microsoft.WindowsAppRuntime.2" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" MinVersion="2.4.0.0" />
   </Dependencies>
   <Resources>
     <Resource Language="en-US" />
   </Resources>
   <Applications>
-    <Application Id="App" Executable="sample-reactor-gallery.exe" EntryPoint="Windows.FullTrustApplication">
+    <Application Id="App" Executable="reactor-gallery.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
           DisplayName="Reactor WinUI Gallery"
           Square150x150Logo="Assets\Square150x150Logo.png"

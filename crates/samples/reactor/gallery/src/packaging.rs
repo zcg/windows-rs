@@ -1,32 +1,48 @@
 //! Development-time package identity for the gallery.
 //!
-//! The system badge API (`Windows.UI.Notifications.BadgeUpdateManager`)
-//! requires a packaged app identity. Registering an MSIX every iteration is
-//! heavy, so the gallery uses `Add-AppxPackage -Register` on the manifest in
-//! the build output directory. The manifest sits next to the executable (same
-//! relative name as `Executable`), so the in-place files keep working with a
-//! package identity and no MSIX install is involved.
+//! The badge and toast APIs on the Notifications page require a packaged app
+//! identity. Starting the executable directly grants none, so `main` calls
+//! [`ensure_packaged`]: when an identity-bearing registration for this package
+//! already exists it is activated through the shell, otherwise the build output
+//! is registered in place (`Add-AppxPackage -Register` with the manifest staged
+//! next to the executable) and the packaged replacement launches through
+//! `shell:AppsFolder\<PFN>!App`. Launching the executable directly again would
+//! loop forever: register, relaunch unpackaged, register again.
 //!
-//! Registration is idempotent: it fails quietly when the package is already
-//! present, and the gallery keeps running unpackaged when the system cannot
-//! register it (for example, in CI). A packaged process resolves its own
-//! package full name; an unpackaged one does not.
-//!
-//! The relaunch goes through the shell (`shell:AppsFolder\<PFN>!App`).
-//! Starting the executable directly does not grant identity, so doing that
-//! would loop forever: register, relaunch unpackaged, register again.
+//! When the system cannot provide an identity (no trusted publisher certificate,
+//! CI), the gallery keeps running unpackaged and the Notifications page reports
+//! the API error. A packaged process resolves its own package full name; an
+//! unpackaged one does not.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const MANIFEST: &str = "packaging/Package.appxmanifest";
 
-/// Returns `true` when the process was started unpackaged and registration
-/// launched a packaged replacement (which may or may not be packaged: the
-/// caller should not treat the return value as a promise of identity).
+/// Returns `true` when the process was started unpackaged and a packaged
+/// replacement was launched (which may or may not be packaged: the caller
+/// should not treat the return value as a promise of identity).
 pub fn ensure_packaged() -> bool {
     if has_package_identity() {
         return false;
+    }
+    let manifest = workspace_root().join(MANIFEST);
+    let Ok(text) = std::fs::read_to_string(&manifest) else {
+        return false;
+    };
+    let Ok(name) = attribute(&text, "<Identity", "Name=") else {
+        return false;
+    };
+    let Ok(app_id) = attribute(&text, "<Application", "Id=") else {
+        return false;
+    };
+    // Prefer activating an existing registration: an installed MSIX carries a
+    // full self-contained layout, and an in-place registration launched from a
+    // build whose runtime DLLs crash under identity on some systems. Both are
+    // identity-bearing; only fall back to a fresh registration when none
+    // exists yet.
+    if let Some(family) = installed_family(&name) {
+        return activate(&family, &app_id);
     }
     match register_in_place() {
         Ok((family, app_id)) => activate(&family, &app_id),
@@ -34,6 +50,25 @@ pub fn ensure_packaged() -> bool {
             eprintln!("windows-reactor gallery: package registration skipped: {error}");
             false
         }
+    }
+}
+
+/// Queries the package family name registered for `name`, or `None` when the
+/// identity is not registered or not installed for the current user.
+fn installed_family(name: &str) -> Option<String> {
+    let script = format!("(Get-AppxPackage -Name '{name}').PackageFamilyName");
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let family = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if family.is_empty() {
+        None
+    } else {
+        Some(family)
     }
 }
 

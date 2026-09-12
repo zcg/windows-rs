@@ -1,10 +1,20 @@
 # 从已构建的 self-contained 产物生成 ReactorWinUIGallery.msix。
 # 用法：pwsh -File build-msix.ps1 [-TargetDir <repo>\target\debug]
 param(
-    [string]$TargetDir = (Join-Path (Split-Path $PSScriptRoot -Parent) 'target\debug'),
+    [string]$TargetDir = '',
     [string]$OutputDir = (Join-Path $PSScriptRoot 'output')
 )
 $ErrorActionPreference = 'Stop'
+if (-not $TargetDir) {
+    # The workspace target directory lives at the repo root; walk up from the
+    # script directory until it shows up.
+    $dir = $PSScriptRoot
+    while ($dir -and -not (Test-Path (Join-Path $dir 'target\debug'))) {
+        $dir = Split-Path $dir -Parent
+    }
+    if (-not $dir) { throw 'target\debug not found above the script directory' }
+    $TargetDir = Join-Path $dir 'target\debug'
+}
 $staging = Join-Path $env:TEMP 'gallery-msix-stage'
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
 New-Item -ItemType Directory -Path (Join-Path $staging 'Assets') -Force | Out-Null
@@ -22,44 +32,44 @@ New-Png (Join-Path $staging 'Assets\Square44x44Logo.png') 44 44
 New-Png (Join-Path $staging 'Assets\Square150x150Logo.png') 150 150
 
 Copy-Item (Join-Path $PSScriptRoot 'Package.appxmanifest') (Join-Path $staging 'AppxManifest.xml')
-Copy-Item (Join-Path $TargetDir 'sample-reactor-gallery.exe') $staging
-Get-ChildItem $TargetDir -Filter '*.dll' | Copy-Item -Destination $staging
-Get-ChildItem $TargetDir -Filter '*.pri' | Copy-Item -Destination $staging
+Copy-Item (Join-Path $TargetDir 'reactor-gallery.exe') $staging
 
-Add-Type -AssemblyName System.IO.Compression
-Add-Type -AssemblyName System.IO.Compression.FileSystem
+# The MSIX is framework-dependent: the Windows App Runtime files listed in
+# reactor-setup's assets/runtime.txt are provided by the installed
+# Microsoft.WindowsAppRuntime.2 framework package (declared as a
+# <PackageDependency> in the manifest). Shipping them beside the executable
+# too makes a packaged process load two copies of the runtime, which
+# fail-fasts in CoreMessagingXP. Everything else (VC runtime, WebView2) is
+# carried in the package.
+$frameworkFiles = @{}
+$runtimeList = Join-Path $PSScriptRoot '..\..\..\..\libs\reactor-setup\assets\runtime.txt'
+if (Test-Path $runtimeList) {
+    Get-Content $runtimeList | ForEach-Object { $frameworkFiles[$_.Trim().ToLowerInvariant()] = $true }
+} else {
+    throw 'reactor-setup assets/runtime.txt not found'
+}
+Get-ChildItem $TargetDir -Filter '*.dll' | Where-Object {
+    -not $frameworkFiles.ContainsKey($_.Name.ToLowerInvariant())
+} | Copy-Item -Destination $staging
+Get-ChildItem $TargetDir -Filter '*.pri' | Where-Object {
+    -not $frameworkFiles.ContainsKey($_.Name.ToLowerInvariant())
+} | Copy-Item -Destination $staging
+
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 $out = Join-Path $OutputDir 'ReactorWinUIGallery.msix'
 if (Test-Path $out) { Remove-Item $out -Force }
 
-# 1. Zip all staged files (BlockMap is added last, so it is not in the map).
-$zip = [System.IO.Compression.ZipFile]::Open($out, [System.IO.Compression.ZipArchiveMode]::Create)
-foreach ($f in (Get-ChildItem $staging -Recurse -File)) {
-    $rel = $f.FullName.Substring($staging.Length + 1).Replace('\', '/')
-    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $f.FullName, $rel, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
-}
-$zip.Dispose()
-
-# 2. BlockMap with Size + LZSize (read from the written zip) + SHA-256.
-$sha = [System.Security.Cryptography.SHA256]::Create()
-$reader = [System.IO.Compression.ZipFile]::OpenRead($out)
-$lines = foreach ($entry in $reader.Entries) {
-    $file = Join-Path $staging ($entry.FullName.Replace('/', '\'))
-    $hash = [Convert]::ToBase64String($sha.ComputeHash([System.IO.File]::ReadAllBytes($file)))
-    '  <File Name="' + $entry.FullName + '" Size="' + $entry.Length + '" LZSize="' + $entry.CompressedLength + '" Hash="' + $hash + '" />'
-}
-$reader.Dispose()
-$blockMap = '<?xml version="1.0" encoding="UTF-8"?>' + "`n" + '<BlockMap xmlns="http://schemas.microsoft.com/appx/2010/blockmap" HashMethod="http://www.w3.org/2001/04/xmlenc#sha256">' + "`n" + ($lines -join "`n") + "`n</BlockMap>`n"
-
-# 3. Append AppxBlockMap.xml stored (uncompressed).
-$zip = [System.IO.Compression.ZipFile]::Open($out, [System.IO.Compression.ZipArchiveMode]::Update)
-$entry = $zip.CreateEntry('AppxBlockMap.xml', [System.IO.Compression.CompressionLevel]::NoCompression)
-$stream = $entry.Open()
-$writer = New-Object System.IO.StreamWriter($stream, (New-Object System.Text.UTF8Encoding($false)))
-$writer.Write($blockMap)
-$writer.Flush(); $writer.Dispose(); $stream.Dispose()
-$zip.Dispose()
+# Pack and sign with the Windows SDK tools: MakeAppx writes the
+# [Content_Types].xml and AppxBlockMap.xml a valid package needs, which a
+# hand-rolled zip cannot.
+$kitBin = Split-Path (Get-Command makeappx.exe -ErrorAction Stop).Source -Parent
+$makeappx = Join-Path $kitBin 'makeappx.exe'
+$signtool = Join-Path $kitBin 'signtool.exe'
+& $makeappx pack /o /d $staging /p $out
+if ($LASTEXITCODE -ne 0) { throw "MakeAppx failed with exit code $LASTEXITCODE" }
+& $signtool sign /fd SHA256 /a /n 'ReactorGalleryDev' $out
+if ($LASTEXITCODE -ne 0) { throw "Signtool failed with exit code $LASTEXITCODE" }
 
 Write-Output ("MSIX: " + $out + " (" + [math]::Round((Get-Item $out).Length / 1MB) + " MB)")
-Write-Output "Install (administrator PowerShell):"
+Write-Output "Install:"
 Write-Output "  Add-AppxPackage -Path $out"

@@ -935,8 +935,7 @@ fn rebuild_window_backdrop(
             if let Some(args) = args.as_ref()
                 && let Ok(state) = args.WindowActivationState()
             {
-                let _ = configuration
-                    .SetIsInputActive(state != WindowActivationState::Deactivated);
+                let _ = configuration.SetIsInputActive(state != WindowActivationState::Deactivated);
             }
         })
         .map_err(native_error)?;
@@ -5280,17 +5279,14 @@ fn xaml_scale(element: &UIElement) -> Result<f64, RuntimeError> {
 }
 
 pub fn bootstrap_runtime() -> windows_core::Result<()> {
-    if self_contained_manifest_present() {
-        return if self_contained_runtime_present() {
-            Ok(())
-        } else {
-            Err(windows_core::Error::new(
-                windows_core::HRESULT(0x8007007e_u32 as i32),
-                "self-contained Windows App Runtime files are missing",
-            ))
-        };
+    if self_contained_manifest_present() && self_contained_runtime_present() {
+        return Ok(());
     }
 
+    // The self-contained marker with missing local files means the executable
+    // is deployed framework-dependent (for example a packaged MSIX layout,
+    // where self-contained runtime files cannot be shipped): resolve the
+    // Windows App Runtime through the package graph instead.
     bootstrap::bootstrap()
 }
 
