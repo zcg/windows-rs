@@ -127,6 +127,7 @@ pub(crate) enum PropertyAdapter {
     PathData,
     PointerCapture,
     PointerEvent,
+    RefreshDeferral,
     DragInfo,
     DropData,
     DropPolicy,
@@ -227,6 +228,7 @@ impl PropertyAdapter {
             | Self::PathData
             | Self::PointerEvent
             | Self::RatingValue
+            | Self::RefreshDeferral
             | Self::SelectionIndex
             | Self::TreeNodeContent
             | Self::Uri
@@ -249,6 +251,7 @@ impl PropertyAdapter {
         const ITEMS_VIEW: &str = "Microsoft.UI.Xaml.Controls.ItemsView";
         const MAP_CONTROL: &str = "Microsoft.UI.Xaml.Controls.MapControl";
         const MEDIA_PLAYER_ELEMENT: &str = "Microsoft.UI.Xaml.Controls.MediaPlayerElement";
+        const NAVIGATION_VIEW: &str = "Microsoft.UI.Xaml.Controls.NavigationView";
         const NUMBER_BOX: &str = "Microsoft.UI.Xaml.Controls.NumberBox";
         const PATH_ICON: &str = "Microsoft.UI.Xaml.Controls.PathIcon";
         const RATING_CONTROL: &str = "Microsoft.UI.Xaml.Controls.RatingControl";
@@ -256,6 +259,7 @@ impl PropertyAdapter {
         const RICH_TEXT_BLOCK: &str = "Microsoft.UI.Xaml.Controls.RichTextBlock";
         const TEXT_BLOCK: &str = "Microsoft.UI.Xaml.Controls.TextBlock";
         const TIME_PICKER: &str = "Microsoft.UI.Xaml.Controls.TimePicker";
+        const TOGGLE_BUTTON: &str = "Microsoft.UI.Xaml.Controls.Primitives.ToggleButton";
 
         let property = |targets, metadata, value, copy, requirement| {
             PropertyAdapterKind::Property(PropertyAdapterContract {
@@ -404,11 +408,15 @@ impl PropertyAdapter {
                 "rich_text_blocks requires RichTextBlock.Blocks",
             ),
             Self::ResourceOverrides => property(
-                OneOf(&[(BUTTON, "Resources")]),
+                OneOf(&[
+                    (BUTTON, "Resources"),
+                    (NAVIGATION_VIEW, "Resources"),
+                    (TOGGLE_BUTTON, "Resources"),
+                ]),
                 None,
                 "ResourceOverrides",
                 false,
-                "resource_overrides requires Button.Resources",
+                "resource_overrides requires Button, NavigationView or ToggleButton Resources",
             ),
             Self::Uri => property(
                 Any,
@@ -466,6 +474,9 @@ impl PropertyAdapter {
             }
             Self::PointerEvent => {
                 PropertyAdapterKind::EventOnly("pointer_event is an event-only adapter")
+            }
+            Self::RefreshDeferral => {
+                PropertyAdapterKind::EventOnly("refresh_deferral is an event-only adapter")
             }
             Self::DragInfo | Self::DropData => {
                 PropertyAdapterKind::EventOnly("drag adapters are event-only")
@@ -540,6 +551,15 @@ pub(crate) struct Event {
     pub(crate) field: Option<String>,
     #[serde(default)]
     pub(crate) property: Option<String>,
+    /// Projects a single field of a value-type event-args property.
+    ///
+    /// `property = "NewSize"` alone is unresolvable because `Windows.Foundation.Size` has no
+    /// `EventPayload` variant of its own. `value_field = "width"` selects that struct's
+    /// `width` field (matched by snake_case name) and widens it to the `F64` payload, which
+    /// is how `Slider.SizeChanged` reports the control's new layout width in DIP. Requires
+    /// `property`.
+    #[serde(default)]
+    pub(crate) value_field: Option<String>,
     #[serde(default)]
     pub(crate) observe: Option<String>,
     #[serde(default)]
@@ -705,6 +725,7 @@ pub(crate) enum EventPayloadSource {
     EventArgsTreeNodeContent { interface: String, property: String },
     SenderRichEditText { interface: String, property: String },
     PointerEvent,
+    RefreshDeferral { interface: String },
     SenderItemTags { interface: String, property: String },
 }
 
@@ -739,7 +760,11 @@ impl EventPayloadSource {
                 interface,
                 property,
             } => Some((interface, property)),
-            Self::Unit | Self::DragInfo { .. } | Self::DropData { .. } | Self::PointerEvent => None,
+            Self::Unit
+            | Self::DragInfo { .. }
+            | Self::DropData { .. }
+            | Self::PointerEvent
+            | Self::RefreshDeferral { .. } => None,
         }
     }
 
@@ -761,6 +786,8 @@ pub(crate) enum EventSubscription {
 pub(crate) enum EventPayloadConversion {
     Identity,
     Field(String),
+    /// Reads one field of a value-type payload and widens it to `F64`.
+    FieldAsF64(String),
     Nullable,
     NumberBoxValue,
     RatingValue,
@@ -1139,6 +1166,12 @@ impl Schema {
                         control.type_name, event.name
                     ));
                 }
+                if event.value_field.is_some() && event.property.is_none() {
+                    return Err(format!(
+                        "{}.{} value_field requires property",
+                        control.type_name, event.name
+                    ));
+                }
                 if let Some(active_property) = event.active_property.as_deref()
                     && !properties
                         .iter()
@@ -1157,6 +1190,7 @@ impl Schema {
                                 | PropertyAdapter::PointerEvent
                                 | PropertyAdapter::DragInfo
                                 | PropertyAdapter::DropData
+                                | PropertyAdapter::RefreshDeferral
                         )
                     )
                     && event.property.is_none()
@@ -1320,6 +1354,27 @@ impl Schema {
                         (
                             "PointerEventInfo".to_string(),
                             EventPayloadSource::PointerEvent,
+                            ReadValueConversion::Identity,
+                        )
+                    } else if event.adapter == Some(PropertyAdapter::RefreshDeferral) {
+                        if event.property.is_some() {
+                            return Err(format!(
+                                "{}.{} has an invalid refresh_deferral contract",
+                                control.type_name, event.name
+                            ));
+                        }
+                        let interface = metadata
+                            .resolve_event_args_method(&name, &method, "GetDeferral")
+                            .ok_or_else(|| {
+                                format!(
+                                    "{}.{} refresh_deferral requires event args with GetDeferral",
+                                    control.type_name, event.name
+                                )
+                            })?
+                            .full_path();
+                        (
+                            "RefreshDeferral".to_string(),
+                            EventPayloadSource::RefreshDeferral { interface },
                             ReadValueConversion::Identity,
                         )
                     } else if matches!(
@@ -1528,14 +1583,29 @@ impl Schema {
                                 ReadValueConversion::Identity,
                             )
                         } else {
-                            let (payload, interface, conversion) = metadata
-                                .resolve_event_args_property(&name, &method, property)
-                                .ok_or_else(|| {
-                                    format!(
-                                        "{}.{} has unsupported event property {}",
-                                        control.type_name, event.name, property
-                                    )
-                                })?;
+                            let (payload, interface, conversion) = match &event.value_field {
+                                Some(field) => {
+                                    let field = to_snake_case(field);
+                                    metadata
+                                        .resolve_event_args_property_field(
+                                            &name, &method, property, &field,
+                                        )
+                                        .ok_or_else(|| {
+                                            format!(
+                                                "{}.{} has unsupported event property {} field {}",
+                                                control.type_name, event.name, property, field
+                                            )
+                                        })?
+                                }
+                                None => metadata
+                                    .resolve_event_args_property(&name, &method, property)
+                                    .ok_or_else(|| {
+                                        format!(
+                                            "{}.{} has unsupported event property {}",
+                                            control.type_name, event.name, property
+                                        )
+                                    })?,
+                            };
                             (
                                 payload,
                                 EventPayloadSource::EventArgsProperty {
@@ -1566,6 +1636,9 @@ impl Schema {
                     match conversion {
                         ReadValueConversion::Identity => EventPayloadConversion::Identity,
                         ReadValueConversion::Field(field) => EventPayloadConversion::Field(field),
+                        ReadValueConversion::FieldAsF64(field) => {
+                            EventPayloadConversion::FieldAsF64(field)
+                        }
                         ReadValueConversion::Nullable => EventPayloadConversion::Nullable,
                     }
                 };
@@ -2726,7 +2799,37 @@ property = "FontWeight"
     }
 
     #[test]
-    fn rejects_multi_field_event_payload() {
+    fn projects_value_type_event_payload_field() {
+        let source = r#"
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.TextBlock"
+capabilities = ["layout"]
+
+[[control.event]]
+name = "SizeChanged"
+property = "NewSize"
+value_field = "Width"
+"#;
+        let metadata = MetadataResolver::load(&workspace_path("crates/tools/reactor/winmd"));
+        let resolved = Schema::parse(source).unwrap().resolve(&metadata).unwrap();
+        let event = &resolved.controls[0].events[0];
+
+        assert_eq!(event.payload, "F64");
+        assert_eq!(
+            event.conversion,
+            EventPayloadConversion::FieldAsF64("width".to_string())
+        );
+        assert!(matches!(
+            &event.source,
+            EventPayloadSource::EventArgsProperty {
+                interface,
+                property
+            } if interface.ends_with("ISizeChangedEventArgs") && property == "NewSize"
+        ));
+    }
+
+    #[test]
+    fn rejects_multi_field_event_payload_without_value_field() {
         let source = r#"
 [[control]]
 type = "Microsoft.UI.Xaml.Controls.TextBlock"
@@ -2744,6 +2847,49 @@ property = "NewSize"
             .unwrap();
 
         assert!(error.contains("unsupported event property NewSize"));
+    }
+
+    #[test]
+    fn rejects_unknown_value_field() {
+        let source = r#"
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.TextBlock"
+capabilities = ["layout"]
+
+[[control.event]]
+name = "SizeChanged"
+property = "NewSize"
+value_field = "depth"
+"#;
+        let metadata = MetadataResolver::load(&workspace_path("crates/tools/reactor/winmd"));
+        let error = Schema::parse(source)
+            .unwrap()
+            .resolve(&metadata)
+            .err()
+            .unwrap();
+
+        assert!(error.contains("unsupported event property NewSize field depth"));
+    }
+
+    #[test]
+    fn rejects_value_field_without_property() {
+        let source = r#"
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.TextBlock"
+capabilities = ["layout"]
+
+[[control.event]]
+name = "SizeChanged"
+value_field = "width"
+"#;
+        let metadata = MetadataResolver::load(&workspace_path("crates/tools/reactor/winmd"));
+        let error = Schema::parse(source)
+            .unwrap()
+            .resolve(&metadata)
+            .err()
+            .unwrap();
+
+        assert!(error.contains("value_field requires property"));
     }
 
     #[test]

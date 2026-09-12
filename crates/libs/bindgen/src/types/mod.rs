@@ -222,6 +222,13 @@ impl Type {
             .then_with(|| self.row_key().cmp(&other.row_key()))
     }
 
+    /// Name this type is emitted under in a `--flat` layout, where the namespace
+    /// module is dropped. Two types from different namespaces can therefore share
+    /// one output name; see `Config::write_flat`.
+    pub(crate) fn output_name(&self) -> &'static str {
+        self.sort_key().1.name()
+    }
+
     pub(crate) fn is_intrinsic(&self) -> bool {
         matches!(
             self,

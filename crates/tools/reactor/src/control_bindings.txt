@@ -49,9 +49,13 @@ Microsoft::UI::Xaml::Controls::ContentDialog::TitleProperty
 Microsoft::UI::Xaml::Controls::Control::BackgroundProperty
 Microsoft::UI::Xaml::Controls::Control::BorderBrushProperty
 Microsoft::UI::Xaml::Controls::Control::BorderThicknessProperty
+Microsoft::UI::Xaml::Controls::Control::CornerRadiusProperty
 Microsoft::UI::Xaml::Controls::Control::FontFamilyProperty
+Microsoft::UI::Xaml::Controls::Control::FontSizeProperty
+Microsoft::UI::Xaml::Controls::Control::ForegroundProperty
 Microsoft::UI::Xaml::Controls::Control::HorizontalContentAlignmentProperty
 Microsoft::UI::Xaml::Controls::Control::IsEnabledProperty
+Microsoft::UI::Xaml::Controls::Control::PaddingProperty
 Microsoft::UI::Xaml::Controls::Control::VerticalContentAlignmentProperty
 Microsoft::UI::Xaml::Controls::DatePicker::CreateInstance
 Microsoft::UI::Xaml::Controls::DatePicker::DayVisibleProperty
@@ -126,9 +130,13 @@ Microsoft::UI::Xaml::Controls::IContentDialogClosedEventArgs::get_Result
 Microsoft::UI::Xaml::Controls::IControl::put_Background
 Microsoft::UI::Xaml::Controls::IControl::put_BorderBrush
 Microsoft::UI::Xaml::Controls::IControl::put_BorderThickness
+Microsoft::UI::Xaml::Controls::IControl::put_CornerRadius
 Microsoft::UI::Xaml::Controls::IControl::put_FontFamily
+Microsoft::UI::Xaml::Controls::IControl::put_FontSize
+Microsoft::UI::Xaml::Controls::IControl::put_Foreground
 Microsoft::UI::Xaml::Controls::IControl::put_HorizontalContentAlignment
 Microsoft::UI::Xaml::Controls::IControl::put_IsEnabled
+Microsoft::UI::Xaml::Controls::IControl::put_Padding
 Microsoft::UI::Xaml::Controls::IControl::put_VerticalContentAlignment
 Microsoft::UI::Xaml::Controls::IDatePicker::put_DayVisible
 Microsoft::UI::Xaml::Controls::IDatePicker::put_Header
@@ -258,6 +266,7 @@ Microsoft::UI::Xaml::Controls::IRatingControl::put_Value
 Microsoft::UI::Xaml::Controls::IRatingControl::{add_ValueChanged, remove_ValueChanged}
 Microsoft::UI::Xaml::Controls::IRefreshContainer::put_PullDirection
 Microsoft::UI::Xaml::Controls::IRefreshContainer::{add_RefreshRequested, remove_RefreshRequested}
+Microsoft::UI::Xaml::Controls::IRefreshRequestedEventArgs::GetDeferral
 Microsoft::UI::Xaml::Controls::IRichEditBox::get_Document
 Microsoft::UI::Xaml::Controls::IRichEditBox::put_Header
 Microsoft::UI::Xaml::Controls::IRichEditBox::put_IsReadOnly
@@ -297,6 +306,7 @@ Microsoft::UI::Xaml::Controls::ISplitView::put_OpenPaneLength
 Microsoft::UI::Xaml::Controls::ISplitView::put_Pane
 Microsoft::UI::Xaml::Controls::IStackLayout::{put_Orientation, put_Spacing}
 Microsoft::UI::Xaml::Controls::IStackPanel::put_Orientation
+Microsoft::UI::Xaml::Controls::IStackPanel::put_Padding
 Microsoft::UI::Xaml::Controls::IStackPanel::put_Spacing
 Microsoft::UI::Xaml::Controls::ISymbolIcon::put_Symbol
 Microsoft::UI::Xaml::Controls::ITabView::get_SelectedIndex
@@ -542,6 +552,7 @@ Microsoft::UI::Xaml::Controls::SplitViewDisplayMode
 Microsoft::UI::Xaml::Controls::StackLayout::CreateInstance
 Microsoft::UI::Xaml::Controls::StackPanel::CreateInstance
 Microsoft::UI::Xaml::Controls::StackPanel::OrientationProperty
+Microsoft::UI::Xaml::Controls::StackPanel::PaddingProperty
 Microsoft::UI::Xaml::Controls::StackPanel::SpacingProperty
 Microsoft::UI::Xaml::Controls::SwapChainPanel::CreateInstance
 Microsoft::UI::Xaml::Controls::SwipeControl::CreateInstance
@@ -619,8 +630,10 @@ Microsoft::UI::Xaml::IFrameworkElement::get_Tag
 Microsoft::UI::Xaml::IFrameworkElement::put_Tag
 Microsoft::UI::Xaml::IFrameworkElement::{add_SizeChanged, remove_SizeChanged}
 Microsoft::UI::Xaml::IScalarTransition::put_Duration
+Microsoft::UI::Xaml::ISizeChangedEventArgs::get_NewSize
 Microsoft::UI::Xaml::IUIElement::put_AllowDrop
 Microsoft::UI::Xaml::IUIElement::put_CenterPoint
+Microsoft::UI::Xaml::IUIElement::put_IsHitTestVisible
 Microsoft::UI::Xaml::IUIElement::put_OpacityTransition
 Microsoft::UI::Xaml::IUIElement::put_Scale
 Microsoft::UI::Xaml::IUIElement::put_ScaleTransition
@@ -636,6 +649,7 @@ Microsoft::UI::Xaml::IUIElement::{add_PointerMoved, remove_PointerMoved}
 Microsoft::UI::Xaml::IUIElement::{add_PointerPressed, remove_PointerPressed}
 Microsoft::UI::Xaml::IUIElement::{add_PointerReleased, remove_PointerReleased}
 Microsoft::UI::Xaml::IUIElement::{add_PointerWheelChanged, remove_PointerWheelChanged}
+Microsoft::UI::Xaml::IUIElement::{add_Tapped, remove_Tapped}
 Microsoft::UI::Xaml::IUIElement::{get_KeyboardAccelerators, put_KeyboardAcceleratorPlacementMode}
 Microsoft::UI::Xaml::IVector3Transition::put_Duration
 Microsoft::UI::Xaml::Input::IKeyboardAccelerator::{put_Key, put_Modifiers, Invoked}
@@ -678,9 +692,11 @@ Microsoft::UI::Xaml::Shapes::Shape::StrokeThicknessProperty
 Microsoft::UI::Xaml::TextTrimming
 Microsoft::UI::Xaml::TextWrapping
 Microsoft::UI::Xaml::UIElement::AllowDropProperty
+Microsoft::UI::Xaml::UIElement::IsHitTestVisibleProperty
 Microsoft::UI::Xaml::Vector3Transition::CreateInstance
 Windows::ApplicationModel::DataTransfer::IDataPackageView::{Contains, GetTextAsync, GetStorageItemsAsync}
 Windows::Devices::Geolocation::Geopoint::Create
+Windows::Foundation::IDeferral::Complete
 Windows::Foundation::Uri::CreateUri
 Windows::Media::Core::MediaSource::CreateFromUri
 Windows::Storage::IStorageItem::{get_Name, get_Path}

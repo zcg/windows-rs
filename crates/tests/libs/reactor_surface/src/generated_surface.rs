@@ -46,8 +46,8 @@ pub struct ExtensionSurface {
     pub name: &'static str,
 }
 pub(crate) const PROJECTED_CONTROL_COUNT: usize = 90usize;
-pub(crate) const PROJECTED_PROPERTY_COUNT: usize = 258usize;
-pub(crate) const PROJECTED_EVENT_COUNT: usize = 72usize;
+pub(crate) const PROJECTED_PROPERTY_COUNT: usize = 278usize;
+pub(crate) const PROJECTED_EVENT_COUNT: usize = 79usize;
 pub(crate) const CAPABILITY_PROPERTY_COUNT: usize = 27usize;
 pub(crate) const STRUCTURAL_COUNT: usize = 72usize;
 pub(crate) const EXTENSION_COUNT: usize = 5;
@@ -397,11 +397,59 @@ fn property_text_block_foreground(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_text_block_is_hit_test_visible(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((TextBlock::new(),)),
+        1 => Grid::new().children((TextBlock::new().is_hit_test_visible(true),)),
+        2 => Grid::new().children((TextBlock::new().is_hit_test_visible(false),)),
+        _ => unreachable!(),
+    }
+}
 fn property_button_is_enabled(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((Button::new(),)),
         1 => Grid::new().children((Button::new().is_enabled(true),)),
         2 => Grid::new().children((Button::new().is_enabled(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_button_padding(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Button::new(),)),
+        1 => Grid::new().children((Button::new().padding(Thickness::uniform(2.0)),)),
+        2 => Grid::new().children((Button::new().padding(Thickness::uniform(4.0)),)),
+        _ => unreachable!(),
+    }
+}
+fn property_button_corner_radius(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Button::new(),)),
+        1 => Grid::new().children((Button::new().corner_radius(CornerRadius::uniform(2.0)),)),
+        2 => Grid::new().children((Button::new().corner_radius(CornerRadius::uniform(4.0)),)),
+        _ => unreachable!(),
+    }
+}
+fn property_button_background(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Button::new(),)),
+        1 => Grid::new().children((Button::new().background(Color::rgb(32, 64, 96)),)),
+        2 => Grid::new().children((Button::new().background(Color::rgb(96, 64, 32)),)),
+        _ => unreachable!(),
+    }
+}
+fn property_button_foreground(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Button::new(),)),
+        1 => Grid::new().children((Button::new().foreground(Color::rgb(32, 64, 96)),)),
+        2 => Grid::new().children((Button::new().foreground(Color::rgb(96, 64, 32)),)),
+        _ => unreachable!(),
+    }
+}
+fn property_button_is_hit_test_visible(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Button::new(),)),
+        1 => Grid::new().children((Button::new().is_hit_test_visible(true),)),
+        2 => Grid::new().children((Button::new().is_hit_test_visible(false),)),
         _ => unreachable!(),
     }
 }
@@ -589,6 +637,14 @@ fn property_border_drop_policy(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_border_is_hit_test_visible(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Border::new(),)),
+        1 => Grid::new().children((Border::new().is_hit_test_visible(true),)),
+        2 => Grid::new().children((Border::new().is_hit_test_visible(false),)),
+        _ => unreachable!(),
+    }
+}
 fn property_breadcrumb_bar_items_source(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((BreadcrumbBar::new(),)),
@@ -610,6 +666,22 @@ fn property_stack_panel_spacing(stage: usize) -> View {
         0 | 3 => Grid::new().children((StackPanel::new(),)),
         1 => Grid::new().children((StackPanel::new().spacing(1.0),)),
         2 => Grid::new().children((StackPanel::new().spacing(2.0),)),
+        _ => unreachable!(),
+    }
+}
+fn property_stack_panel_padding(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((StackPanel::new(),)),
+        1 => Grid::new().children((StackPanel::new().padding(Thickness::uniform(2.0)),)),
+        2 => Grid::new().children((StackPanel::new().padding(Thickness::uniform(4.0)),)),
+        _ => unreachable!(),
+    }
+}
+fn property_stack_panel_is_hit_test_visible(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((StackPanel::new(),)),
+        1 => Grid::new().children((StackPanel::new().is_hit_test_visible(true),)),
+        2 => Grid::new().children((StackPanel::new().is_hit_test_visible(false),)),
         _ => unreachable!(),
     }
 }
@@ -684,6 +756,14 @@ fn property_grid_background(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_grid_is_hit_test_visible(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Grid::new(),)),
+        1 => Grid::new().children((Grid::new().is_hit_test_visible(true),)),
+        2 => Grid::new().children((Grid::new().is_hit_test_visible(false),)),
+        _ => unreachable!(),
+    }
+}
 fn property_text_box_text(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((TextBox::new(),)),
@@ -713,6 +793,22 @@ fn property_text_box_accepts_return(stage: usize) -> View {
         0 | 3 => Grid::new().children((TextBox::new(),)),
         1 => Grid::new().children((TextBox::new().accepts_return(true),)),
         2 => Grid::new().children((TextBox::new().accepts_return(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_text_box_font_size(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((TextBox::new(),)),
+        1 => Grid::new().children((TextBox::new().font_size(8.0),)),
+        2 => Grid::new().children((TextBox::new().font_size(16.0),)),
+        _ => unreachable!(),
+    }
+}
+fn property_text_box_padding(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((TextBox::new(),)),
+        1 => Grid::new().children((TextBox::new().padding(Thickness::uniform(2.0)),)),
+        2 => Grid::new().children((TextBox::new().padding(Thickness::uniform(4.0)),)),
         _ => unreachable!(),
     }
 }
@@ -903,6 +999,18 @@ fn property_slider_is_thumb_tool_tip_enabled(stage: usize) -> View {
         0 | 3 => Grid::new().children((Slider::new(),)),
         1 => Grid::new().children((Slider::new().is_thumb_tool_tip_enabled(true),)),
         2 => Grid::new().children((Slider::new().is_thumb_tool_tip_enabled(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_navigation_view_resource_overrides(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((NavigationView::new(),)),
+        1 => Grid::new().children((NavigationView::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonBackground", Color::rgb(32, 64, 96)),
+        ),)),
+        2 => Grid::new().children((NavigationView::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonForeground", Color::rgb(96, 64, 32)),
+        ),)),
         _ => unreachable!(),
     }
 }
@@ -1113,6 +1221,22 @@ fn property_progress_bar_is_enabled(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_progress_bar_foreground(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ProgressBar::new(),)),
+        1 => Grid::new().children((ProgressBar::new().foreground(Color::rgb(32, 64, 96)),)),
+        2 => Grid::new().children((ProgressBar::new().foreground(Color::rgb(96, 64, 32)),)),
+        _ => unreachable!(),
+    }
+}
+fn property_progress_bar_is_hit_test_visible(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ProgressBar::new(),)),
+        1 => Grid::new().children((ProgressBar::new().is_hit_test_visible(true),)),
+        2 => Grid::new().children((ProgressBar::new().is_hit_test_visible(false),)),
+        _ => unreachable!(),
+    }
+}
 fn property_toggle_switch_is_on(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((ToggleSwitch::new(),)),
@@ -1158,6 +1282,26 @@ fn property_toggle_button_is_enabled(stage: usize) -> View {
         0 | 3 => Grid::new().children((ToggleButton::new(),)),
         1 => Grid::new().children((ToggleButton::new().is_enabled(true),)),
         2 => Grid::new().children((ToggleButton::new().is_enabled(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_toggle_button_resource_overrides(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ToggleButton::new(),)),
+        1 => Grid::new().children((ToggleButton::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonBackground", Color::rgb(32, 64, 96)),
+        ),)),
+        2 => Grid::new().children((ToggleButton::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonForeground", Color::rgb(96, 64, 32)),
+        ),)),
+        _ => unreachable!(),
+    }
+}
+fn property_toggle_button_corner_radius(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ToggleButton::new(),)),
+        1 => Grid::new().children((ToggleButton::new().corner_radius(CornerRadius::uniform(2.0)),)),
+        2 => Grid::new().children((ToggleButton::new().corner_radius(CornerRadius::uniform(4.0)),)),
         _ => unreachable!(),
     }
 }
@@ -1352,6 +1496,14 @@ fn property_image_stretch(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_image_is_hit_test_visible(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Image::new(),)),
+        1 => Grid::new().children((Image::new().is_hit_test_visible(true),)),
+        2 => Grid::new().children((Image::new().is_hit_test_visible(false),)),
+        _ => unreachable!(),
+    }
+}
 fn property_progress_ring_minimum(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((ProgressRing::new(),)),
@@ -1397,6 +1549,22 @@ fn property_progress_ring_is_enabled(stage: usize) -> View {
         0 | 3 => Grid::new().children((ProgressRing::new(),)),
         1 => Grid::new().children((ProgressRing::new().is_enabled(true),)),
         2 => Grid::new().children((ProgressRing::new().is_enabled(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_progress_ring_foreground(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ProgressRing::new(),)),
+        1 => Grid::new().children((ProgressRing::new().foreground(Color::rgb(32, 64, 96)),)),
+        2 => Grid::new().children((ProgressRing::new().foreground(Color::rgb(96, 64, 32)),)),
+        _ => unreachable!(),
+    }
+}
+fn property_progress_ring_is_hit_test_visible(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ProgressRing::new(),)),
+        1 => Grid::new().children((ProgressRing::new().is_hit_test_visible(true),)),
+        2 => Grid::new().children((ProgressRing::new().is_hit_test_visible(false),)),
         _ => unreachable!(),
     }
 }
@@ -2505,6 +2673,30 @@ fn property_title_bar_is_pane_toggle_button_visible(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn event_text_block_on_tapped(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((TextBlock::new(),)),
+        1 => Grid::new().children((TextBlock::new().on_tapped(move || {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((TextBlock::new().on_tapped(move || {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn event_button_on_tapped(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Button::new(),)),
+        1 => Grid::new().children((Button::new().on_tapped(move || {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((Button::new().on_tapped(move || {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
 fn event_button_on_click(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((Button::new(),)),
@@ -2685,6 +2877,18 @@ fn event_border_on_pointer_canceled(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn event_border_on_tapped(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Border::new(),)),
+        1 => Grid::new().children((Border::new().on_tapped(move || {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((Border::new().on_tapped(move || {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
 fn event_breadcrumb_bar_on_item_clicked(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((BreadcrumbBar::new(),)),
@@ -2692,6 +2896,42 @@ fn event_breadcrumb_bar_on_item_clicked(stage: usize) -> View {
             let _ = 0u8;
         }),)),
         2 => Grid::new().children((BreadcrumbBar::new().on_item_clicked(move |_| {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn event_stack_panel_on_tapped(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((StackPanel::new(),)),
+        1 => Grid::new().children((StackPanel::new().on_tapped(move || {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((StackPanel::new().on_tapped(move || {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn event_grid_on_tapped(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Grid::new(),)),
+        1 => Grid::new().children((Grid::new().on_tapped(move || {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((Grid::new().on_tapped(move || {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn event_grid_on_pointer_wheel_changed(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Grid::new(),)),
+        1 => Grid::new().children((Grid::new().on_pointer_wheel_changed(move |_| {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((Grid::new().on_pointer_wheel_changed(move |_| {
             let _ = 1u8;
         }),)),
         _ => unreachable!(),
@@ -2772,10 +3012,10 @@ fn event_slider_on_value_changed(stage: usize) -> View {
 fn event_slider_on_size_changed(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((Slider::new(),)),
-        1 => Grid::new().children((Slider::new().on_size_changed(move || {
+        1 => Grid::new().children((Slider::new().on_size_changed(move |_| {
             let _ = 0u8;
         }),)),
-        2 => Grid::new().children((Slider::new().on_size_changed(move || {
+        2 => Grid::new().children((Slider::new().on_size_changed(move |_| {
             let _ = 1u8;
         }),)),
         _ => unreachable!(),
@@ -2908,6 +3148,18 @@ fn event_scroll_viewer_on_view_changed(stage: usize) -> View {
             let _ = 0u8;
         }),)),
         2 => Grid::new().children((ScrollViewer::new().on_view_changed(move || {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn event_image_on_tapped(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Image::new(),)),
+        1 => Grid::new().children((Image::new().on_tapped(move || {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((Image::new().on_tapped(move || {
             let _ = 1u8;
         }),)),
         _ => unreachable!(),
@@ -3336,10 +3588,10 @@ fn event_items_view_on_item_invoked(stage: usize) -> View {
 fn event_refresh_container_on_refresh_requested(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((RefreshContainer::new(),)),
-        1 => Grid::new().children((RefreshContainer::new().on_refresh_requested(move || {
+        1 => Grid::new().children((RefreshContainer::new().on_refresh_requested(move |_| {
             let _ = 0u8;
         }),)),
-        2 => Grid::new().children((RefreshContainer::new().on_refresh_requested(move || {
+        2 => Grid::new().children((RefreshContainer::new().on_refresh_requested(move |_| {
             let _ = 1u8;
         }),)),
         _ => unreachable!(),
@@ -4941,6 +5193,20 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: property_text_block_foreground,
     },
     SurfaceCase {
+        name: "property.TextBlock.IsHitTestVisible",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_text_block_is_hit_test_visible,
+    },
+    SurfaceCase {
+        name: "event.TextBlock.Tapped",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_text_block_on_tapped,
+    },
+    SurfaceCase {
         name: "control.Button.construct",
         kind: SurfaceKind::Control,
         stages: 1,
@@ -4953,6 +5219,41 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: None,
         build: property_button_is_enabled,
+    },
+    SurfaceCase {
+        name: "property.Button.Padding",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_button_padding,
+    },
+    SurfaceCase {
+        name: "property.Button.CornerRadius",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_button_corner_radius,
+    },
+    SurfaceCase {
+        name: "property.Button.Background",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_button_background,
+    },
+    SurfaceCase {
+        name: "property.Button.Foreground",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_button_foreground,
+    },
+    SurfaceCase {
+        name: "property.Button.IsHitTestVisible",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_button_is_hit_test_visible,
     },
     SurfaceCase {
         name: "property.Button.HorizontalContentAlignment",
@@ -4995,6 +5296,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: None,
         build: structural_button_content,
+    },
+    SurfaceCase {
+        name: "event.Button.Tapped",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_button_on_tapped,
     },
     SurfaceCase {
         name: "event.Button.Click",
@@ -5158,6 +5466,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: property_border_drop_policy,
     },
     SurfaceCase {
+        name: "property.Border.IsHitTestVisible",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_border_is_hit_test_visible,
+    },
+    SurfaceCase {
         name: "structural.Border.Content",
         kind: SurfaceKind::Structural,
         stages: 4,
@@ -5249,6 +5564,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: event_border_on_pointer_canceled,
     },
     SurfaceCase {
+        name: "event.Border.Tapped",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_border_on_tapped,
+    },
+    SurfaceCase {
         name: "control.BreadcrumbBar.construct",
         kind: SurfaceKind::Control,
         stages: 1,
@@ -5291,11 +5613,32 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: property_stack_panel_spacing,
     },
     SurfaceCase {
+        name: "property.StackPanel.Padding",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_stack_panel_padding,
+    },
+    SurfaceCase {
+        name: "property.StackPanel.IsHitTestVisible",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_stack_panel_is_hit_test_visible,
+    },
+    SurfaceCase {
         name: "structural.StackPanel.Children",
         kind: SurfaceKind::Structural,
         stages: 4,
         subscription_delta: None,
         build: structural_stack_panel_children,
+    },
+    SurfaceCase {
+        name: "event.StackPanel.Tapped",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_stack_panel_on_tapped,
     },
     SurfaceCase {
         name: "control.VariableSizedWrapGrid.construct",
@@ -5375,11 +5718,32 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: property_grid_background,
     },
     SurfaceCase {
+        name: "property.Grid.IsHitTestVisible",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_grid_is_hit_test_visible,
+    },
+    SurfaceCase {
         name: "structural.Grid.Children",
         kind: SurfaceKind::Structural,
         stages: 4,
         subscription_delta: None,
         build: structural_grid_children,
+    },
+    SurfaceCase {
+        name: "event.Grid.Tapped",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_grid_on_tapped,
+    },
+    SurfaceCase {
+        name: "event.Grid.PointerWheelChanged",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_grid_on_pointer_wheel_changed,
     },
     SurfaceCase {
         name: "control.TextBox.construct",
@@ -5415,6 +5779,20 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: None,
         build: property_text_box_accepts_return,
+    },
+    SurfaceCase {
+        name: "property.TextBox.FontSize",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_text_box_font_size,
+    },
+    SurfaceCase {
+        name: "property.TextBox.Padding",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_text_box_padding,
     },
     SurfaceCase {
         name: "property.TextBox.TextWrapping",
@@ -5695,6 +6073,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 1,
         subscription_delta: None,
         build: construct_navigation_view,
+    },
+    SurfaceCase {
+        name: "property.NavigationView.Resources",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_navigation_view_resource_overrides,
     },
     SurfaceCase {
         name: "property.NavigationView.IsEnabled",
@@ -5991,6 +6376,20 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: property_progress_bar_is_enabled,
     },
     SurfaceCase {
+        name: "property.ProgressBar.Foreground",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_progress_bar_foreground,
+    },
+    SurfaceCase {
+        name: "property.ProgressBar.IsHitTestVisible",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_progress_bar_is_hit_test_visible,
+    },
+    SurfaceCase {
         name: "control.ToggleSwitch.construct",
         kind: SurfaceKind::Control,
         stages: 1,
@@ -6094,6 +6493,20 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: None,
         build: property_toggle_button_is_enabled,
+    },
+    SurfaceCase {
+        name: "property.ToggleButton.Resources",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_toggle_button_resource_overrides,
+    },
+    SurfaceCase {
+        name: "property.ToggleButton.CornerRadius",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_toggle_button_corner_radius,
     },
     SurfaceCase {
         name: "structural.ToggleButton.Content",
@@ -6383,6 +6796,20 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: property_image_stretch,
     },
     SurfaceCase {
+        name: "property.Image.IsHitTestVisible",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_image_is_hit_test_visible,
+    },
+    SurfaceCase {
+        name: "event.Image.Tapped",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_image_on_tapped,
+    },
+    SurfaceCase {
         name: "event.Image.ImageOpened",
         kind: SurfaceKind::Event,
         stages: 4,
@@ -6444,6 +6871,20 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: None,
         build: property_progress_ring_is_enabled,
+    },
+    SurfaceCase {
+        name: "property.ProgressRing.Foreground",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_progress_ring_foreground,
+    },
+    SurfaceCase {
+        name: "property.ProgressRing.IsHitTestVisible",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_progress_ring_is_hit_test_visible,
     },
     SurfaceCase {
         name: "control.ListBox.construct",
@@ -8398,8 +8839,62 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         theme_style: true,
     },
     PropertySurface {
+        control: "TextBlock",
+        property: "IsHitTestVisible",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
         control: "Button",
         property: "IsEnabled",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "Button",
+        property: "Padding",
+        value: "Thickness",
+        adapter: "direct",
+        validation: Some("FiniteNonNegative"),
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "Button",
+        property: "CornerRadius",
+        value: "CornerRadius",
+        adapter: "direct",
+        validation: Some("FiniteNonNegative"),
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "Button",
+        property: "Background",
+        value: "Brush",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: true,
+    },
+    PropertySurface {
+        control: "Button",
+        property: "Foreground",
+        value: "Brush",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: true,
+    },
+    PropertySurface {
+        control: "Button",
+        property: "IsHitTestVisible",
         value: "Bool",
         adapter: "direct",
         validation: None,
@@ -8587,6 +9082,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         theme_style: false,
     },
     PropertySurface {
+        control: "Border",
+        property: "IsHitTestVisible",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
         control: "BreadcrumbBar",
         property: "ItemsSource",
         value: "StrList",
@@ -8608,6 +9112,24 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         control: "StackPanel",
         property: "Spacing",
         value: "F64",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "StackPanel",
+        property: "Padding",
+        value: "Thickness",
+        adapter: "direct",
+        validation: Some("FiniteNonNegative"),
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "StackPanel",
+        property: "IsHitTestVisible",
+        value: "Bool",
         adapter: "direct",
         validation: None,
         clearable: true,
@@ -8686,6 +9208,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         theme_style: true,
     },
     PropertySurface {
+        control: "Grid",
+        property: "IsHitTestVisible",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
         control: "TextBox",
         property: "Text",
         value: "Str",
@@ -8718,6 +9249,24 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         value: "Bool",
         adapter: "direct",
         validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "TextBox",
+        property: "FontSize",
+        value: "F64",
+        adapter: "direct",
+        validation: Some("FinitePositive"),
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "TextBox",
+        property: "Padding",
+        value: "Thickness",
+        adapter: "direct",
+        validation: Some("FiniteNonNegative"),
         clearable: true,
         theme_style: false,
     },
@@ -8975,6 +9524,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
     },
     PropertySurface {
         control: "NavigationView",
+        property: "Resources",
+        value: "ResourceOverrides",
+        adapter: "ResourceOverrides",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "NavigationView",
         property: "IsEnabled",
         value: "Bool",
         adapter: "direct",
@@ -9199,6 +9757,24 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         theme_style: false,
     },
     PropertySurface {
+        control: "ProgressBar",
+        property: "Foreground",
+        value: "Brush",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: true,
+    },
+    PropertySurface {
+        control: "ProgressBar",
+        property: "IsHitTestVisible",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
         control: "ToggleSwitch",
         property: "IsOn",
         value: "Bool",
@@ -9249,6 +9825,24 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         value: "Bool",
         adapter: "direct",
         validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "ToggleButton",
+        property: "Resources",
+        value: "ResourceOverrides",
+        adapter: "ResourceOverrides",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "ToggleButton",
+        property: "CornerRadius",
+        value: "CornerRadius",
+        adapter: "direct",
+        validation: Some("FiniteNonNegative"),
         clearable: true,
         theme_style: false,
     },
@@ -9442,6 +10036,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         theme_style: false,
     },
     PropertySurface {
+        control: "Image",
+        property: "IsHitTestVisible",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
         control: "ProgressRing",
         property: "Minimum",
         value: "F64",
@@ -9489,6 +10092,24 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
     PropertySurface {
         control: "ProgressRing",
         property: "IsEnabled",
+        value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "ProgressRing",
+        property: "Foreground",
+        value: "Brush",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: true,
+    },
+    PropertySurface {
+        control: "ProgressRing",
+        property: "IsHitTestVisible",
         value: "Bool",
         adapter: "direct",
         validation: None,
@@ -10641,6 +11262,24 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
 ];
 pub static PROJECTED_EVENTS: &[EventSurface] = &[
     EventSurface {
+        control: "TextBlock",
+        event: "Tapped",
+        payload: "Unit",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
+        control: "Button",
+        event: "Tapped",
+        payload: "Unit",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
         control: "Button",
         event: "Click",
         payload: "Unit",
@@ -10776,9 +11415,45 @@ pub static PROJECTED_EVENTS: &[EventSurface] = &[
         active_property: None,
     },
     EventSurface {
+        control: "Border",
+        event: "Tapped",
+        payload: "Unit",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
         control: "BreadcrumbBar",
         event: "ItemClicked",
         payload: "Str",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
+        control: "StackPanel",
+        event: "Tapped",
+        payload: "Unit",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
+        control: "Grid",
+        event: "Tapped",
+        payload: "Unit",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
+        control: "Grid",
+        event: "PointerWheelChanged",
+        payload: "PointerEventInfo",
         conversion: "Identity",
         subscription: "callback",
         delivery: "registration+deterministic",
@@ -10841,8 +11516,8 @@ pub static PROJECTED_EVENTS: &[EventSurface] = &[
     EventSurface {
         control: "Slider",
         event: "SizeChanged",
-        payload: "Unit",
-        conversion: "Identity",
+        payload: "F64",
+        conversion: "FieldAsF64(\"width\")",
         subscription: "callback",
         delivery: "registration+deterministic",
         active_property: None,
@@ -10958,6 +11633,15 @@ pub static PROJECTED_EVENTS: &[EventSurface] = &[
     EventSurface {
         control: "ScrollViewer",
         event: "ViewChanged",
+        payload: "Unit",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_property: None,
+    },
+    EventSurface {
+        control: "Image",
+        event: "Tapped",
         payload: "Unit",
         conversion: "Identity",
         subscription: "callback",
@@ -11282,7 +11966,7 @@ pub static PROJECTED_EVENTS: &[EventSurface] = &[
     EventSurface {
         control: "RefreshContainer",
         event: "RefreshRequested",
-        payload: "Unit",
+        payload: "RefreshDeferral",
         conversion: "Identity",
         subscription: "callback",
         delivery: "registration+deterministic",

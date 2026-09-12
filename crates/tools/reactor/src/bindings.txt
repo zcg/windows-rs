@@ -11,7 +11,8 @@ Microsoft::UI::Text::ITextDocument::{GetText, SetText}
 Microsoft::UI::Text::TextGetOptions::None
 Microsoft::UI::Text::TextSetOptions::None
 Microsoft::UI::Windowing::IAppWindow2::{get_ClientSize, ResizeClient}
-Microsoft::UI::Windowing::IAppWindow::{get_TitleBar, get_Presenter, get_Size, SetIcon}
+Microsoft::UI::Windowing::IAppWindow::{get_TitleBar, get_Presenter, get_Size, SetIcon, SetPresenterByKind}
+Microsoft::UI::Windowing::AppWindowPresenterKind
 Microsoft::UI::Windowing::IAppWindowTitleBar2::put_PreferredHeightOption
 Microsoft::UI::Windowing::IAppWindowTitleBar3::put_PreferredTheme
 Microsoft::UI::Windowing::IOverlappedPresenter3::{put_PreferredMinimumWidth, put_PreferredMinimumHeight, put_PreferredMaximumWidth, put_PreferredMaximumHeight}
@@ -50,7 +51,7 @@ Microsoft::UI::Xaml::Controls::ISwapChainPanel::{get_CompositionScaleX, get_Comp
 Microsoft::UI::Xaml::Controls::IComboBox::{add_DropDownOpened, remove_DropDownOpened}
 Microsoft::UI::Xaml::Controls::Primitives::IPopup::get_Child
 Microsoft::UI::Xaml::Media::VisualTreeHelper::{GetChild, GetChildrenCount, GetOpenPopupsForXamlRoot}
-Microsoft::UI::Xaml::Controls::IScrollViewer::{get_HorizontalOffset, get_VerticalOffset, get_ZoomFactor}
+Microsoft::UI::Xaml::Controls::IScrollViewer::{get_HorizontalOffset, get_VerticalOffset, get_ZoomFactor, get_ExtentWidth, get_ExtentHeight, get_ViewportWidth, get_ViewportHeight}
 Microsoft::UI::Xaml::Controls::ISwipeControl::{put_LeftItems, put_RightItems}
 Microsoft::UI::Xaml::Controls::ISwipeItem::{put_Text, put_Background, put_Foreground, add_Invoked, remove_Invoked}
 Microsoft::UI::Xaml::Controls::SwipeItem::CreateInstance
@@ -167,3 +168,30 @@ extras::WINDOWSAPPSDK_RUNTIME_VERSION_MAJOR
 extras::WINDOWSAPPSDK_RUNTIME_VERSION_MINOR
 extras::WINDOWSAPPSDK_RUNTIME_VERSION_BUILD
 extras::WINDOWSAPPSDK_RUNTIME_VERSION_REVISION
+Microsoft::UI::Composition::ICompositionSupportsSystemBackdrop::{}
+Microsoft::UI::Composition::SystemBackdrops::DesktopAcrylicController::CreateInstance
+Microsoft::UI::Composition::SystemBackdrops::DesktopAcrylicKind
+Microsoft::UI::Composition::SystemBackdrops::IDesktopAcrylicController
+Microsoft::UI::Composition::SystemBackdrops::IDesktopAcrylicController3::{get_Kind, put_Kind}
+Microsoft::UI::Composition::SystemBackdrops::IDesktopAcrylicControllerStatics
+Microsoft::UI::Composition::SystemBackdrops::IMicaController
+Microsoft::UI::Composition::SystemBackdrops::IMicaController2::{get_Kind, put_Kind}
+Microsoft::UI::Composition::SystemBackdrops::IMicaControllerStatics
+Microsoft::UI::Composition::SystemBackdrops::ISystemBackdropConfiguration
+Microsoft::UI::Composition::SystemBackdrops::ISystemBackdropConfiguration::{get_IsInputActive, put_IsInputActive, get_Theme, put_Theme}
+Microsoft::UI::Composition::SystemBackdrops::ISystemBackdropControllerWithTargets::{AddSystemBackdropTarget, RemoveSystemBackdropTarget, SetSystemBackdropConfiguration}
+Microsoft::UI::Composition::SystemBackdrops::MicaController::CreateInstance
+Microsoft::UI::Composition::SystemBackdrops::MicaKind
+Microsoft::UI::Composition::SystemBackdrops::SystemBackdropConfiguration::CreateInstance
+Microsoft::UI::Composition::SystemBackdrops::SystemBackdropTheme
+Microsoft::UI::Xaml::IWindow::{add_Activated, remove_Activated}
+Microsoft::UI::Xaml::IWindowActivatedEventArgs::get_WindowActivationState
+Microsoft::UI::Xaml::WindowActivationState
+Windows::Win32::DwmSetWindowAttribute
+Windows::Win32::DWMWA_BORDER_COLOR
+Windows::Win32::DWMWA_SYSTEMBACKDROP_TYPE
+Windows::Win32::DWMWA_WINDOW_CORNER_PREFERENCE
+Windows::Win32::DWMWCP_DONOTROUND
+Windows::Win32::DWMWCP_ROUND
+Windows::Win32::DWMWCP_ROUNDSMALL
+Windows::Win32::DWMSBT_NONE

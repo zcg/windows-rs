@@ -1770,7 +1770,85 @@ pub enum WindowBackdrop {
     None,
     Mica,
     MicaAlt,
+    /// Desktop Acrylic, `Kind = Base`.
     Acrylic,
+    /// Desktop Acrylic, `Kind = Thin` — lighter tint, more desktop showing through.
+    AcrylicThin,
+    /// No desktop sampling: [`WindowBackdropTuning::tint_color`] is painted flat,
+    /// with [`WindowBackdropTuning::tint_opacity`] as its alpha.
+    Solid,
+}
+
+/// Per-material tuning for [`WindowBackdrop::Mica`], [`WindowBackdrop::MicaAlt`],
+/// [`WindowBackdrop::Acrylic`], [`WindowBackdrop::AcrylicThin`] and
+/// [`WindowBackdrop::Solid`].
+///
+/// Every field is optional; `None` leaves the system default in place.
+///
+/// The library deliberately does **not** rescale these values. A caller wiring a
+/// 0..1 slider must do its own interpolation: writing the raw slider value into
+/// `tint_opacity` makes 0.0 lose the material entirely and 1.0 collapse it into
+/// a flat plate, so both ends of the travel become unusable.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct WindowBackdropTuning {
+    /// Tint layer opacity, in `0.0..=1.0`.
+    pub tint_opacity: Option<f64>,
+    /// Luminosity layer opacity, in `0.0..=1.0`.
+    pub luminosity_opacity: Option<f64>,
+    /// Tint colour.
+    pub tint_color: Option<Color>,
+    /// Painted instead of the requested material when the system cannot render it.
+    pub fallback_color: Option<Color>,
+}
+
+impl WindowBackdropTuning {
+    fn validate(self) {
+        for (name, value) in [
+            ("tint_opacity", self.tint_opacity),
+            ("luminosity_opacity", self.luminosity_opacity),
+        ] {
+            if let Some(value) = value {
+                assert!(
+                    value.is_finite() && (0.0..=1.0).contains(&value),
+                    "window backdrop {name} must be finite and within 0.0..=1.0"
+                );
+            }
+        }
+    }
+}
+
+/// Window outline painted by the window manager.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum WindowBorder {
+    /// Leave the system outline alone.
+    #[default]
+    Default,
+    /// Remove the system outline.
+    ///
+    /// An application drawing its own outline should use this: a system outline
+    /// and a self-drawn one do not share geometry and read as a doubled hairline
+    /// around the corners.
+    Hidden,
+    /// Paint the outline in a specific colour.
+    Color(Color),
+}
+
+/// Window corner rounding applied by the window manager.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum WindowCorner {
+    /// Leave it to the system.
+    #[default]
+    Default,
+    /// Square corners.
+    DoNotRound,
+    /// 4 device-independent pixels.
+    RoundSmall,
+    /// 8 device-independent pixels — the system default, and its upper bound.
+    ///
+    /// The system offers nothing larger for a standard window. Rounding further
+    /// means giving up the system frame and hit-testing the whole non-client area
+    /// by hand, which trades away maximise, snap and resize.
+    Round,
 }
 
 /// Height preset for an extended window title bar.
@@ -1819,14 +1897,74 @@ impl WindowConstraints {
     }
 }
 
+/// Keeps a pull-to-refresh indicator alive until the host finishes refreshing.
+///
+/// A `RefreshContainer` hands one to its `RefreshRequested` handler. The system keeps the
+/// refresh indicator on screen until the deferral is completed, so an asynchronous refresh
+/// can hold it while it fetches. Clones share one underlying deferral: completing (or
+/// dropping) any of them releases it.
+#[derive(Clone)]
+pub struct RefreshDeferral {
+    complete: Rc<std::cell::RefCell<Option<Box<dyn FnOnce()>>>>,
+}
+
+impl RefreshDeferral {
+    pub(crate) fn new(complete: impl FnOnce() + 'static) -> Self {
+        Self {
+            complete: Rc::new(std::cell::RefCell::new(Some(Box::new(complete)))),
+        }
+    }
+
+    /// Releases the deferral, letting the refresh indicator retract.
+    pub fn complete(self) {
+        if let Some(complete) = self.complete.borrow_mut().take() {
+            complete();
+        }
+    }
+}
+
+impl fmt::Debug for RefreshDeferral {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("RefreshDeferral")
+            .field("pending", &self.complete.borrow().is_some())
+            .finish()
+    }
+}
+
+impl PartialEq for RefreshDeferral {
+    /// Two deferrals are never equal: each one stands for its own outstanding refresh.
+    fn eq(&self, _: &Self) -> bool {
+        false
+    }
+}
+
+/// Window presenter requested by a component publication.
+///
+/// The presenter is the system-level chrome/size policy for the window, so it survives
+/// host-side layout tricks: a full-screen presenter removes the border and title bar and
+/// covers the whole monitor.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum WindowPresenter {
+    /// The default overlapped window: bordered, titled, resizable.
+    #[default]
+    Default,
+    /// The system full-screen presenter: no border, no title bar, monitor-sized.
+    FullScreen,
+}
+
 /// Window appearance and client sizing requested by a component publication.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct WindowVisuals {
     pub(crate) backdrop: WindowBackdrop,
+    pub(crate) backdrop_tuning: WindowBackdropTuning,
+    pub(crate) border: WindowBorder,
     pub(crate) client_size: Option<(f64, f64)>,
     pub(crate) constraints: Option<WindowConstraints>,
+    pub(crate) corner: WindowCorner,
     pub(crate) icon: Option<&'static str>,
     pub(crate) theme: WindowTheme,
+    pub(crate) presenter: WindowPresenter,
 }
 
 impl WindowVisuals {
@@ -1836,6 +1974,29 @@ impl WindowVisuals {
 
     pub fn backdrop(mut self, backdrop: WindowBackdrop) -> Self {
         self.backdrop = backdrop;
+        self
+    }
+
+    /// Tunes the selected [`WindowBackdrop`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if an opacity is non-finite or outside `0.0..=1.0`.
+    pub fn backdrop_tuning(mut self, tuning: WindowBackdropTuning) -> Self {
+        tuning.validate();
+        self.backdrop_tuning = tuning;
+        self
+    }
+
+    /// Sets the window outline.
+    pub fn border(mut self, border: WindowBorder) -> Self {
+        self.border = border;
+        self
+    }
+
+    /// Sets the window corner rounding.
+    pub fn corner(mut self, corner: WindowCorner) -> Self {
+        self.corner = corner;
         self
     }
 
@@ -1877,6 +2038,12 @@ impl WindowVisuals {
 
     pub fn theme(mut self, theme: WindowTheme) -> Self {
         self.theme = theme;
+        self
+    }
+
+    /// Selects the window presenter (default overlapped window or system full screen).
+    pub fn presenter(mut self, presenter: WindowPresenter) -> Self {
+        self.presenter = presenter;
         self
     }
 }

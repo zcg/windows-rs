@@ -995,6 +995,15 @@ pub fn set_property(
                 .map_err(native_error)?;
             control.SetForeground(&brush).map_err(native_error)
         }
+        (
+            Handle::TextBlock(control),
+            PropertyId::TextBlockIsHitTestVisible,
+            PropertyValue::Bool(value),
+        ) => control
+            .cast::<IUIElement>()
+            .map_err(native_error)?
+            .SetIsHitTestVisible(*value)
+            .map_err(native_error),
         (Handle::Button(control), PropertyId::ButtonIsEnabled, PropertyValue::Bool(value)) => {
             control
                 .cast::<IControl>()
@@ -1002,6 +1011,87 @@ pub fn set_property(
                 .SetIsEnabled(*value)
                 .map_err(native_error)
         }
+        (Handle::Button(control), PropertyId::ButtonPadding, PropertyValue::Thickness(value)) => {
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetPadding({
+                    let [left, top, right, bottom] = value.values();
+                    bindings::Thickness {
+                        left,
+                        top,
+                        right,
+                        bottom,
+                    }
+                })
+                .map_err(native_error)
+        }
+        (
+            Handle::Button(control),
+            PropertyId::ButtonCornerRadius,
+            PropertyValue::CornerRadius(value),
+        ) => control
+            .cast::<IControl>()
+            .map_err(native_error)?
+            .SetCornerRadius({
+                let [top_left, top_right, bottom_right, bottom_left] = value.values();
+                bindings::CornerRadius {
+                    top_left,
+                    top_right,
+                    bottom_right,
+                    bottom_left,
+                }
+            })
+            .map_err(native_error),
+        (
+            Handle::Button(control),
+            PropertyId::ButtonBackground,
+            PropertyValue::Brush(crate::Brush::Solid(color)),
+        ) => {
+            let brush = SolidColorBrush::new().map_err(native_error)?;
+            brush
+                .SetColor(bindings::Color {
+                    a: color.a,
+                    r: color.r,
+                    g: color.g,
+                    b: color.b,
+                })
+                .map_err(native_error)?;
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetBackground(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::Button(control),
+            PropertyId::ButtonForeground,
+            PropertyValue::Brush(crate::Brush::Solid(color)),
+        ) => {
+            let brush = SolidColorBrush::new().map_err(native_error)?;
+            brush
+                .SetColor(bindings::Color {
+                    a: color.a,
+                    r: color.r,
+                    g: color.g,
+                    b: color.b,
+                })
+                .map_err(native_error)?;
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetForeground(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::Button(control),
+            PropertyId::ButtonIsHitTestVisible,
+            PropertyValue::Bool(value),
+        ) => control
+            .cast::<IUIElement>()
+            .map_err(native_error)?
+            .SetIsHitTestVisible(*value)
+            .map_err(native_error),
         (
             Handle::Button(control),
             PropertyId::ButtonHorizontalContentAlignment,
@@ -1217,6 +1307,15 @@ pub fn set_property(
             Err(RuntimeError::UnsupportedKind)
         }
         (
+            Handle::Border(control),
+            PropertyId::BorderIsHitTestVisible,
+            PropertyValue::Bool(value),
+        ) => control
+            .cast::<IUIElement>()
+            .map_err(native_error)?
+            .SetIsHitTestVisible(*value)
+            .map_err(native_error),
+        (
             Handle::BreadcrumbBar(control),
             PropertyId::BreadcrumbBarItemsSource,
             PropertyValue::StrList(value),
@@ -1241,6 +1340,30 @@ pub fn set_property(
         (Handle::StackPanel(control), PropertyId::StackPanelSpacing, PropertyValue::F64(value)) => {
             control.SetSpacing(*value).map_err(native_error)
         }
+        (
+            Handle::StackPanel(control),
+            PropertyId::StackPanelPadding,
+            PropertyValue::Thickness(value),
+        ) => control
+            .SetPadding({
+                let [left, top, right, bottom] = value.values();
+                bindings::Thickness {
+                    left,
+                    top,
+                    right,
+                    bottom,
+                }
+            })
+            .map_err(native_error),
+        (
+            Handle::StackPanel(control),
+            PropertyId::StackPanelIsHitTestVisible,
+            PropertyValue::Bool(value),
+        ) => control
+            .cast::<IUIElement>()
+            .map_err(native_error)?
+            .SetIsHitTestVisible(*value)
+            .map_err(native_error),
         (
             Handle::VariableSizedWrapGrid(control),
             PropertyId::VariableSizedWrapGridItemWidth,
@@ -1299,6 +1422,13 @@ pub fn set_property(
                 .SetBackground(&brush)
                 .map_err(native_error)
         }
+        (Handle::Grid(control), PropertyId::GridIsHitTestVisible, PropertyValue::Bool(value)) => {
+            control
+                .cast::<IUIElement>()
+                .map_err(native_error)?
+                .SetIsHitTestVisible(*value)
+                .map_err(native_error)
+        }
         (Handle::TextBox(control), PropertyId::TextBoxText, PropertyValue::Str(value)) => {
             control.SetText(value).map_err(native_error)
         }
@@ -1319,6 +1449,28 @@ pub fn set_property(
             PropertyId::TextBoxAcceptsReturn,
             PropertyValue::Bool(value),
         ) => control.SetAcceptsReturn(*value).map_err(native_error),
+        (Handle::TextBox(control), PropertyId::TextBoxFontSize, PropertyValue::F64(value)) => {
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetFontSize(*value)
+                .map_err(native_error)
+        }
+        (Handle::TextBox(control), PropertyId::TextBoxPadding, PropertyValue::Thickness(value)) => {
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetPadding({
+                    let [left, top, right, bottom] = value.values();
+                    bindings::Thickness {
+                        left,
+                        top,
+                        right,
+                        bottom,
+                    }
+                })
+                .map_err(native_error)
+        }
         (
             Handle::TextBox(control),
             PropertyId::TextBoxTextWrapping,
@@ -1540,6 +1692,11 @@ pub fn set_property(
             .SetIsPaneToggleButtonVisible(*value)
             .map_err(native_error),
         (
+            Handle::NavigationView(_),
+            PropertyId::NavigationViewResources,
+            PropertyValue::ResourceOverrides(_),
+        ) => Err(RuntimeError::UnsupportedKind),
+        (
             Handle::NavigationView(control),
             PropertyId::NavigationViewIsEnabled,
             PropertyValue::Bool(value),
@@ -1760,6 +1917,35 @@ pub fn set_property(
             .SetIsEnabled(*value)
             .map_err(native_error),
         (
+            Handle::ProgressBar(control),
+            PropertyId::ProgressBarForeground,
+            PropertyValue::Brush(crate::Brush::Solid(color)),
+        ) => {
+            let brush = SolidColorBrush::new().map_err(native_error)?;
+            brush
+                .SetColor(bindings::Color {
+                    a: color.a,
+                    r: color.r,
+                    g: color.g,
+                    b: color.b,
+                })
+                .map_err(native_error)?;
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetForeground(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::ProgressBar(control),
+            PropertyId::ProgressBarIsHitTestVisible,
+            PropertyValue::Bool(value),
+        ) => control
+            .cast::<IUIElement>()
+            .map_err(native_error)?
+            .SetIsHitTestVisible(*value)
+            .map_err(native_error),
+        (
             Handle::ToggleSwitch(control),
             PropertyId::ToggleSwitchIsOn,
             PropertyValue::Bool(value),
@@ -1800,6 +1986,28 @@ pub fn set_property(
             .cast::<IControl>()
             .map_err(native_error)?
             .SetIsEnabled(*value)
+            .map_err(native_error),
+        (
+            Handle::ToggleButton(_),
+            PropertyId::ToggleButtonResources,
+            PropertyValue::ResourceOverrides(_),
+        ) => Err(RuntimeError::UnsupportedKind),
+        (
+            Handle::ToggleButton(control),
+            PropertyId::ToggleButtonCornerRadius,
+            PropertyValue::CornerRadius(value),
+        ) => control
+            .cast::<IControl>()
+            .map_err(native_error)?
+            .SetCornerRadius({
+                let [top_left, top_right, bottom_right, bottom_left] = value.values();
+                bindings::CornerRadius {
+                    top_left,
+                    top_right,
+                    bottom_right,
+                    bottom_left,
+                }
+            })
             .map_err(native_error),
         (
             Handle::RadioButton(control),
@@ -1971,6 +2179,13 @@ pub fn set_property(
                 })
                 .map_err(native_error)
         }
+        (Handle::Image(control), PropertyId::ImageIsHitTestVisible, PropertyValue::Bool(value)) => {
+            control
+                .cast::<IUIElement>()
+                .map_err(native_error)?
+                .SetIsHitTestVisible(*value)
+                .map_err(native_error)
+        }
         (
             Handle::ProgressRing(control),
             PropertyId::ProgressRingMinimum,
@@ -2004,6 +2219,35 @@ pub fn set_property(
             .cast::<IControl>()
             .map_err(native_error)?
             .SetIsEnabled(*value)
+            .map_err(native_error),
+        (
+            Handle::ProgressRing(control),
+            PropertyId::ProgressRingForeground,
+            PropertyValue::Brush(crate::Brush::Solid(color)),
+        ) => {
+            let brush = SolidColorBrush::new().map_err(native_error)?;
+            brush
+                .SetColor(bindings::Color {
+                    a: color.a,
+                    r: color.r,
+                    g: color.g,
+                    b: color.b,
+                })
+                .map_err(native_error)?;
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetForeground(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::ProgressRing(control),
+            PropertyId::ProgressRingIsHitTestVisible,
+            PropertyValue::Bool(value),
+        ) => control
+            .cast::<IUIElement>()
+            .map_err(native_error)?
+            .SetIsHitTestVisible(*value)
             .map_err(native_error),
         (Handle::ListBox(control), PropertyId::ListBoxIsEnabled, PropertyValue::Bool(value)) => {
             control
@@ -3315,8 +3559,26 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
         (Handle::TextBlock(_), PropertyId::TextBlockForeground) => dependency_object
             .ClearValue(&bindings::TextBlock::ForegroundProperty().map_err(native_error)?)
             .map_err(native_error),
+        (Handle::TextBlock(_), PropertyId::TextBlockIsHitTestVisible) => dependency_object
+            .ClearValue(&bindings::UIElement::IsHitTestVisibleProperty().map_err(native_error)?)
+            .map_err(native_error),
         (Handle::Button(_), PropertyId::ButtonIsEnabled) => dependency_object
             .ClearValue(&bindings::Control::IsEnabledProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::Button(_), PropertyId::ButtonPadding) => dependency_object
+            .ClearValue(&bindings::Control::PaddingProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::Button(_), PropertyId::ButtonCornerRadius) => dependency_object
+            .ClearValue(&bindings::Control::CornerRadiusProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::Button(_), PropertyId::ButtonBackground) => dependency_object
+            .ClearValue(&bindings::Control::BackgroundProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::Button(_), PropertyId::ButtonForeground) => dependency_object
+            .ClearValue(&bindings::Control::ForegroundProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::Button(_), PropertyId::ButtonIsHitTestVisible) => dependency_object
+            .ClearValue(&bindings::UIElement::IsHitTestVisibleProperty().map_err(native_error)?)
             .map_err(native_error),
         (Handle::Button(_), PropertyId::ButtonHorizontalContentAlignment) => dependency_object
             .ClearValue(
@@ -3388,6 +3650,9 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
             Err(RuntimeError::UnsupportedKind)
         }
         (Handle::Border(_), PropertyId::BorderAllowDrop) => Err(RuntimeError::UnsupportedKind),
+        (Handle::Border(_), PropertyId::BorderIsHitTestVisible) => dependency_object
+            .ClearValue(&bindings::UIElement::IsHitTestVisibleProperty().map_err(native_error)?)
+            .map_err(native_error),
         (Handle::BreadcrumbBar(_), PropertyId::BreadcrumbBarItemsSource) => dependency_object
             .ClearValue(&bindings::BreadcrumbBar::ItemsSourceProperty().map_err(native_error)?)
             .map_err(native_error),
@@ -3396,6 +3661,12 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
             .map_err(native_error),
         (Handle::StackPanel(_), PropertyId::StackPanelSpacing) => dependency_object
             .ClearValue(&bindings::StackPanel::SpacingProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::StackPanel(_), PropertyId::StackPanelPadding) => dependency_object
+            .ClearValue(&bindings::StackPanel::PaddingProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::StackPanel(_), PropertyId::StackPanelIsHitTestVisible) => dependency_object
+            .ClearValue(&bindings::UIElement::IsHitTestVisibleProperty().map_err(native_error)?)
             .map_err(native_error),
         (Handle::VariableSizedWrapGrid(_), PropertyId::VariableSizedWrapGridItemWidth) => {
             dependency_object
@@ -3440,6 +3711,9 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
         (Handle::Grid(_), PropertyId::GridBackground) => dependency_object
             .ClearValue(&bindings::Panel::BackgroundProperty().map_err(native_error)?)
             .map_err(native_error),
+        (Handle::Grid(_), PropertyId::GridIsHitTestVisible) => dependency_object
+            .ClearValue(&bindings::UIElement::IsHitTestVisibleProperty().map_err(native_error)?)
+            .map_err(native_error),
         (Handle::TextBox(_), PropertyId::TextBoxText) => dependency_object
             .ClearValue(&bindings::TextBox::TextProperty().map_err(native_error)?)
             .map_err(native_error),
@@ -3451,6 +3725,12 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
             .map_err(native_error),
         (Handle::TextBox(_), PropertyId::TextBoxAcceptsReturn) => dependency_object
             .ClearValue(&bindings::TextBox::AcceptsReturnProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::TextBox(_), PropertyId::TextBoxFontSize) => dependency_object
+            .ClearValue(&bindings::Control::FontSizeProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::TextBox(_), PropertyId::TextBoxPadding) => dependency_object
+            .ClearValue(&bindings::Control::PaddingProperty().map_err(native_error)?)
             .map_err(native_error),
         (Handle::TextBox(_), PropertyId::TextBoxTextWrapping) => dependency_object
             .ClearValue(&bindings::TextBox::TextWrappingProperty().map_err(native_error)?)
@@ -3538,6 +3818,9 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
                 &bindings::TitleBar::IsPaneToggleButtonVisibleProperty().map_err(native_error)?,
             )
             .map_err(native_error),
+        (Handle::NavigationView(_), PropertyId::NavigationViewResources) => {
+            Err(RuntimeError::UnsupportedKind)
+        }
         (Handle::NavigationView(_), PropertyId::NavigationViewIsEnabled) => dependency_object
             .ClearValue(&bindings::Control::IsEnabledProperty().map_err(native_error)?)
             .map_err(native_error),
@@ -3645,6 +3928,12 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
         (Handle::ProgressBar(_), PropertyId::ProgressBarIsEnabled) => dependency_object
             .ClearValue(&bindings::Control::IsEnabledProperty().map_err(native_error)?)
             .map_err(native_error),
+        (Handle::ProgressBar(_), PropertyId::ProgressBarForeground) => dependency_object
+            .ClearValue(&bindings::Control::ForegroundProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::ProgressBar(_), PropertyId::ProgressBarIsHitTestVisible) => dependency_object
+            .ClearValue(&bindings::UIElement::IsHitTestVisibleProperty().map_err(native_error)?)
+            .map_err(native_error),
         (Handle::ToggleSwitch(_), PropertyId::ToggleSwitchIsOn) => dependency_object
             .ClearValue(&bindings::ToggleSwitch::IsOnProperty().map_err(native_error)?)
             .map_err(native_error),
@@ -3662,6 +3951,12 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
             .map_err(native_error),
         (Handle::ToggleButton(_), PropertyId::ToggleButtonIsEnabled) => dependency_object
             .ClearValue(&bindings::Control::IsEnabledProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::ToggleButton(_), PropertyId::ToggleButtonResources) => {
+            Err(RuntimeError::UnsupportedKind)
+        }
+        (Handle::ToggleButton(_), PropertyId::ToggleButtonCornerRadius) => dependency_object
+            .ClearValue(&bindings::Control::CornerRadiusProperty().map_err(native_error)?)
             .map_err(native_error),
         (Handle::RadioButton(_), PropertyId::RadioButtonGroupName) => dependency_object
             .ClearValue(&bindings::RadioButton::GroupNameProperty().map_err(native_error)?)
@@ -3746,6 +4041,9 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
         (Handle::Image(_), PropertyId::ImageStretch) => dependency_object
             .ClearValue(&bindings::Image::StretchProperty().map_err(native_error)?)
             .map_err(native_error),
+        (Handle::Image(_), PropertyId::ImageIsHitTestVisible) => dependency_object
+            .ClearValue(&bindings::UIElement::IsHitTestVisibleProperty().map_err(native_error)?)
+            .map_err(native_error),
         (Handle::ProgressRing(_), PropertyId::ProgressRingMinimum) => dependency_object
             .ClearValue(&bindings::ProgressRing::MinimumProperty().map_err(native_error)?)
             .map_err(native_error),
@@ -3763,6 +4061,12 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
             .map_err(native_error),
         (Handle::ProgressRing(_), PropertyId::ProgressRingIsEnabled) => dependency_object
             .ClearValue(&bindings::Control::IsEnabledProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::ProgressRing(_), PropertyId::ProgressRingForeground) => dependency_object
+            .ClearValue(&bindings::Control::ForegroundProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::ProgressRing(_), PropertyId::ProgressRingIsHitTestVisible) => dependency_object
+            .ClearValue(&bindings::UIElement::IsHitTestVisibleProperty().map_err(native_error)?)
             .map_err(native_error),
         (Handle::ListBox(_), PropertyId::ListBoxIsEnabled) => dependency_object
             .ClearValue(&bindings::Control::IsEnabledProperty().map_err(native_error)?)
@@ -4901,9 +5205,12 @@ pub fn expected_feedback(
 pub fn theme_style_info(kind: MountedKind) -> Option<(&'static str, &'static [&'static str])> {
     match kind {
         MountedKind::TextBlock => Some(("TextBlock", &["Foreground"])),
+        MountedKind::Button => Some(("Button", &["Background", "Foreground"])),
         MountedKind::Border => Some(("Border", &["Background", "BorderBrush"])),
         MountedKind::Grid => Some(("Grid", &["Background"])),
         MountedKind::TextBox => Some(("TextBox", &["Background", "BorderBrush"])),
+        MountedKind::ProgressBar => Some(("ProgressBar", &["Foreground"])),
+        MountedKind::ProgressRing => Some(("ProgressRing", &["Foreground"])),
         MountedKind::Rectangle => Some(("Rectangle", &["Fill", "Stroke"])),
         MountedKind::Ellipse => Some(("Ellipse", &["Fill", "Stroke"])),
         MountedKind::Line => Some(("Line", &["Stroke"])),
@@ -4918,6 +5225,28 @@ pub fn subscribe_event(
     sink: EventSink,
 ) -> Result<NativeSubscription, RuntimeError> {
     match (handle, event) {
+        (Handle::TextBlock(value), EventId::TextBlockTapped) => {
+            let source = value.cast::<IUIElement>().map_err(native_error)?;
+            source.Tapped(move |_, _| {
+                sink.enqueue(node, EventId::TextBlockTapped, revision, EventPayload::Unit);
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::Button(value), EventId::ButtonTapped) => {
+            let source = value.cast::<IUIElement>().map_err(native_error)?;
+            source.Tapped(move |_, _| {
+                sink.enqueue(node, EventId::ButtonTapped, revision, EventPayload::Unit);
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
         (Handle::Button(value), EventId::ButtonClick) => {
             let source = value.cast::<IButtonBase>().map_err(native_error)?;
             source.Click(move |_, _| {
@@ -5494,6 +5823,17 @@ pub fn subscribe_event(
             revision,
         })
         .map_err(native_error),
+        (Handle::Border(value), EventId::BorderTapped) => {
+            let source = value.cast::<IUIElement>().map_err(native_error)?;
+            source.Tapped(move |_, _| {
+                sink.enqueue(node, EventId::BorderTapped, revision, EventPayload::Unit);
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
         (Handle::BreadcrumbBar(value), EventId::BreadcrumbBarItemClicked) => {
             value.ItemClicked(move |_, args| {
                 if let Some(args) = args.as_ref() {
@@ -5517,6 +5857,76 @@ pub fn subscribe_event(
                             native_error(error),
                         ),
                     }
+                }
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::StackPanel(value), EventId::StackPanelTapped) => {
+            let source = value.cast::<IUIElement>().map_err(native_error)?;
+            source.Tapped(move |_, _| {
+                sink.enqueue(
+                    node,
+                    EventId::StackPanelTapped,
+                    revision,
+                    EventPayload::Unit,
+                );
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::Grid(value), EventId::GridTapped) => {
+            let source = value.cast::<IUIElement>().map_err(native_error)?;
+            source.Tapped(move |_, _| {
+                sink.enqueue(node, EventId::GridTapped, revision, EventPayload::Unit);
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::Grid(value), EventId::GridPointerWheelChanged) => {
+            let source = value.cast::<IUIElement>().map_err(native_error)?;
+            source.PointerWheelChanged({
+                let element = value.cast::<UIElement>().map_err(native_error)?;
+                move |_, args| {
+                    let mut info = crate::PointerEventInfo::default();
+                    if let Some(args) = args.as_ref() {
+                        if let Ok(point) = args.GetCurrentPoint(&element) {
+                            if let Ok(position) = point.Position() {
+                                info.x = f64::from(position.x);
+                                info.y = f64::from(position.y);
+                            }
+                            if let Ok(properties) = point.Properties() {
+                                info.is_left_button_pressed =
+                                    properties.IsLeftButtonPressed().unwrap_or(false);
+                                info.is_right_button_pressed =
+                                    properties.IsRightButtonPressed().unwrap_or(false);
+                                info.is_middle_button_pressed =
+                                    properties.IsMiddleButtonPressed().unwrap_or(false);
+                                info.mouse_wheel_delta = properties.MouseWheelDelta().unwrap_or(0);
+                            }
+                        }
+                        if let Ok(point) = args.GetCurrentPoint(None::<&UIElement>)
+                            && let Ok(position) = point.Position()
+                        {
+                            info.window_x = f64::from(position.x);
+                            info.window_y = f64::from(position.y);
+                        }
+                    }
+                    sink.enqueue(
+                        node,
+                        EventId::GridPointerWheelChanged,
+                        revision,
+                        EventPayload::PointerEventInfo(info),
+                    );
                 }
             })
         }
@@ -5681,13 +6091,23 @@ pub fn subscribe_event(
         .map_err(native_error),
         (Handle::Slider(value), EventId::SliderSizeChanged) => {
             let source = value.cast::<IFrameworkElement>().map_err(native_error)?;
-            source.SizeChanged(move |_, _| {
-                sink.enqueue(
-                    node,
-                    EventId::SliderSizeChanged,
-                    revision,
-                    EventPayload::Unit,
-                );
+            source.SizeChanged(move |_, args| {
+                if let Some(args) = args.as_ref() {
+                    match args.NewSize() {
+                        Ok(value) => sink.enqueue(
+                            node,
+                            EventId::SliderSizeChanged,
+                            revision,
+                            EventPayload::F64((value.width) as f64),
+                        ),
+                        Err(error) => sink.error(
+                            node,
+                            EventId::SliderSizeChanged,
+                            revision,
+                            native_error(error),
+                        ),
+                    }
+                }
             })
         }
         .map(|revoker| NativeSubscription::Event {
@@ -6036,6 +6456,17 @@ pub fn subscribe_event(
                     revision,
                     EventPayload::Unit,
                 );
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::Image(value), EventId::ImageTapped) => {
+            let source = value.cast::<IUIElement>().map_err(native_error)?;
+            source.Tapped(move |_, _| {
+                sink.enqueue(node, EventId::ImageTapped, revision, EventPayload::Unit);
             })
         }
         .map(|revoker| NativeSubscription::Event {
@@ -7046,13 +7477,28 @@ pub fn subscribe_event(
         })
         .map_err(native_error),
         (Handle::RefreshContainer(value), EventId::RefreshContainerRefreshRequested) => {
-            value.RefreshRequested(move |_, _| {
-                sink.enqueue(
-                    node,
-                    EventId::RefreshContainerRefreshRequested,
-                    revision,
-                    EventPayload::Unit,
-                );
+            value.RefreshRequested(move |_, args| {
+                if let Some(args) = args.as_ref() {
+                    match args.GetDeferral() {
+                        Ok(deferral) => {
+                            let deferral = crate::RefreshDeferral::new(move || {
+                                let _ = deferral.Complete();
+                            });
+                            sink.enqueue(
+                                node,
+                                EventId::RefreshContainerRefreshRequested,
+                                revision,
+                                EventPayload::RefreshDeferral(deferral),
+                            );
+                        }
+                        Err(error) => sink.error(
+                            node,
+                            EventId::RefreshContainerRefreshRequested,
+                            revision,
+                            native_error(error),
+                        ),
+                    }
+                }
             })
         }
         .map(|revoker| NativeSubscription::Event {

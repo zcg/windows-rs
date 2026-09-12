@@ -100,6 +100,7 @@ pub(crate) fn generate_control_bindings_filter(schema: &ResolvedSchema) -> Strin
                 | Some(PropertyAdapter::PointerCapture)
                 | Some(PropertyAdapter::PointerEvent)
                 | Some(PropertyAdapter::RatingValue)
+                | Some(PropertyAdapter::RefreshDeferral)
                 | Some(PropertyAdapter::DragInfo)
                 | Some(PropertyAdapter::DropData)
                 | Some(PropertyAdapter::DropPolicy)
@@ -266,6 +267,10 @@ pub(crate) fn generate_control_bindings_filter(schema: &ResolvedSchema) -> Strin
             }
             if let Some((interface, property)) = event.source.getter() {
                 entries.insert(format!("{}::get_{}", filter_path(interface), property));
+            }
+            if let EventPayloadSource::RefreshDeferral { interface } = &event.source {
+                entries.insert(format!("{}::GetDeferral", filter_path(interface)));
+                entries.insert("Windows::Foundation::IDeferral::Complete".to_string());
             }
             if matches!(
                 event.source,
@@ -1059,6 +1064,10 @@ fn generate_payload_value(conversion: &EventPayloadConversion, event_id: &Ident)
             let field = ident(field);
             quote! { value.#field }
         }
+        EventPayloadConversion::FieldAsF64(field) => {
+            let field = ident(field);
+            quote! { (value.#field) as f64 }
+        }
         EventPayloadConversion::Nullable => quote! { Some(value) },
         EventPayloadConversion::NumberBoxValue => quote! { number_box_value(value) },
         EventPayloadConversion::RatingValue => quote! { rating_value(value) },
@@ -1616,6 +1625,37 @@ fn generate_event_arm(control: &ResolvedControl, event: &ResolvedEvent) -> Token
                 }
             }
         },
+        EventPayloadSource::RefreshDeferral { interface: _ } => {
+            quote! {
+                move |_, args| {
+                    if let Some(args) = args.as_ref() {
+                        match args.GetDeferral() {
+                            Ok(deferral) => {
+                                // Keeps the refresh indicator on screen until the host
+                                // completes the deferral after its asynchronous refresh.
+                                // Dropping it without completing also releases the system
+                                // deferral (the WinRT object's destructor completes it).
+                                let deferral = crate::RefreshDeferral::new(move || {
+                                    let _ = deferral.Complete();
+                                });
+                                sink.enqueue(
+                                    node,
+                                    EventId::#event_id,
+                                    revision,
+                                    EventPayload::RefreshDeferral(deferral),
+                                );
+                            }
+                            Err(error) => sink.error(
+                                node,
+                                EventId::#event_id,
+                                revision,
+                                native_error(error),
+                            ),
+                        }
+                    }
+                }
+            }
+        }
         EventPayloadSource::EventArgsItemTag {
             interface: _,
             property,

@@ -4,6 +4,11 @@ use crate::core::ThemeStyle;
 use crate::element::*;
 use crate::reference::{ElementRef, FocusControl, NativeElementRef};
 #[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct ButtonEvents {
+    on_tapped: Option<Callback<()>>,
+    on_click: Option<Callback<()>>,
+}
+#[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct BorderEvents {
     on_drag_enter: Option<Callback<DragKind>>,
     on_drag_over: Option<Callback<DragKind>>,
@@ -17,6 +22,12 @@ pub(crate) struct BorderEvents {
     on_pointer_wheel_changed: Option<Callback<PointerEventInfo>>,
     on_pointer_capture_lost: Option<Callback<()>>,
     on_pointer_canceled: Option<Callback<()>>,
+    on_tapped: Option<Callback<()>>,
+}
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct GridEvents {
+    on_tapped: Option<Callback<()>>,
+    on_pointer_wheel_changed: Option<Callback<PointerEventInfo>>,
 }
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct AutoSuggestBoxEvents {
@@ -26,7 +37,7 @@ pub(crate) struct AutoSuggestBoxEvents {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct SliderEvents {
     on_value_changed: Option<Callback<f64>>,
-    on_size_changed: Option<Callback<()>>,
+    on_size_changed: Option<Callback<f64>>,
 }
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct TitleBarEvents {
@@ -41,6 +52,7 @@ pub(crate) struct NavigationViewEvents {
 }
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct ImageEvents {
+    on_tapped: Option<Callback<()>>,
     on_opened: Option<Callback<()>>,
     on_failed: Option<Callback<()>>,
 }
@@ -433,6 +445,8 @@ pub mod public {
         max_lines: Property<i32>,
         text_trimming: Property<TextTrimming>,
         foreground: Property<Brush>,
+        is_hit_test_visible: Property<bool>,
+        on_tapped: Option<Callback<()>>,
         element_state: Option<std::rc::Rc<ElementState>>,
     }
     impl TextBlock {
@@ -512,6 +526,15 @@ pub mod public {
             self.foreground = Property::from(value.map(Into::into));
             self
         }
+        pub fn is_hit_test_visible(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_hit_test_visible = Property::from(value);
+            self
+        }
+        pub fn on_tapped(mut self, callback: impl IntoUnitCallback) -> Self {
+            self.on_tapped = Some(callback.into_unit_callback());
+            self
+        }
     }
     impl sealed::Sealed for TextBlock {}
     impl sealed::NativeControl for TextBlock {
@@ -528,12 +551,17 @@ pub mod public {
     #[derive(Clone, Debug, Default, PartialEq)]
     pub struct Button {
         is_enabled: Property<bool>,
+        padding: Property<Thickness>,
+        corner_radius: Property<CornerRadius>,
+        background: Property<Brush>,
+        foreground: Property<Brush>,
+        is_hit_test_visible: Property<bool>,
         horizontal_content_alignment: Property<HorizontalAlignment>,
         vertical_content_alignment: Property<VerticalAlignment>,
         resource_overrides: Property<ResourceOverrides>,
         style: Property<ButtonStyle>,
         key_accelerators: Property<KeyAccelerators>,
-        on_click: Option<Callback<()>>,
+        events: Option<std::rc::Rc<ButtonEvents>>,
         reference: Option<NativeElementRef>,
         element_state: Option<std::rc::Rc<ElementState>>,
         content: Option<Box<Element>>,
@@ -549,6 +577,79 @@ pub mod public {
         pub fn is_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
             let value = value.into();
             self.is_enabled = Property::from(value);
+            self
+        }
+        pub fn padding(mut self, value: impl Into<Thickness>) -> Self {
+            let value = value.into();
+            assert!(
+                value.is_finite_non_negative(),
+                "Button Padding must contain finite non-negative values"
+            );
+            self.padding = Property::Set(value);
+            self
+        }
+        pub fn padding_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<Thickness>,
+        {
+            let value = value.map(Into::into);
+            assert!(
+                value
+                    .as_ref()
+                    .is_none_or(|value| value.is_finite_non_negative()),
+                "Button Padding must contain finite non-negative values",
+            );
+            self.padding = Property::from(value);
+            self
+        }
+        pub fn corner_radius(mut self, value: impl Into<CornerRadius>) -> Self {
+            let value = value.into();
+            assert!(
+                value.is_finite_non_negative(),
+                "Button CornerRadius must contain finite non-negative values"
+            );
+            self.corner_radius = Property::Set(value);
+            self
+        }
+        pub fn corner_radius_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<CornerRadius>,
+        {
+            let value = value.map(Into::into);
+            assert!(
+                value
+                    .as_ref()
+                    .is_none_or(|value| value.is_finite_non_negative()),
+                "Button CornerRadius must contain finite non-negative values",
+            );
+            self.corner_radius = Property::from(value);
+            self
+        }
+        pub fn background(mut self, value: impl Into<Brush>) -> Self {
+            self.background = Property::Set(value.into());
+            self
+        }
+        pub fn background_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<Brush>,
+        {
+            self.background = Property::from(value.map(Into::into));
+            self
+        }
+        pub fn foreground(mut self, value: impl Into<Brush>) -> Self {
+            self.foreground = Property::Set(value.into());
+            self
+        }
+        pub fn foreground_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<Brush>,
+        {
+            self.foreground = Property::from(value.map(Into::into));
+            self
+        }
+        pub fn is_hit_test_visible(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_hit_test_visible = Property::from(value);
             self
         }
         pub fn horizontal_content_alignment(
@@ -582,8 +683,20 @@ pub mod public {
             self.key_accelerators = Property::from(value);
             self
         }
+        pub fn on_tapped(mut self, callback: impl IntoUnitCallback) -> Self {
+            std::rc::Rc::make_mut(
+                self.events
+                    .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
+            )
+            .on_tapped = Some(callback.into_unit_callback());
+            self
+        }
         pub fn on_click(mut self, callback: impl IntoUnitCallback) -> Self {
-            self.on_click = Some(callback.into_unit_callback());
+            std::rc::Rc::make_mut(
+                self.events
+                    .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
+            )
+            .on_click = Some(callback.into_unit_callback());
             self
         }
     }
@@ -748,6 +861,7 @@ pub mod public {
         scale_transition: Property<std::time::Duration>,
         capture_pointer_on_press: Property<bool>,
         drop_policy: Property<DragDropPolicy>,
+        is_hit_test_visible: Property<bool>,
         events: Option<std::rc::Rc<BorderEvents>>,
         element_state: Option<std::rc::Rc<ElementState>>,
         content: Option<Box<Element>>,
@@ -878,6 +992,11 @@ pub mod public {
             self.drop_policy = Property::from(value);
             self
         }
+        pub fn is_hit_test_visible(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_hit_test_visible = Property::from(value);
+            self
+        }
         pub fn on_drag_enter(mut self, callback: impl IntoPayloadCallback<DragKind>) -> Self {
             std::rc::Rc::make_mut(
                 self.events
@@ -992,6 +1111,14 @@ pub mod public {
             .on_pointer_canceled = Some(callback.into_unit_callback());
             self
         }
+        pub fn on_tapped(mut self, callback: impl IntoUnitCallback) -> Self {
+            std::rc::Rc::make_mut(
+                self.events
+                    .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
+            )
+            .on_tapped = Some(callback.into_unit_callback());
+            self
+        }
     }
     impl sealed::Sealed for Border {}
     impl sealed::NativeControl for Border {
@@ -1065,6 +1192,9 @@ pub mod public {
     pub struct StackPanel {
         orientation: Property<Orientation>,
         spacing: Property<f64>,
+        padding: Property<Thickness>,
+        is_hit_test_visible: Property<bool>,
+        on_tapped: Option<Callback<()>>,
         element_state: Option<std::rc::Rc<ElementState>>,
         children: std::rc::Rc<Vec<KeyedElement>>,
     }
@@ -1080,6 +1210,38 @@ pub mod public {
         pub fn spacing(mut self, value: impl Into<Option<f64>>) -> Self {
             let value = value.into();
             self.spacing = Property::from(value);
+            self
+        }
+        pub fn padding(mut self, value: impl Into<Thickness>) -> Self {
+            let value = value.into();
+            assert!(
+                value.is_finite_non_negative(),
+                "StackPanel Padding must contain finite non-negative values"
+            );
+            self.padding = Property::Set(value);
+            self
+        }
+        pub fn padding_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<Thickness>,
+        {
+            let value = value.map(Into::into);
+            assert!(
+                value
+                    .as_ref()
+                    .is_none_or(|value| value.is_finite_non_negative()),
+                "StackPanel Padding must contain finite non-negative values",
+            );
+            self.padding = Property::from(value);
+            self
+        }
+        pub fn is_hit_test_visible(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_hit_test_visible = Property::from(value);
+            self
+        }
+        pub fn on_tapped(mut self, callback: impl IntoUnitCallback) -> Self {
+            self.on_tapped = Some(callback.into_unit_callback());
             self
         }
     }
@@ -1183,6 +1345,8 @@ pub mod public {
         column_spacing: Property<f64>,
         key_accelerators: Property<KeyAccelerators>,
         background: Property<Brush>,
+        is_hit_test_visible: Property<bool>,
+        events: Option<std::rc::Rc<GridEvents>>,
         reference: Option<NativeElementRef>,
         element_state: Option<std::rc::Rc<ElementState>>,
         rows: Property<std::rc::Rc<Vec<GridLength>>>,
@@ -1221,6 +1385,30 @@ pub mod public {
             T: Into<Brush>,
         {
             self.background = Property::from(value.map(Into::into));
+            self
+        }
+        pub fn is_hit_test_visible(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_hit_test_visible = Property::from(value);
+            self
+        }
+        pub fn on_tapped(mut self, callback: impl IntoUnitCallback) -> Self {
+            std::rc::Rc::make_mut(
+                self.events
+                    .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
+            )
+            .on_tapped = Some(callback.into_unit_callback());
+            self
+        }
+        pub fn on_pointer_wheel_changed(
+            mut self,
+            callback: impl IntoPayloadCallback<PointerEventInfo>,
+        ) -> Self {
+            std::rc::Rc::make_mut(
+                self.events
+                    .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
+            )
+            .on_pointer_wheel_changed = Some(callback.into_payload_callback());
             self
         }
         pub fn rows(mut self, values: impl IntoIterator<Item = GridLength>) -> Self {
@@ -1302,6 +1490,8 @@ pub mod public {
         placeholder_text: Property<String>,
         is_enabled: Property<bool>,
         accepts_return: Property<bool>,
+        font_size: Property<f64>,
+        padding: Property<Thickness>,
         text_wrapping: Property<TextWrapping>,
         background: Property<Brush>,
         border_brush: Property<Brush>,
@@ -1348,6 +1538,40 @@ pub mod public {
         pub fn accepts_return(mut self, value: impl Into<Option<bool>>) -> Self {
             let value = value.into();
             self.accepts_return = Property::from(value);
+            self
+        }
+        pub fn font_size(mut self, value: impl Into<Option<f64>>) -> Self {
+            let value = value.into();
+            assert!(
+                value
+                    .as_ref()
+                    .is_none_or(|value| value.is_finite() && *value > 0.0),
+                "TextBox FontSize must be finite and positive",
+            );
+            self.font_size = Property::from(value);
+            self
+        }
+        pub fn padding(mut self, value: impl Into<Thickness>) -> Self {
+            let value = value.into();
+            assert!(
+                value.is_finite_non_negative(),
+                "TextBox Padding must contain finite non-negative values"
+            );
+            self.padding = Property::Set(value);
+            self
+        }
+        pub fn padding_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<Thickness>,
+        {
+            let value = value.map(Into::into);
+            assert!(
+                value
+                    .as_ref()
+                    .is_none_or(|value| value.is_finite_non_negative()),
+                "TextBox Padding must contain finite non-negative values",
+            );
+            self.padding = Property::from(value);
             self
         }
         pub fn text_wrapping(mut self, value: impl Into<Option<TextWrapping>>) -> Self {
@@ -1774,12 +1998,12 @@ pub mod public {
             .on_value_changed = Some(callback.into_payload_callback());
             self
         }
-        pub fn on_size_changed(mut self, callback: impl IntoUnitCallback) -> Self {
+        pub fn on_size_changed(mut self, callback: impl IntoPayloadCallback<f64>) -> Self {
             std::rc::Rc::make_mut(
                 self.events
                     .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
             )
-            .on_size_changed = Some(callback.into_unit_callback());
+            .on_size_changed = Some(callback.into_payload_callback());
             self
         }
     }
@@ -1914,6 +2138,7 @@ pub mod public {
     }
     #[derive(Clone, Debug, Default, PartialEq)]
     pub struct NavigationView {
+        resource_overrides: Property<ResourceOverrides>,
         is_enabled: Property<bool>,
         pane_display_mode: Property<NavigationViewPaneDisplayMode>,
         is_pane_toggle_button_visible: Property<bool>,
@@ -1930,6 +2155,11 @@ pub mod public {
     impl NavigationView {
         pub fn new() -> Self {
             Self::default()
+        }
+        pub fn resource_overrides(mut self, value: impl Into<Option<ResourceOverrides>>) -> Self {
+            let value = value.into();
+            self.resource_overrides = Property::from(value);
+            self
         }
         pub fn is_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
             let value = value.into();
@@ -2207,6 +2437,8 @@ pub mod public {
         show_error: Property<bool>,
         show_paused: Property<bool>,
         is_enabled: Property<bool>,
+        foreground: Property<Brush>,
+        is_hit_test_visible: Property<bool>,
         element_state: Option<std::rc::Rc<ElementState>>,
     }
     impl ProgressBar {
@@ -2246,6 +2478,22 @@ pub mod public {
         pub fn is_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
             let value = value.into();
             self.is_enabled = Property::from(value);
+            self
+        }
+        pub fn foreground(mut self, value: impl Into<Brush>) -> Self {
+            self.foreground = Property::Set(value.into());
+            self
+        }
+        pub fn foreground_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<Brush>,
+        {
+            self.foreground = Property::from(value.map(Into::into));
+            self
+        }
+        pub fn is_hit_test_visible(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_hit_test_visible = Property::from(value);
             self
         }
     }
@@ -2383,6 +2631,8 @@ pub mod public {
     pub struct ToggleButton {
         is_checked: Property<bool>,
         is_enabled: Property<bool>,
+        resource_overrides: Property<ResourceOverrides>,
+        corner_radius: Property<CornerRadius>,
         on_is_checked_changed: Option<Callback<bool>>,
         reference: Option<NativeElementRef>,
         element_state: Option<std::rc::Rc<ElementState>>,
@@ -2404,6 +2654,34 @@ pub mod public {
         pub fn is_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
             let value = value.into();
             self.is_enabled = Property::from(value);
+            self
+        }
+        pub fn resource_overrides(mut self, value: impl Into<Option<ResourceOverrides>>) -> Self {
+            let value = value.into();
+            self.resource_overrides = Property::from(value);
+            self
+        }
+        pub fn corner_radius(mut self, value: impl Into<CornerRadius>) -> Self {
+            let value = value.into();
+            assert!(
+                value.is_finite_non_negative(),
+                "ToggleButton CornerRadius must contain finite non-negative values"
+            );
+            self.corner_radius = Property::Set(value);
+            self
+        }
+        pub fn corner_radius_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<CornerRadius>,
+        {
+            let value = value.map(Into::into);
+            assert!(
+                value
+                    .as_ref()
+                    .is_none_or(|value| value.is_finite_non_negative()),
+                "ToggleButton CornerRadius must contain finite non-negative values",
+            );
+            self.corner_radius = Property::from(value);
             self
         }
         pub fn on_is_checked_changed(mut self, callback: impl IntoPayloadCallback<bool>) -> Self {
@@ -2878,6 +3156,7 @@ pub mod public {
         source: Property<ImageValue>,
         decode_width: Property<i32>,
         stretch: Property<Stretch>,
+        is_hit_test_visible: Property<bool>,
         events: Option<std::rc::Rc<ImageEvents>>,
         reference: Option<NativeElementRef>,
         element_state: Option<std::rc::Rc<ElementState>>,
@@ -2927,6 +3206,19 @@ pub mod public {
             self.stretch = Property::from(value);
             self
         }
+        pub fn is_hit_test_visible(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_hit_test_visible = Property::from(value);
+            self
+        }
+        pub fn on_tapped(mut self, callback: impl IntoUnitCallback) -> Self {
+            std::rc::Rc::make_mut(
+                self.events
+                    .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
+            )
+            .on_tapped = Some(callback.into_unit_callback());
+            self
+        }
         pub fn on_opened(mut self, callback: impl IntoUnitCallback) -> Self {
             std::rc::Rc::make_mut(
                 self.events
@@ -2966,6 +3258,8 @@ pub mod public {
         is_indeterminate: Property<bool>,
         is_active: Property<bool>,
         is_enabled: Property<bool>,
+        foreground: Property<Brush>,
+        is_hit_test_visible: Property<bool>,
         element_state: Option<std::rc::Rc<ElementState>>,
     }
     impl ProgressRing {
@@ -3000,6 +3294,22 @@ pub mod public {
         pub fn is_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
             let value = value.into();
             self.is_enabled = Property::from(value);
+            self
+        }
+        pub fn foreground(mut self, value: impl Into<Brush>) -> Self {
+            self.foreground = Property::Set(value.into());
+            self
+        }
+        pub fn foreground_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<Brush>,
+        {
+            self.foreground = Property::from(value.map(Into::into));
+            self
+        }
+        pub fn is_hit_test_visible(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.is_hit_test_visible = Property::from(value);
             self
         }
     }
@@ -6058,7 +6368,7 @@ pub mod public {
     #[derive(Clone, Debug, Default, PartialEq)]
     pub struct RefreshContainer {
         pull_direction: Property<RefreshPullDirection>,
-        on_refresh_requested: Option<Callback<()>>,
+        on_refresh_requested: Option<Callback<RefreshDeferral>>,
         element_state: Option<std::rc::Rc<ElementState>>,
         content: Option<Box<Element>>,
     }
@@ -6071,8 +6381,11 @@ pub mod public {
             self.pull_direction = Property::from(value);
             self
         }
-        pub fn on_refresh_requested(mut self, callback: impl IntoUnitCallback) -> Self {
-            self.on_refresh_requested = Some(callback.into_unit_callback());
+        pub fn on_refresh_requested(
+            mut self,
+            callback: impl IntoPayloadCallback<RefreshDeferral>,
+        ) -> Self {
+            self.on_refresh_requested = Some(callback.into_payload_callback());
             self
         }
     }
@@ -7201,6 +7514,8 @@ pub mod public {
                         max_lines,
                         text_trimming,
                         foreground,
+                        is_hit_test_visible,
+                        on_tapped,
                         element_state,
                     } = value;
                     ElementParts {
@@ -7215,6 +7530,8 @@ pub mod public {
                             max_lines,
                             text_trimming,
                             foreground,
+                            is_hit_test_visible,
+                            on_tapped,
                         })),
                         reference: None,
                         element_state,
@@ -7226,12 +7543,17 @@ pub mod public {
                     let value = std::rc::Rc::unwrap_or_clone(value);
                     let Button {
                         is_enabled,
+                        padding,
+                        corner_radius,
+                        background,
+                        foreground,
+                        is_hit_test_visible,
                         horizontal_content_alignment,
                         vertical_content_alignment,
                         resource_overrides,
                         style,
                         key_accelerators,
-                        on_click,
+                        events,
                         reference,
                         element_state,
                         content,
@@ -7240,12 +7562,17 @@ pub mod public {
                         kind: MountedKind::Button,
                         props: MountedProps::Button(std::rc::Rc::new(ButtonMountedProps {
                             is_enabled,
+                            padding,
+                            corner_radius,
+                            background,
+                            foreground,
+                            is_hit_test_visible,
                             horizontal_content_alignment,
                             vertical_content_alignment,
                             resource_overrides,
                             style,
                             key_accelerators,
-                            on_click,
+                            events,
                         })),
                         reference,
                         element_state,
@@ -7317,6 +7644,7 @@ pub mod public {
                         scale_transition,
                         capture_pointer_on_press,
                         drop_policy,
+                        is_hit_test_visible,
                         events,
                         element_state,
                         content,
@@ -7334,6 +7662,7 @@ pub mod public {
                             scale_transition,
                             capture_pointer_on_press,
                             drop_policy,
+                            is_hit_test_visible,
                             events,
                         })),
                         reference: None,
@@ -7368,6 +7697,9 @@ pub mod public {
                     let StackPanel {
                         orientation,
                         spacing,
+                        padding,
+                        is_hit_test_visible,
+                        on_tapped,
                         element_state,
                         children,
                     } = value;
@@ -7376,6 +7708,9 @@ pub mod public {
                         props: MountedProps::StackPanel(std::rc::Rc::new(StackPanelMountedProps {
                             orientation,
                             spacing,
+                            padding,
+                            is_hit_test_visible,
+                            on_tapped,
                         })),
                         reference: None,
                         element_state,
@@ -7416,6 +7751,8 @@ pub mod public {
                         column_spacing,
                         key_accelerators,
                         background,
+                        is_hit_test_visible,
+                        events,
                         rows,
                         columns,
                         reference,
@@ -7429,6 +7766,8 @@ pub mod public {
                             column_spacing,
                             key_accelerators,
                             background,
+                            is_hit_test_visible,
+                            events,
                             rows,
                             columns,
                         })),
@@ -7445,6 +7784,8 @@ pub mod public {
                         placeholder_text,
                         is_enabled,
                         accepts_return,
+                        font_size,
+                        padding,
                         text_wrapping,
                         background,
                         border_brush,
@@ -7460,6 +7801,8 @@ pub mod public {
                             placeholder_text,
                             is_enabled,
                             accepts_return,
+                            font_size,
+                            padding,
                             text_wrapping,
                             background,
                             border_brush,
@@ -7617,6 +7960,7 @@ pub mod public {
                 Self::NavigationView(value) => {
                     let value = std::rc::Rc::unwrap_or_clone(value);
                     let NavigationView {
+                        resource_overrides,
                         is_enabled,
                         pane_display_mode,
                         is_pane_toggle_button_visible,
@@ -7634,6 +7978,7 @@ pub mod public {
                         kind: MountedKind::NavigationView,
                         props: MountedProps::NavigationView(std::rc::Rc::new(
                             NavigationViewMountedProps {
+                                resource_overrides,
                                 is_enabled,
                                 pane_display_mode,
                                 is_pane_toggle_button_visible,
@@ -7713,6 +8058,8 @@ pub mod public {
                         show_error,
                         show_paused,
                         is_enabled,
+                        foreground,
+                        is_hit_test_visible,
                         element_state,
                     } = value;
                     ElementParts {
@@ -7726,6 +8073,8 @@ pub mod public {
                                 show_error,
                                 show_paused,
                                 is_enabled,
+                                foreground,
+                                is_hit_test_visible,
                             },
                         )),
                         reference: None,
@@ -7786,6 +8135,8 @@ pub mod public {
                     let ToggleButton {
                         is_checked,
                         is_enabled,
+                        resource_overrides,
+                        corner_radius,
                         on_is_checked_changed,
                         reference,
                         element_state,
@@ -7797,6 +8148,8 @@ pub mod public {
                             ToggleButtonMountedProps {
                                 is_checked,
                                 is_enabled,
+                                resource_overrides,
+                                corner_radius,
                                 on_is_checked_changed,
                             },
                         )),
@@ -7991,6 +8344,7 @@ pub mod public {
                         source,
                         decode_width,
                         stretch,
+                        is_hit_test_visible,
                         events,
                         reference,
                         element_state,
@@ -8001,6 +8355,7 @@ pub mod public {
                             source,
                             decode_width,
                             stretch,
+                            is_hit_test_visible,
                             events,
                         })),
                         reference,
@@ -8018,6 +8373,8 @@ pub mod public {
                         is_indeterminate,
                         is_active,
                         is_enabled,
+                        foreground,
+                        is_hit_test_visible,
                         element_state,
                     } = value;
                     ElementParts {
@@ -8030,6 +8387,8 @@ pub mod public {
                                 is_indeterminate,
                                 is_active,
                                 is_enabled,
+                                foreground,
+                                is_hit_test_visible,
                             },
                         )),
                         reference: None,
@@ -9273,16 +9632,23 @@ pub mod public {
                         && value.max_lines == mounted.max_lines
                         && value.text_trimming == mounted.text_trimming
                         && value.foreground == mounted.foreground
+                        && value.is_hit_test_visible == mounted.is_hit_test_visible
+                        && value.on_tapped == mounted.on_tapped
                 }
                 (Self::Button(value), MountedProps::Button(mounted)) => {
                     true && value.is_enabled == mounted.is_enabled
+                        && value.padding == mounted.padding
+                        && value.corner_radius == mounted.corner_radius
+                        && value.background == mounted.background
+                        && value.foreground == mounted.foreground
+                        && value.is_hit_test_visible == mounted.is_hit_test_visible
                         && value.horizontal_content_alignment
                             == mounted.horizontal_content_alignment
                         && value.vertical_content_alignment == mounted.vertical_content_alignment
                         && value.resource_overrides == mounted.resource_overrides
                         && value.style == mounted.style
                         && value.key_accelerators == mounted.key_accelerators
-                        && value.on_click == mounted.on_click
+                        && value.events == mounted.events
                 }
                 (Self::HyperlinkButton(value), MountedProps::HyperlinkButton(mounted)) => {
                     true && value.navigate_uri == mounted.navigate_uri
@@ -9306,6 +9672,7 @@ pub mod public {
                         && value.scale_transition == mounted.scale_transition
                         && value.capture_pointer_on_press == mounted.capture_pointer_on_press
                         && value.drop_policy == mounted.drop_policy
+                        && value.is_hit_test_visible == mounted.is_hit_test_visible
                         && value.events == mounted.events
                 }
                 (Self::BreadcrumbBar(value), MountedProps::BreadcrumbBar(mounted)) => {
@@ -9315,6 +9682,9 @@ pub mod public {
                 (Self::StackPanel(value), MountedProps::StackPanel(mounted)) => {
                     true && value.orientation == mounted.orientation
                         && f64_property_eq(&value.spacing, &mounted.spacing)
+                        && value.padding == mounted.padding
+                        && value.is_hit_test_visible == mounted.is_hit_test_visible
+                        && value.on_tapped == mounted.on_tapped
                 }
                 (
                     Self::VariableSizedWrapGrid(value),
@@ -9330,6 +9700,8 @@ pub mod public {
                         && f64_property_eq(&value.column_spacing, &mounted.column_spacing)
                         && value.key_accelerators == mounted.key_accelerators
                         && value.background == mounted.background
+                        && value.is_hit_test_visible == mounted.is_hit_test_visible
+                        && value.events == mounted.events
                         && value.rows == mounted.rows
                         && value.columns == mounted.columns
                 }
@@ -9338,6 +9710,8 @@ pub mod public {
                         && value.placeholder_text == mounted.placeholder_text
                         && value.is_enabled == mounted.is_enabled
                         && value.accepts_return == mounted.accepts_return
+                        && f64_property_eq(&value.font_size, &mounted.font_size)
+                        && value.padding == mounted.padding
                         && value.text_wrapping == mounted.text_wrapping
                         && value.background == mounted.background
                         && value.border_brush == mounted.border_brush
@@ -9385,7 +9759,8 @@ pub mod public {
                         && value.events == mounted.events
                 }
                 (Self::NavigationView(value), MountedProps::NavigationView(mounted)) => {
-                    true && value.is_enabled == mounted.is_enabled
+                    true && value.resource_overrides == mounted.resource_overrides
+                        && value.is_enabled == mounted.is_enabled
                         && value.pane_display_mode == mounted.pane_display_mode
                         && value.is_pane_toggle_button_visible
                             == mounted.is_pane_toggle_button_visible
@@ -9419,6 +9794,8 @@ pub mod public {
                         && value.show_error == mounted.show_error
                         && value.show_paused == mounted.show_paused
                         && value.is_enabled == mounted.is_enabled
+                        && value.foreground == mounted.foreground
+                        && value.is_hit_test_visible == mounted.is_hit_test_visible
                 }
                 (Self::ToggleSwitch(value), MountedProps::ToggleSwitch(mounted)) => {
                     true && value.is_on == mounted.is_on
@@ -9433,6 +9810,8 @@ pub mod public {
                 (Self::ToggleButton(value), MountedProps::ToggleButton(mounted)) => {
                     true && value.is_checked == mounted.is_checked
                         && value.is_enabled == mounted.is_enabled
+                        && value.resource_overrides == mounted.resource_overrides
+                        && value.corner_radius == mounted.corner_radius
                         && value.on_is_checked_changed == mounted.on_is_checked_changed
                 }
                 (Self::RadioButton(value), MountedProps::RadioButton(mounted)) => {
@@ -9480,6 +9859,7 @@ pub mod public {
                     true && value.source == mounted.source
                         && value.decode_width == mounted.decode_width
                         && value.stretch == mounted.stretch
+                        && value.is_hit_test_visible == mounted.is_hit_test_visible
                         && value.events == mounted.events
                 }
                 (Self::ProgressRing(value), MountedProps::ProgressRing(mounted)) => {
@@ -9489,6 +9869,8 @@ pub mod public {
                         && value.is_indeterminate == mounted.is_indeterminate
                         && value.is_active == mounted.is_active
                         && value.is_enabled == mounted.is_enabled
+                        && value.foreground == mounted.foreground
+                        && value.is_hit_test_visible == mounted.is_hit_test_visible
                 }
                 (Self::ListBox(value), MountedProps::ListBox(mounted)) => {
                     true && value.is_enabled == mounted.is_enabled
@@ -10147,9 +10529,24 @@ pub mod public {
         }
         fn visit_events(&self, visit: &mut dyn FnMut(EventId, bool)) {
             match self {
-                Self::TextBlock(_) => {}
+                Self::TextBlock(value) => {
+                    visit(EventId::TextBlockTapped, value.on_tapped.is_some());
+                }
                 Self::Button(value) => {
-                    visit(EventId::ButtonClick, value.on_click.is_some());
+                    visit(
+                        EventId::ButtonTapped,
+                        value
+                            .events
+                            .as_ref()
+                            .is_some_and(|events| events.on_tapped.is_some()),
+                    );
+                    visit(
+                        EventId::ButtonClick,
+                        value
+                            .events
+                            .as_ref()
+                            .is_some_and(|events| events.on_click.is_some()),
+                    );
                 }
                 Self::HyperlinkButton(value) => {
                     visit(EventId::HyperlinkButtonClick, value.on_click.is_some());
@@ -10245,6 +10642,13 @@ pub mod public {
                             .as_ref()
                             .is_some_and(|events| events.on_pointer_canceled.is_some()),
                     );
+                    visit(
+                        EventId::BorderTapped,
+                        value
+                            .events
+                            .as_ref()
+                            .is_some_and(|events| events.on_tapped.is_some()),
+                    );
                 }
                 Self::BreadcrumbBar(value) => {
                     visit(
@@ -10252,9 +10656,26 @@ pub mod public {
                         value.on_item_clicked.is_some(),
                     );
                 }
-                Self::StackPanel(_) => {}
+                Self::StackPanel(value) => {
+                    visit(EventId::StackPanelTapped, value.on_tapped.is_some());
+                }
                 Self::VariableSizedWrapGrid(_) => {}
-                Self::Grid(_) => {}
+                Self::Grid(value) => {
+                    visit(
+                        EventId::GridTapped,
+                        value
+                            .events
+                            .as_ref()
+                            .is_some_and(|events| events.on_tapped.is_some()),
+                    );
+                    visit(
+                        EventId::GridPointerWheelChanged,
+                        value
+                            .events
+                            .as_ref()
+                            .is_some_and(|events| events.on_pointer_wheel_changed.is_some()),
+                    );
+                }
                 Self::TextBox(_) => {
                     visit(EventId::TextBoxTextChanged, true);
                 }
@@ -10345,6 +10766,13 @@ pub mod public {
                 }
                 Self::ScrollView(_) => {}
                 Self::Image(value) => {
+                    visit(
+                        EventId::ImageTapped,
+                        value
+                            .events
+                            .as_ref()
+                            .is_some_and(|events| events.on_tapped.is_some()),
+                    );
                     visit(
                         EventId::ImageImageOpened,
                         value
@@ -10655,11 +11083,57 @@ impl MountedPropsExt for MountedProps {
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
                 );
+                visit(
+                    PropertyId::TextBlockIsHitTestVisible,
+                    match &values.is_hit_test_visible {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
             }
             Self::Button(values) => {
                 visit(
                     PropertyId::ButtonIsEnabled,
                     match &values.is_enabled {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::ButtonPadding,
+                    match &values.padding {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Thickness(value)),
+                    },
+                );
+                visit(
+                    PropertyId::ButtonCornerRadius,
+                    match &values.corner_radius {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::CornerRadius(value)),
+                    },
+                );
+                visit(
+                    PropertyId::ButtonBackground,
+                    match &values.background {
+                        Property::Set(Brush::Solid(color)) => {
+                            Some(PropertyValueRef::Brush(Brush::Solid(*color)))
+                        }
+                        Property::Inherited | Property::Set(Brush::Theme(_)) => None,
+                    },
+                );
+                visit(
+                    PropertyId::ButtonForeground,
+                    match &values.foreground {
+                        Property::Set(Brush::Solid(color)) => {
+                            Some(PropertyValueRef::Brush(Brush::Solid(*color)))
+                        }
+                        Property::Inherited | Property::Set(Brush::Theme(_)) => None,
+                    },
+                );
+                visit(
+                    PropertyId::ButtonIsHitTestVisible,
+                    match &values.is_hit_test_visible {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
                     },
@@ -10814,6 +11288,13 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(value) => Some(PropertyValueRef::DragDropPolicy(value)),
                     },
                 );
+                visit(
+                    PropertyId::BorderIsHitTestVisible,
+                    match &values.is_hit_test_visible {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
             }
             Self::BreadcrumbBar(values) => {
                 visit(
@@ -10837,6 +11318,20 @@ impl MountedPropsExt for MountedProps {
                     match &values.spacing {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::F64(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::StackPanelPadding,
+                    match &values.padding {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Thickness(value)),
+                    },
+                );
+                visit(
+                    PropertyId::StackPanelIsHitTestVisible,
+                    match &values.is_hit_test_visible {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
                     },
                 );
             }
@@ -10902,6 +11397,13 @@ impl MountedPropsExt for MountedProps {
                     },
                 );
                 visit(
+                    PropertyId::GridIsHitTestVisible,
+                    match &values.is_hit_test_visible {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
                     PropertyId::GridRows,
                     values.rows.as_set().map(PropertyValueRef::GridLengths),
                 );
@@ -10937,6 +11439,20 @@ impl MountedPropsExt for MountedProps {
                     match &values.accepts_return {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::TextBoxFontSize,
+                    match &values.font_size {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::F64(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::TextBoxPadding,
+                    match &values.padding {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Thickness(value)),
                     },
                 );
                 visit(
@@ -11152,6 +11668,13 @@ impl MountedPropsExt for MountedProps {
             }
             Self::NavigationView(values) => {
                 visit(
+                    PropertyId::NavigationViewResources,
+                    match &values.resource_overrides {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::ResourceOverrides(value)),
+                    },
+                );
+                visit(
                     PropertyId::NavigationViewIsEnabled,
                     match &values.is_enabled {
                         Property::Inherited => None,
@@ -11338,6 +11861,22 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
                     },
                 );
+                visit(
+                    PropertyId::ProgressBarForeground,
+                    match &values.foreground {
+                        Property::Set(Brush::Solid(color)) => {
+                            Some(PropertyValueRef::Brush(Brush::Solid(*color)))
+                        }
+                        Property::Inherited | Property::Set(Brush::Theme(_)) => None,
+                    },
+                );
+                visit(
+                    PropertyId::ProgressBarIsHitTestVisible,
+                    match &values.is_hit_test_visible {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
             }
             Self::ToggleSwitch(values) => {
                 visit(
@@ -11384,6 +11923,20 @@ impl MountedPropsExt for MountedProps {
                     match &values.is_enabled {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::ToggleButtonResources,
+                    match &values.resource_overrides {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::ResourceOverrides(value)),
+                    },
+                );
+                visit(
+                    PropertyId::ToggleButtonCornerRadius,
+                    match &values.corner_radius {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::CornerRadius(value)),
                     },
                 );
             }
@@ -11559,6 +12112,13 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(value) => Some(PropertyValueRef::Stretch(*value)),
                     },
                 );
+                visit(
+                    PropertyId::ImageIsHitTestVisible,
+                    match &values.is_hit_test_visible {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
             }
             Self::ProgressRing(values) => {
                 visit(
@@ -11599,6 +12159,22 @@ impl MountedPropsExt for MountedProps {
                 visit(
                     PropertyId::ProgressRingIsEnabled,
                     match &values.is_enabled {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::ProgressRingForeground,
+                    match &values.foreground {
+                        Property::Set(Brush::Solid(color)) => {
+                            Some(PropertyValueRef::Brush(Brush::Solid(*color)))
+                        }
+                        Property::Inherited | Property::Set(Brush::Theme(_)) => None,
+                    },
+                );
+                visit(
+                    PropertyId::ProgressRingIsHitTestVisible,
+                    match &values.is_hit_test_visible {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
                     },
@@ -12634,7 +13210,12 @@ impl MountedPropsExt for MountedProps {
                 None,
                 None,
             ]),
-            Self::Button(_) => ThemeStyle::default(),
+            Self::Button(values) => ThemeStyle::new([
+                values.background.as_set().copied().and_then(Brush::theme),
+                values.foreground.as_set().copied().and_then(Brush::theme),
+                None,
+                None,
+            ]),
             Self::HyperlinkButton(_) => ThemeStyle::default(),
             Self::RepeatButton(_) => ThemeStyle::default(),
             Self::Border(values) => ThemeStyle::new([
@@ -12666,7 +13247,12 @@ impl MountedPropsExt for MountedProps {
             Self::NavigationView(_) => ThemeStyle::default(),
             Self::NavigationViewItem(_) => ThemeStyle::default(),
             Self::SplitView(_) => ThemeStyle::default(),
-            Self::ProgressBar(_) => ThemeStyle::default(),
+            Self::ProgressBar(values) => ThemeStyle::new([
+                values.foreground.as_set().copied().and_then(Brush::theme),
+                None,
+                None,
+                None,
+            ]),
             Self::ToggleSwitch(_) => ThemeStyle::default(),
             Self::CheckBox(_) => ThemeStyle::default(),
             Self::ToggleButton(_) => ThemeStyle::default(),
@@ -12679,7 +13265,12 @@ impl MountedPropsExt for MountedProps {
             Self::ScrollViewer(_) => ThemeStyle::default(),
             Self::ScrollView(_) => ThemeStyle::default(),
             Self::Image(_) => ThemeStyle::default(),
-            Self::ProgressRing(_) => ThemeStyle::default(),
+            Self::ProgressRing(values) => ThemeStyle::new([
+                values.foreground.as_set().copied().and_then(Brush::theme),
+                None,
+                None,
+                None,
+            ]),
             Self::ListBox(_) => ThemeStyle::default(),
             Self::Rectangle(values) => ThemeStyle::new([
                 values.fill.as_set().copied().and_then(Brush::theme),
@@ -12759,9 +13350,24 @@ impl MountedPropsExt for MountedProps {
 impl MountedEventsExt for MountedProps {
     fn visit_events(&self, visit: &mut dyn FnMut(EventId, bool)) {
         match self {
-            Self::TextBlock(_) => {}
+            Self::TextBlock(values) => {
+                visit(EventId::TextBlockTapped, values.on_tapped.is_some());
+            }
             Self::Button(values) => {
-                visit(EventId::ButtonClick, values.on_click.is_some());
+                visit(
+                    EventId::ButtonTapped,
+                    values
+                        .events
+                        .as_ref()
+                        .is_some_and(|events| events.on_tapped.is_some()),
+                );
+                visit(
+                    EventId::ButtonClick,
+                    values
+                        .events
+                        .as_ref()
+                        .is_some_and(|events| events.on_click.is_some()),
+                );
             }
             Self::HyperlinkButton(values) => {
                 visit(EventId::HyperlinkButtonClick, values.on_click.is_some());
@@ -12857,6 +13463,13 @@ impl MountedEventsExt for MountedProps {
                         .as_ref()
                         .is_some_and(|events| events.on_pointer_canceled.is_some()),
                 );
+                visit(
+                    EventId::BorderTapped,
+                    values
+                        .events
+                        .as_ref()
+                        .is_some_and(|events| events.on_tapped.is_some()),
+                );
             }
             Self::BreadcrumbBar(values) => {
                 visit(
@@ -12864,9 +13477,26 @@ impl MountedEventsExt for MountedProps {
                     values.on_item_clicked.is_some(),
                 );
             }
-            Self::StackPanel(_) => {}
+            Self::StackPanel(values) => {
+                visit(EventId::StackPanelTapped, values.on_tapped.is_some());
+            }
             Self::VariableSizedWrapGrid(_) => {}
-            Self::Grid(_) => {}
+            Self::Grid(values) => {
+                visit(
+                    EventId::GridTapped,
+                    values
+                        .events
+                        .as_ref()
+                        .is_some_and(|events| events.on_tapped.is_some()),
+                );
+                visit(
+                    EventId::GridPointerWheelChanged,
+                    values
+                        .events
+                        .as_ref()
+                        .is_some_and(|events| events.on_pointer_wheel_changed.is_some()),
+                );
+            }
             Self::TextBox(_) => {
                 visit(EventId::TextBoxTextChanged, true);
             }
@@ -12957,6 +13587,13 @@ impl MountedEventsExt for MountedProps {
             }
             Self::ScrollView(_) => {}
             Self::Image(values) => {
+                visit(
+                    EventId::ImageTapped,
+                    values
+                        .events
+                        .as_ref()
+                        .is_some_and(|events| events.on_tapped.is_some()),
+                );
                 visit(
                     EventId::ImageImageOpened,
                     values
@@ -13174,9 +13811,19 @@ impl MountedEventsExt for MountedProps {
     }
     fn dispatch_event(&self, event: EventId, payload: &EventPayload) -> Option<bool> {
         match (self, event, payload) {
-            (Self::Button(values), EventId::ButtonClick, EventPayload::Unit) => {
-                values.on_click.as_ref().map(|callback| callback.call(()))
+            (Self::TextBlock(values), EventId::TextBlockTapped, EventPayload::Unit) => {
+                values.on_tapped.as_ref().map(|callback| callback.call(()))
             }
+            (Self::Button(values), EventId::ButtonTapped, EventPayload::Unit) => values
+                .events
+                .as_ref()
+                .and_then(|events| events.on_tapped.as_ref())
+                .map(|callback| callback.call(())),
+            (Self::Button(values), EventId::ButtonClick, EventPayload::Unit) => values
+                .events
+                .as_ref()
+                .and_then(|events| events.on_click.as_ref())
+                .map(|callback| callback.call(())),
             (Self::HyperlinkButton(values), EventId::HyperlinkButtonClick, EventPayload::Unit) => {
                 values.on_click.as_ref().map(|callback| callback.call(()))
             }
@@ -13271,6 +13918,11 @@ impl MountedEventsExt for MountedProps {
                 .as_ref()
                 .and_then(|events| events.on_pointer_canceled.as_ref())
                 .map(|callback| callback.call(())),
+            (Self::Border(values), EventId::BorderTapped, EventPayload::Unit) => values
+                .events
+                .as_ref()
+                .and_then(|events| events.on_tapped.as_ref())
+                .map(|callback| callback.call(())),
             (
                 Self::BreadcrumbBar(values),
                 EventId::BreadcrumbBarItemClicked,
@@ -13279,6 +13931,23 @@ impl MountedEventsExt for MountedProps {
                 .on_item_clicked
                 .as_ref()
                 .map(|callback| callback.call(value.clone())),
+            (Self::StackPanel(values), EventId::StackPanelTapped, EventPayload::Unit) => {
+                values.on_tapped.as_ref().map(|callback| callback.call(()))
+            }
+            (Self::Grid(values), EventId::GridTapped, EventPayload::Unit) => values
+                .events
+                .as_ref()
+                .and_then(|events| events.on_tapped.as_ref())
+                .map(|callback| callback.call(())),
+            (
+                Self::Grid(values),
+                EventId::GridPointerWheelChanged,
+                EventPayload::PointerEventInfo(value),
+            ) => values
+                .events
+                .as_ref()
+                .and_then(|events| events.on_pointer_wheel_changed.as_ref())
+                .map(|callback| callback.call(*value)),
             (Self::TextBox(values), EventId::TextBoxTextChanged, EventPayload::Str(value)) => {
                 values
                     .on_text_changed
@@ -13324,11 +13993,11 @@ impl MountedEventsExt for MountedProps {
                 .as_ref()
                 .and_then(|events| events.on_value_changed.as_ref())
                 .map(|callback| callback.call(*value)),
-            (Self::Slider(values), EventId::SliderSizeChanged, EventPayload::Unit) => values
+            (Self::Slider(values), EventId::SliderSizeChanged, EventPayload::F64(value)) => values
                 .events
                 .as_ref()
                 .and_then(|events| events.on_size_changed.as_ref())
-                .map(|callback| callback.call(())),
+                .map(|callback| callback.call(*value)),
             (Self::TitleBar(values), EventId::TitleBarBackRequested, EventPayload::Unit) => values
                 .events
                 .as_ref()
@@ -13421,6 +14090,11 @@ impl MountedEventsExt for MountedProps {
                     .as_ref()
                     .map(|callback| callback.call(()))
             }
+            (Self::Image(values), EventId::ImageTapped, EventPayload::Unit) => values
+                .events
+                .as_ref()
+                .and_then(|events| events.on_tapped.as_ref())
+                .map(|callback| callback.call(())),
             (Self::Image(values), EventId::ImageImageOpened, EventPayload::Unit) => values
                 .events
                 .as_ref()
@@ -13682,11 +14356,11 @@ impl MountedEventsExt for MountedProps {
             (
                 Self::RefreshContainer(values),
                 EventId::RefreshContainerRefreshRequested,
-                EventPayload::Unit,
+                EventPayload::RefreshDeferral(value),
             ) => values
                 .on_refresh_requested
                 .as_ref()
-                .map(|callback| callback.call(())),
+                .map(|callback| callback.call(value.clone())),
             _ => None,
         }
     }
@@ -14230,6 +14904,8 @@ pub(crate) struct TextBlockMountedProps {
     max_lines: Property<i32>,
     text_trimming: Property<TextTrimming>,
     foreground: Property<Brush>,
+    is_hit_test_visible: Property<bool>,
+    on_tapped: Option<Callback<()>>,
 }
 impl PartialEq for TextBlockMountedProps {
     fn eq(&self, other: &Self) -> bool {
@@ -14242,27 +14918,39 @@ impl PartialEq for TextBlockMountedProps {
             && self.max_lines == other.max_lines
             && self.text_trimming == other.text_trimming
             && self.foreground == other.foreground
+            && self.is_hit_test_visible == other.is_hit_test_visible
+            && self.on_tapped == other.on_tapped
     }
 }
 #[derive(Clone, Debug)]
 pub(crate) struct ButtonMountedProps {
     is_enabled: Property<bool>,
+    padding: Property<Thickness>,
+    corner_radius: Property<CornerRadius>,
+    background: Property<Brush>,
+    foreground: Property<Brush>,
+    is_hit_test_visible: Property<bool>,
     horizontal_content_alignment: Property<HorizontalAlignment>,
     vertical_content_alignment: Property<VerticalAlignment>,
     resource_overrides: Property<ResourceOverrides>,
     style: Property<ButtonStyle>,
     key_accelerators: Property<KeyAccelerators>,
-    on_click: Option<Callback<()>>,
+    events: Option<std::rc::Rc<ButtonEvents>>,
 }
 impl PartialEq for ButtonMountedProps {
     fn eq(&self, other: &Self) -> bool {
         true && self.is_enabled == other.is_enabled
+            && self.padding == other.padding
+            && self.corner_radius == other.corner_radius
+            && self.background == other.background
+            && self.foreground == other.foreground
+            && self.is_hit_test_visible == other.is_hit_test_visible
             && self.horizontal_content_alignment == other.horizontal_content_alignment
             && self.vertical_content_alignment == other.vertical_content_alignment
             && self.resource_overrides == other.resource_overrides
             && self.style == other.style
             && self.key_accelerators == other.key_accelerators
-            && self.on_click == other.on_click
+            && self.events == other.events
     }
 }
 #[derive(Clone, Debug)]
@@ -14305,6 +14993,7 @@ pub(crate) struct BorderMountedProps {
     scale_transition: Property<std::time::Duration>,
     capture_pointer_on_press: Property<bool>,
     drop_policy: Property<DragDropPolicy>,
+    is_hit_test_visible: Property<bool>,
     events: Option<std::rc::Rc<BorderEvents>>,
 }
 impl PartialEq for BorderMountedProps {
@@ -14319,6 +15008,7 @@ impl PartialEq for BorderMountedProps {
             && self.scale_transition == other.scale_transition
             && self.capture_pointer_on_press == other.capture_pointer_on_press
             && self.drop_policy == other.drop_policy
+            && self.is_hit_test_visible == other.is_hit_test_visible
             && self.events == other.events
     }
 }
@@ -14337,11 +15027,17 @@ impl PartialEq for BreadcrumbBarMountedProps {
 pub(crate) struct StackPanelMountedProps {
     orientation: Property<Orientation>,
     spacing: Property<f64>,
+    padding: Property<Thickness>,
+    is_hit_test_visible: Property<bool>,
+    on_tapped: Option<Callback<()>>,
 }
 impl PartialEq for StackPanelMountedProps {
     fn eq(&self, other: &Self) -> bool {
         true && self.orientation == other.orientation
             && f64_property_eq(&self.spacing, &other.spacing)
+            && self.padding == other.padding
+            && self.is_hit_test_visible == other.is_hit_test_visible
+            && self.on_tapped == other.on_tapped
     }
 }
 #[derive(Clone, Debug)]
@@ -14365,6 +15061,8 @@ pub(crate) struct GridMountedProps {
     column_spacing: Property<f64>,
     key_accelerators: Property<KeyAccelerators>,
     background: Property<Brush>,
+    is_hit_test_visible: Property<bool>,
+    events: Option<std::rc::Rc<GridEvents>>,
     rows: Property<std::rc::Rc<Vec<GridLength>>>,
     columns: Property<std::rc::Rc<Vec<GridLength>>>,
 }
@@ -14374,6 +15072,8 @@ impl PartialEq for GridMountedProps {
             && f64_property_eq(&self.column_spacing, &other.column_spacing)
             && self.key_accelerators == other.key_accelerators
             && self.background == other.background
+            && self.is_hit_test_visible == other.is_hit_test_visible
+            && self.events == other.events
             && self.rows == other.rows
             && self.columns == other.columns
     }
@@ -14384,6 +15084,8 @@ pub(crate) struct TextBoxMountedProps {
     placeholder_text: Property<String>,
     is_enabled: Property<bool>,
     accepts_return: Property<bool>,
+    font_size: Property<f64>,
+    padding: Property<Thickness>,
     text_wrapping: Property<TextWrapping>,
     background: Property<Brush>,
     border_brush: Property<Brush>,
@@ -14396,6 +15098,8 @@ impl PartialEq for TextBoxMountedProps {
             && self.placeholder_text == other.placeholder_text
             && self.is_enabled == other.is_enabled
             && self.accepts_return == other.accepts_return
+            && f64_property_eq(&self.font_size, &other.font_size)
+            && self.padding == other.padding
             && self.text_wrapping == other.text_wrapping
             && self.background == other.background
             && self.border_brush == other.border_brush
@@ -14498,6 +15202,7 @@ impl PartialEq for TitleBarMountedProps {
 }
 #[derive(Clone, Debug)]
 pub(crate) struct NavigationViewMountedProps {
+    resource_overrides: Property<ResourceOverrides>,
     is_enabled: Property<bool>,
     pane_display_mode: Property<NavigationViewPaneDisplayMode>,
     is_pane_toggle_button_visible: Property<bool>,
@@ -14512,7 +15217,8 @@ pub(crate) struct NavigationViewMountedProps {
 }
 impl PartialEq for NavigationViewMountedProps {
     fn eq(&self, other: &Self) -> bool {
-        true && self.is_enabled == other.is_enabled
+        true && self.resource_overrides == other.resource_overrides
+            && self.is_enabled == other.is_enabled
             && self.pane_display_mode == other.pane_display_mode
             && self.is_pane_toggle_button_visible == other.is_pane_toggle_button_visible
             && self.is_back_button_visible == other.is_back_button_visible
@@ -14566,6 +15272,8 @@ pub(crate) struct ProgressBarMountedProps {
     show_error: Property<bool>,
     show_paused: Property<bool>,
     is_enabled: Property<bool>,
+    foreground: Property<Brush>,
+    is_hit_test_visible: Property<bool>,
 }
 impl PartialEq for ProgressBarMountedProps {
     fn eq(&self, other: &Self) -> bool {
@@ -14576,6 +15284,8 @@ impl PartialEq for ProgressBarMountedProps {
             && self.show_error == other.show_error
             && self.show_paused == other.show_paused
             && self.is_enabled == other.is_enabled
+            && self.foreground == other.foreground
+            && self.is_hit_test_visible == other.is_hit_test_visible
     }
 }
 #[derive(Clone, Debug)]
@@ -14608,12 +15318,16 @@ impl PartialEq for CheckBoxMountedProps {
 pub(crate) struct ToggleButtonMountedProps {
     is_checked: Property<bool>,
     is_enabled: Property<bool>,
+    resource_overrides: Property<ResourceOverrides>,
+    corner_radius: Property<CornerRadius>,
     on_is_checked_changed: Option<Callback<bool>>,
 }
 impl PartialEq for ToggleButtonMountedProps {
     fn eq(&self, other: &Self) -> bool {
         true && self.is_checked == other.is_checked
             && self.is_enabled == other.is_enabled
+            && self.resource_overrides == other.resource_overrides
+            && self.corner_radius == other.corner_radius
             && self.on_is_checked_changed == other.on_is_checked_changed
     }
 }
@@ -14721,6 +15435,7 @@ pub(crate) struct ImageMountedProps {
     source: Property<ImageValue>,
     decode_width: Property<i32>,
     stretch: Property<Stretch>,
+    is_hit_test_visible: Property<bool>,
     events: Option<std::rc::Rc<ImageEvents>>,
 }
 impl PartialEq for ImageMountedProps {
@@ -14728,6 +15443,7 @@ impl PartialEq for ImageMountedProps {
         true && self.source == other.source
             && self.decode_width == other.decode_width
             && self.stretch == other.stretch
+            && self.is_hit_test_visible == other.is_hit_test_visible
             && self.events == other.events
     }
 }
@@ -14739,6 +15455,8 @@ pub(crate) struct ProgressRingMountedProps {
     is_indeterminate: Property<bool>,
     is_active: Property<bool>,
     is_enabled: Property<bool>,
+    foreground: Property<Brush>,
+    is_hit_test_visible: Property<bool>,
 }
 impl PartialEq for ProgressRingMountedProps {
     fn eq(&self, other: &Self) -> bool {
@@ -14748,6 +15466,8 @@ impl PartialEq for ProgressRingMountedProps {
             && self.is_indeterminate == other.is_indeterminate
             && self.is_active == other.is_active
             && self.is_enabled == other.is_enabled
+            && self.foreground == other.foreground
+            && self.is_hit_test_visible == other.is_hit_test_visible
     }
 }
 #[derive(Clone, Debug)]
@@ -15452,7 +16172,7 @@ impl PartialEq for SwipeControlMountedProps {
 #[derive(Clone, Debug)]
 pub(crate) struct RefreshContainerMountedProps {
     pull_direction: Property<RefreshPullDirection>,
-    on_refresh_requested: Option<Callback<()>>,
+    on_refresh_requested: Option<Callback<RefreshDeferral>>,
 }
 impl PartialEq for RefreshContainerMountedProps {
     fn eq(&self, other: &Self) -> bool {
@@ -15616,7 +16336,13 @@ pub enum PropertyId {
     TextBlockMaxLines,
     TextBlockTextTrimming,
     TextBlockForeground,
+    TextBlockIsHitTestVisible,
     ButtonIsEnabled,
+    ButtonPadding,
+    ButtonCornerRadius,
+    ButtonBackground,
+    ButtonForeground,
+    ButtonIsHitTestVisible,
     ButtonHorizontalContentAlignment,
     ButtonVerticalContentAlignment,
     ButtonResources,
@@ -15637,9 +16363,12 @@ pub enum PropertyId {
     BorderScaleTransition,
     BorderCapturePointerOnPress,
     BorderAllowDrop,
+    BorderIsHitTestVisible,
     BreadcrumbBarItemsSource,
     StackPanelOrientation,
     StackPanelSpacing,
+    StackPanelPadding,
+    StackPanelIsHitTestVisible,
     VariableSizedWrapGridItemWidth,
     VariableSizedWrapGridItemHeight,
     VariableSizedWrapGridMaximumRowsOrColumns,
@@ -15648,10 +16377,13 @@ pub enum PropertyId {
     GridColumnSpacing,
     GridKeyboardAccelerators,
     GridBackground,
+    GridIsHitTestVisible,
     TextBoxText,
     TextBoxPlaceholderText,
     TextBoxIsEnabled,
     TextBoxAcceptsReturn,
+    TextBoxFontSize,
+    TextBoxPadding,
     TextBoxTextWrapping,
     TextBoxBackground,
     TextBoxBorderBrush,
@@ -15680,6 +16412,7 @@ pub enum PropertyId {
     TitleBarIsBackButtonVisible,
     TitleBarIsBackButtonEnabled,
     TitleBarIsPaneToggleButtonVisible,
+    NavigationViewResources,
     NavigationViewIsEnabled,
     NavigationViewPaneDisplayMode,
     NavigationViewIsPaneToggleButtonVisible,
@@ -15705,12 +16438,16 @@ pub enum PropertyId {
     ProgressBarShowError,
     ProgressBarShowPaused,
     ProgressBarIsEnabled,
+    ProgressBarForeground,
+    ProgressBarIsHitTestVisible,
     ToggleSwitchIsOn,
     ToggleSwitchIsEnabled,
     CheckBoxIsChecked,
     CheckBoxIsEnabled,
     ToggleButtonIsChecked,
     ToggleButtonIsEnabled,
+    ToggleButtonResources,
+    ToggleButtonCornerRadius,
     RadioButtonGroupName,
     RadioButtonIsChecked,
     RadioButtonIsEnabled,
@@ -15732,12 +16469,15 @@ pub enum PropertyId {
     ImageSource,
     ImageDecodeWidth,
     ImageStretch,
+    ImageIsHitTestVisible,
     ProgressRingMinimum,
     ProgressRingMaximum,
     ProgressRingValue,
     ProgressRingIsIndeterminate,
     ProgressRingIsActive,
     ProgressRingIsEnabled,
+    ProgressRingForeground,
+    ProgressRingIsHitTestVisible,
     ListBoxIsEnabled,
     RectangleFill,
     RectangleStroke,
@@ -15871,6 +16611,8 @@ pub enum EventId {
     OwnedCommandInvoked,
     OwnedMenuItemInvoked,
     OwnedSwipeInvoked,
+    TextBlockTapped,
+    ButtonTapped,
     ButtonClick,
     HyperlinkButtonClick,
     RepeatButtonClick,
@@ -15886,7 +16628,11 @@ pub enum EventId {
     BorderPointerWheelChanged,
     BorderPointerCaptureLost,
     BorderPointerCanceled,
+    BorderTapped,
     BreadcrumbBarItemClicked,
+    StackPanelTapped,
+    GridTapped,
+    GridPointerWheelChanged,
     TextBoxTextChanged,
     AutoSuggestBoxTextChanged,
     AutoSuggestBoxSuggestionChosen,
@@ -15907,6 +16653,7 @@ pub enum EventId {
     RadioButtonsSelectionChanged,
     InfoBarClosed,
     ScrollViewerViewChanged,
+    ImageTapped,
     ImageImageOpened,
     ImageImageFailed,
     ListBoxSelectionChanged,
@@ -16450,6 +17197,7 @@ pub enum EventPayload {
     OptionalF64(Option<f64>),
     OptionalTimeSpan(Option<windows_time::TimeSpan>),
     PointerEventInfo(PointerEventInfo),
+    RefreshDeferral(RefreshDeferral),
     SelectionChange(SelectionChange),
     SelectionIndex(Option<usize>),
     Str(String),
@@ -16478,6 +17226,7 @@ impl PartialEq for EventPayload {
             },
             (Self::OptionalTimeSpan(left), Self::OptionalTimeSpan(right)) => left == right,
             (Self::PointerEventInfo(left), Self::PointerEventInfo(right)) => left == right,
+            (Self::RefreshDeferral(left), Self::RefreshDeferral(right)) => left == right,
             (Self::SelectionChange(left), Self::SelectionChange(right)) => left == right,
             (Self::SelectionIndex(left), Self::SelectionIndex(right)) => left == right,
             (Self::Str(left), Self::Str(right)) => left == right,
@@ -16665,8 +17414,25 @@ const TEXT_BLOCK_PROPERTIES: &[PropertyDescriptor] = &[
         feedback_contract: None,
         observes_feedback: false,
     },
+    PropertyDescriptor {
+        id: PropertyId::TextBlockIsHitTestVisible,
+        name: "IsHitTestVisible",
+        field: "is_hit_test_visible",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
 ];
-const TEXT_BLOCK_EVENTS: &[EventDescriptor] = &[];
+const TEXT_BLOCK_EVENTS: &[EventDescriptor] = &[EventDescriptor {
+    id: EventId::TextBlockTapped,
+    name: "Tapped",
+    field: "on_tapped",
+    payload: "Unit",
+    interface: "Microsoft.UI.Xaml.IUIElement",
+}];
 const TEXT_BLOCK_SLOTS: &[SlotDescriptor] = &[];
 const BUTTON_PROPERTIES: &[PropertyDescriptor] = &[
     PropertyDescriptor {
@@ -16675,6 +17441,61 @@ const BUTTON_PROPERTIES: &[PropertyDescriptor] = &[
         field: "is_enabled",
         value: "Bool",
         interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ButtonPadding,
+        name: "Padding",
+        field: "padding",
+        value: "Thickness",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ButtonCornerRadius,
+        name: "CornerRadius",
+        field: "corner_radius",
+        value: "CornerRadius",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ButtonBackground,
+        name: "Background",
+        field: "background",
+        value: "Brush",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ButtonForeground,
+        name: "Foreground",
+        field: "foreground",
+        value: "Brush",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ButtonIsHitTestVisible,
+        name: "IsHitTestVisible",
+        field: "is_hit_test_visible",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.IUIElement",
         clearable: true,
         feedback: None,
         feedback_contract: None,
@@ -16736,13 +17557,22 @@ const BUTTON_PROPERTIES: &[PropertyDescriptor] = &[
         observes_feedback: false,
     },
 ];
-const BUTTON_EVENTS: &[EventDescriptor] = &[EventDescriptor {
-    id: EventId::ButtonClick,
-    name: "Click",
-    field: "on_click",
-    payload: "Unit",
-    interface: "Microsoft.UI.Xaml.Controls.Primitives.IButtonBase",
-}];
+const BUTTON_EVENTS: &[EventDescriptor] = &[
+    EventDescriptor {
+        id: EventId::ButtonTapped,
+        name: "Tapped",
+        field: "on_tapped",
+        payload: "Unit",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+    },
+    EventDescriptor {
+        id: EventId::ButtonClick,
+        name: "Click",
+        field: "on_click",
+        payload: "Unit",
+        interface: "Microsoft.UI.Xaml.Controls.Primitives.IButtonBase",
+    },
+];
 const BUTTON_SLOTS: &[SlotDescriptor] = &[];
 const HYPERLINK_BUTTON_PROPERTIES: &[PropertyDescriptor] = &[
     PropertyDescriptor {
@@ -16930,6 +17760,17 @@ const BORDER_PROPERTIES: &[PropertyDescriptor] = &[
         feedback_contract: None,
         observes_feedback: false,
     },
+    PropertyDescriptor {
+        id: PropertyId::BorderIsHitTestVisible,
+        name: "IsHitTestVisible",
+        field: "is_hit_test_visible",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
 ];
 const BORDER_EVENTS: &[EventDescriptor] = &[
     EventDescriptor {
@@ -17016,6 +17857,13 @@ const BORDER_EVENTS: &[EventDescriptor] = &[
         payload: "Unit",
         interface: "Microsoft.UI.Xaml.IUIElement",
     },
+    EventDescriptor {
+        id: EventId::BorderTapped,
+        name: "Tapped",
+        field: "on_tapped",
+        payload: "Unit",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+    },
 ];
 const BORDER_SLOTS: &[SlotDescriptor] = &[];
 const BREADCRUMB_BAR_PROPERTIES: &[PropertyDescriptor] = &[PropertyDescriptor {
@@ -17060,8 +17908,36 @@ const STACK_PANEL_PROPERTIES: &[PropertyDescriptor] = &[
         feedback_contract: None,
         observes_feedback: false,
     },
+    PropertyDescriptor {
+        id: PropertyId::StackPanelPadding,
+        name: "Padding",
+        field: "padding",
+        value: "Thickness",
+        interface: "Microsoft.UI.Xaml.Controls.IStackPanel",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::StackPanelIsHitTestVisible,
+        name: "IsHitTestVisible",
+        field: "is_hit_test_visible",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
 ];
-const STACK_PANEL_EVENTS: &[EventDescriptor] = &[];
+const STACK_PANEL_EVENTS: &[EventDescriptor] = &[EventDescriptor {
+    id: EventId::StackPanelTapped,
+    name: "Tapped",
+    field: "on_tapped",
+    payload: "Unit",
+    interface: "Microsoft.UI.Xaml.IUIElement",
+}];
 const STACK_PANEL_SLOTS: &[SlotDescriptor] = &[];
 const VARIABLE_SIZED_WRAP_GRID_PROPERTIES: &[PropertyDescriptor] = &[
     PropertyDescriptor {
@@ -17156,8 +18032,34 @@ const GRID_PROPERTIES: &[PropertyDescriptor] = &[
         feedback_contract: None,
         observes_feedback: false,
     },
+    PropertyDescriptor {
+        id: PropertyId::GridIsHitTestVisible,
+        name: "IsHitTestVisible",
+        field: "is_hit_test_visible",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
 ];
-const GRID_EVENTS: &[EventDescriptor] = &[];
+const GRID_EVENTS: &[EventDescriptor] = &[
+    EventDescriptor {
+        id: EventId::GridTapped,
+        name: "Tapped",
+        field: "on_tapped",
+        payload: "Unit",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+    },
+    EventDescriptor {
+        id: EventId::GridPointerWheelChanged,
+        name: "PointerWheelChanged",
+        field: "on_pointer_wheel_changed",
+        payload: "PointerEventInfo",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+    },
+];
 const GRID_SLOTS: &[SlotDescriptor] = &[];
 const TEXT_BOX_PROPERTIES: &[PropertyDescriptor] = &[
     PropertyDescriptor {
@@ -17199,6 +18101,28 @@ const TEXT_BOX_PROPERTIES: &[PropertyDescriptor] = &[
         field: "accepts_return",
         value: "Bool",
         interface: "Microsoft.UI.Xaml.Controls.ITextBox",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::TextBoxFontSize,
+        name: "FontSize",
+        field: "font_size",
+        value: "F64",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::TextBoxPadding,
+        name: "Padding",
+        field: "padding",
+        value: "Thickness",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
         clearable: true,
         feedback: None,
         feedback_contract: None,
@@ -17543,7 +18467,7 @@ const SLIDER_EVENTS: &[EventDescriptor] = &[
         id: EventId::SliderSizeChanged,
         name: "SizeChanged",
         field: "on_size_changed",
-        payload: "Unit",
+        payload: "F64",
         interface: "Microsoft.UI.Xaml.IFrameworkElement",
     },
 ];
@@ -17644,6 +18568,17 @@ const TITLE_BAR_SLOTS: &[SlotDescriptor] = &[
     },
 ];
 const NAVIGATION_VIEW_PROPERTIES: &[PropertyDescriptor] = &[
+    PropertyDescriptor {
+        id: PropertyId::NavigationViewResources,
+        name: "Resources",
+        field: "resource_overrides",
+        value: "ResourceOverrides",
+        interface: "Microsoft.UI.Xaml.IFrameworkElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
     PropertyDescriptor {
         id: PropertyId::NavigationViewIsEnabled,
         name: "IsEnabled",
@@ -18032,6 +18967,28 @@ const PROGRESS_BAR_PROPERTIES: &[PropertyDescriptor] = &[
         feedback_contract: None,
         observes_feedback: false,
     },
+    PropertyDescriptor {
+        id: PropertyId::ProgressBarForeground,
+        name: "Foreground",
+        field: "foreground",
+        value: "Brush",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ProgressBarIsHitTestVisible,
+        name: "IsHitTestVisible",
+        field: "is_hit_test_visible",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
 ];
 const PROGRESS_BAR_EVENTS: &[EventDescriptor] = &[];
 const PROGRESS_BAR_SLOTS: &[SlotDescriptor] = &[];
@@ -18138,6 +19095,28 @@ const TOGGLE_BUTTON_PROPERTIES: &[PropertyDescriptor] = &[
         name: "IsEnabled",
         field: "is_enabled",
         value: "Bool",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ToggleButtonResources,
+        name: "Resources",
+        field: "resource_overrides",
+        value: "ResourceOverrides",
+        interface: "Microsoft.UI.Xaml.IFrameworkElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ToggleButtonCornerRadius,
+        name: "CornerRadius",
+        field: "corner_radius",
+        value: "CornerRadius",
         interface: "Microsoft.UI.Xaml.Controls.IControl",
         clearable: true,
         feedback: None,
@@ -18444,8 +19423,26 @@ const IMAGE_PROPERTIES: &[PropertyDescriptor] = &[
         feedback_contract: None,
         observes_feedback: false,
     },
+    PropertyDescriptor {
+        id: PropertyId::ImageIsHitTestVisible,
+        name: "IsHitTestVisible",
+        field: "is_hit_test_visible",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
 ];
 const IMAGE_EVENTS: &[EventDescriptor] = &[
+    EventDescriptor {
+        id: EventId::ImageTapped,
+        name: "Tapped",
+        field: "on_tapped",
+        payload: "Unit",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+    },
     EventDescriptor {
         id: EventId::ImageImageOpened,
         name: "ImageOpened",
@@ -18524,6 +19521,28 @@ const PROGRESS_RING_PROPERTIES: &[PropertyDescriptor] = &[
         field: "is_enabled",
         value: "Bool",
         interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ProgressRingForeground,
+        name: "Foreground",
+        field: "foreground",
+        value: "Brush",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ProgressRingIsHitTestVisible,
+        name: "IsHitTestVisible",
+        field: "is_hit_test_visible",
+        value: "Bool",
+        interface: "Microsoft.UI.Xaml.IUIElement",
         clearable: true,
         feedback: None,
         feedback_contract: None,
@@ -20498,7 +21517,7 @@ const REFRESH_CONTAINER_EVENTS: &[EventDescriptor] = &[EventDescriptor {
     id: EventId::RefreshContainerRefreshRequested,
     name: "RefreshRequested",
     field: "on_refresh_requested",
-    payload: "Unit",
+    payload: "RefreshDeferral",
     interface: "Microsoft.UI.Xaml.Controls.IRefreshContainer",
 }];
 const REFRESH_CONTAINER_SLOTS: &[SlotDescriptor] = &[];

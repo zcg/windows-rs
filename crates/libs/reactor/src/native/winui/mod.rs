@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 
 use super::*;
 use crate::Brush as ReactorBrush;
+use crate::Color as ReactorColor;
 use crate::SwipeItem as SwipeItemDef;
 use windows_core::Interface;
 
@@ -177,6 +178,7 @@ pub struct WinUiRuntime {
     subscriptions: HashMap<(NodeId, EventId), NativeSubscription>,
     theme_styles: HashMap<(MountedKind, ThemeStyle), Style>,
     virtuals: HashMap<NodeId, element_factory::VirtualHandle>,
+    window_backdrops: Rc<RefCell<HashMap<NodeId, BackdropHost>>>,
     window_closed: Rc<Cell<bool>>,
     window_observations: HashMap<NodeId, WindowObservationFlags>,
     window_hosts: HashMap<NodeId, bindings::Grid>,
@@ -332,6 +334,10 @@ fn scroll_offsets_of(viewer: &bindings::ScrollViewer) -> ScrollOffsets {
         horizontal: viewer.HorizontalOffset().unwrap_or(0.0),
         vertical: viewer.VerticalOffset().unwrap_or(0.0),
         zoom: viewer.ZoomFactor().unwrap_or(1.0),
+        extent_width: viewer.ExtentWidth().unwrap_or(0.0),
+        extent_height: viewer.ExtentHeight().unwrap_or(0.0),
+        viewport_width: viewer.ViewportWidth().unwrap_or(0.0),
+        viewport_height: viewer.ViewportHeight().unwrap_or(0.0),
     }
 }
 
@@ -447,9 +453,13 @@ fn build_swipe_items(
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct WindowVisualChanges {
     backdrop: bool,
+    backdrop_tuning: bool,
+    border: bool,
     client_size: bool,
     constraints: bool,
+    corner: bool,
     icon: bool,
+    presenter: bool,
     theme: bool,
 }
 
@@ -699,11 +709,296 @@ fn window_visual_changes(
 ) -> WindowVisualChanges {
     WindowVisualChanges {
         backdrop: previous.is_none_or(|previous| previous.backdrop != next.backdrop),
+        backdrop_tuning: previous
+            .is_none_or(|previous| previous.backdrop_tuning != next.backdrop_tuning),
+        border: previous.is_none_or(|previous| previous.border != next.border),
         client_size: previous.is_none_or(|previous| previous.client_size != next.client_size),
         constraints: previous.is_none_or(|previous| previous.constraints != next.constraints),
+        corner: previous.is_none_or(|previous| previous.corner != next.corner),
         icon: next.icon.is_some() && previous.is_none_or(|previous| previous.icon != next.icon),
+        presenter: previous.is_none_or(|previous| previous.presenter != next.presenter),
         theme: previous.is_none_or(|previous| previous.theme != next.theme),
     }
+}
+
+/// Live backdrop state for one window.
+///
+/// The controller has to outlive the call that installs it — dropping it
+/// detaches the material — so changing any material parameter means building a
+/// fresh controller rather than mutating the installed one.
+struct BackdropHost {
+    /// Keeps the controller object alive; releasing it tears the material out.
+    controller: Option<windows_core::IUnknown>,
+    targets: Option<ISystemBackdropControllerWithTargets>,
+    activated: Option<windows_core::EventRevoker>,
+}
+
+impl BackdropHost {
+    /// Releases the COM references **while the XAML runtime is still alive**.
+    ///
+    /// The timing is the whole point. On the process-exit path WinUI has already
+    /// been torn down, and `Release`-ing a backdrop controller there dereferences
+    /// a dead runtime — measured as an access violation with `IUnknown::drop` on
+    /// the stack. Every path that can run during a live session goes through here;
+    /// [`Drop`] deliberately leaks instead.
+    fn release(&mut self) {
+        if let Some(activated) = self.activated.take() {
+            activated.into_token();
+        }
+        self.targets = None;
+        self.controller = None;
+    }
+}
+
+impl Drop for BackdropHost {
+    fn drop(&mut self) {
+        // Reached only on the exit path, where releasing would fault (see
+        // `release`). A process on its way out has no use for accurate COM
+        // reference counts, and leaking beats crashing on the way out.
+        std::mem::forget(self.activated.take());
+        std::mem::forget(self.targets.take());
+        std::mem::forget(self.controller.take());
+    }
+}
+
+/// Installs (or removes) the window material.
+///
+/// Returns `Ok(None)` when the window should carry no material at all: either
+/// the caller asked for [`WindowBackdrop::None`], or the system cannot render
+/// the requested material and the application is expected to paint its own
+/// fallback.
+fn rebuild_window_backdrop(
+    window: &Window,
+    visuals: WindowVisuals,
+    previous: Option<BackdropHost>,
+) -> Result<Option<BackdropHost>, RuntimeError> {
+    let target = window
+        .cast::<ICompositionSupportsSystemBackdrop>()
+        .map_err(native_error)?;
+
+    if let Some(mut previous) = previous {
+        if let Some(targets) = previous.targets.as_ref() {
+            targets
+                .RemoveSystemBackdropTarget(&target)
+                .map_err(native_error)?;
+        }
+        // Released here rather than dropped: this runs inside a live UI session,
+        // so the COM references can go immediately — otherwise every slider tick
+        // would leave another controller's render resources behind.
+        previous.release();
+    }
+
+    // The XAML `SystemBackdrop` path and a Composition controller both drive the
+    // same surface; holding both paints the material twice.
+    window
+        .cast::<IWindow2>()
+        .map_err(native_error)?
+        .SetSystemBackdrop(None::<&SystemBackdrop>)
+        .map_err(native_error)?;
+
+    if visuals.backdrop == WindowBackdrop::None {
+        return Ok(None);
+    }
+
+    let tuning = visuals.backdrop_tuning;
+    let (controller, targets): (windows_core::IUnknown, ISystemBackdropControllerWithTargets) =
+        match visuals.backdrop {
+            WindowBackdrop::Mica | WindowBackdrop::MicaAlt => {
+                if !MicaController::IsSupported().map_err(native_error)? {
+                    return Ok(None);
+                }
+                let controller = MicaController::new().map_err(native_error)?;
+                controller
+                    .cast::<IMicaController2>()
+                    .map_err(native_error)?
+                    .SetKind(if visuals.backdrop == WindowBackdrop::MicaAlt {
+                        MicaKind::BaseAlt
+                    } else {
+                        MicaKind::Base
+                    })
+                    .map_err(native_error)?;
+                if let Some(value) = tuning.tint_opacity {
+                    controller.SetTintOpacity(value as f32).map_err(native_error)?;
+                }
+                if let Some(value) = tuning.luminosity_opacity {
+                    controller
+                        .SetLuminosityOpacity(value as f32)
+                        .map_err(native_error)?;
+                }
+                if let Some(color) = tuning.tint_color {
+                    controller
+                        .SetTintColor(native_color(color))
+                        .map_err(native_error)?;
+                }
+                if let Some(color) = tuning.fallback_color {
+                    controller
+                        .SetFallbackColor(native_color(color))
+                        .map_err(native_error)?;
+                }
+                let targets = controller
+                    .cast::<ISystemBackdropControllerWithTargets>()
+                    .map_err(native_error)?;
+                (controller.cast().map_err(native_error)?, targets)
+            }
+            WindowBackdrop::Acrylic | WindowBackdrop::AcrylicThin | WindowBackdrop::Solid => {
+                if !DesktopAcrylicController::IsSupported().map_err(native_error)? {
+                    return Ok(None);
+                }
+                let controller = DesktopAcrylicController::new().map_err(native_error)?;
+                controller
+                    .cast::<IDesktopAcrylicController3>()
+                    .map_err(native_error)?
+                    .SetKind(if visuals.backdrop == WindowBackdrop::AcrylicThin {
+                        DesktopAcrylicKind::Thin
+                    } else {
+                        DesktopAcrylicKind::Base
+                    })
+                    .map_err(native_error)?;
+
+                if visuals.backdrop == WindowBackdrop::Solid {
+                    // A fully opaque tint over the blur *is* a flat colour: the
+                    // desktop sample is completely covered, so this needs no
+                    // separate path and no extra DWM attribute.
+                    controller
+                        .SetTintOpacity(tuning.tint_opacity.unwrap_or(1.0) as f32)
+                        .map_err(native_error)?;
+                    controller.SetLuminosityOpacity(0.0).map_err(native_error)?;
+                } else {
+                    if let Some(value) = tuning.tint_opacity {
+                        controller.SetTintOpacity(value as f32).map_err(native_error)?;
+                    }
+                    if let Some(value) = tuning.luminosity_opacity {
+                        controller
+                            .SetLuminosityOpacity(value as f32)
+                            .map_err(native_error)?;
+                    }
+                }
+                if let Some(color) = tuning.tint_color {
+                    controller
+                        .SetTintColor(native_color(color))
+                        .map_err(native_error)?;
+                }
+                if let Some(color) = tuning.fallback_color {
+                    controller
+                        .SetFallbackColor(native_color(color))
+                        .map_err(native_error)?;
+                }
+                let targets = controller
+                    .cast::<ISystemBackdropControllerWithTargets>()
+                    .map_err(native_error)?;
+                (controller.cast().map_err(native_error)?, targets)
+            }
+            WindowBackdrop::None => unreachable!("`None` returned above"),
+        };
+
+    let configuration = SystemBackdropConfiguration::new().map_err(native_error)?;
+    configuration.SetIsInputActive(true).map_err(native_error)?;
+    configuration
+        .SetTheme(match visuals.theme {
+            WindowTheme::Light => SystemBackdropTheme::Light,
+            WindowTheme::Dark => SystemBackdropTheme::Dark,
+            WindowTheme::System => SystemBackdropTheme::Default,
+        })
+        .map_err(native_error)?;
+
+    targets
+        .AddSystemBackdropTarget(&target)
+        .map_err(native_error)?;
+    targets
+        .SetSystemBackdropConfiguration(&configuration)
+        .map_err(native_error)?;
+
+    // An inactive window renders its material in the lost-focus appearance.
+    // Nothing else updates this flag, so without the hook the material keeps
+    // whichever state the window happened to be created in.
+    let activated_configuration = configuration.clone();
+    let activated = window
+        .Activated(move |_, args| {
+            if let Some(args) = args.as_ref()
+                && let Ok(state) = args.WindowActivationState()
+            {
+                let _ = activated_configuration
+                    .SetIsInputActive(state != WindowActivationState::Deactivated);
+            }
+        })
+        .map_err(native_error)?;
+
+    Ok(Some(BackdropHost {
+        controller: Some(controller),
+        targets: Some(targets),
+        activated: Some(activated),
+    }))
+}
+
+fn native_color(color: ReactorColor) -> bindings::Color {
+    bindings::Color {
+        a: color.a,
+        r: color.r,
+        g: color.g,
+        b: color.b,
+    }
+}
+
+/// Applies the window outline and corner rounding through DWM.
+///
+/// Both are recorded on the window itself (`DWMWINDOWATTRIBUTE` is window state,
+/// not per-frame state), so they survive until the next change.
+fn apply_window_frame(hwnd: HWND, visuals: WindowVisuals) -> Result<(), RuntimeError> {
+    let corner = match visuals.corner {
+        WindowCorner::Default => None,
+        WindowCorner::DoNotRound => Some(DWMWCP_DONOTROUND),
+        WindowCorner::RoundSmall => Some(DWMWCP_ROUNDSMALL),
+        WindowCorner::Round => Some(DWMWCP_ROUND),
+    };
+    let border = match visuals.border {
+        WindowBorder::Default => None,
+        // `DWMWA_COLOR_NONE` is DWM's documented "no outline" sentinel. An
+        // application drawing its own outline wants exactly this: the system
+        // outline does not share geometry with a self-drawn one, and the two
+        // together read as a doubled hairline around the corners.
+        WindowBorder::Hidden => Some(0xFFFF_FFFE_u32),
+        WindowBorder::Color(color) => Some(
+            // DWM takes a `COLORREF`, whose high byte must be zero: an alpha
+            // there is rejected outright (`E_INVALIDARG`) rather than ignored, so
+            // the system outline cannot be drawn partially transparent. An
+            // application that wants a soft hairline draws its own and asks for
+            // `Hidden` here.
+            (u32::from(color.r) << 16) | (u32::from(color.g) << 8) | u32::from(color.b),
+        ),
+    };
+
+    unsafe {
+        if let Some(corner) = corner {
+            let value = corner;
+            // A rejection here is not fatal: corner rounding is decoration, and
+            // DWM answers `E_INVALIDARG` on any system that predates the
+            // attribute. Losing it must not take the window down.
+            if let Err(error) = DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_WINDOW_CORNER_PREFERENCE as u32,
+                std::ptr::from_ref(&value).cast(),
+                size_of_val(&value) as u32,
+            )
+            .ok()
+            {
+                eprintln!("windows-reactor: DWMWA_WINDOW_CORNER_PREFERENCE rejected: {error}");
+            }
+        }
+        if let Some(border) = border {
+            let value = border;
+            if let Err(error) = DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_BORDER_COLOR as u32,
+                std::ptr::from_ref(&value).cast(),
+                size_of_val(&value) as u32,
+            )
+            .ok()
+            {
+                eprintln!("windows-reactor: DWMWA_BORDER_COLOR rejected: {error}");
+            }
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -725,9 +1020,13 @@ mod window_visual_tests {
             window_visual_changes(Some(previous), next),
             WindowVisualChanges {
                 backdrop: false,
+                backdrop_tuning: false,
+                border: false,
                 client_size: false,
                 constraints: false,
+                corner: false,
                 icon: false,
+                presenter: false,
                 theme: true,
             }
         );
@@ -755,9 +1054,13 @@ mod window_visual_tests {
             window_visual_changes(Some(constrained), resized),
             WindowVisualChanges {
                 backdrop: false,
+                backdrop_tuning: false,
+                border: false,
                 client_size: true,
                 constraints: false,
+                corner: false,
                 icon: false,
+                presenter: false,
                 theme: false,
             }
         );
@@ -765,9 +1068,13 @@ mod window_visual_tests {
             window_visual_changes(Some(resized), cleared),
             WindowVisualChanges {
                 backdrop: false,
+                backdrop_tuning: false,
+                border: false,
                 client_size: false,
                 constraints: true,
+                corner: false,
                 icon: false,
+                presenter: false,
                 theme: false,
             }
         );
@@ -968,33 +1275,20 @@ impl WinUiRuntime {
             Ok(value)
         };
 
-        if changes.backdrop {
-            match visuals.backdrop {
-                WindowBackdrop::None => window_2
-                    .SetSystemBackdrop(None::<&SystemBackdrop>)
-                    .map_err(native_error)?,
-                WindowBackdrop::Mica | WindowBackdrop::MicaAlt => {
-                    let mica = MicaBackdrop::new().map_err(native_error)?;
-                    mica.SetKind(match visuals.backdrop {
-                        WindowBackdrop::Mica => MicaKind::Base,
-                        WindowBackdrop::MicaAlt => MicaKind::BaseAlt,
-                        _ => unreachable!(),
-                    })
-                    .map_err(native_error)?;
-                    let backdrop: SystemBackdrop = mica.cast().map_err(native_error)?;
-                    window_2
-                        .SetSystemBackdrop(&backdrop)
-                        .map_err(native_error)?;
-                }
-                WindowBackdrop::Acrylic => {
-                    let backdrop: SystemBackdrop = DesktopAcrylicBackdrop::new()
-                        .and_then(|backdrop| backdrop.cast())
-                        .map_err(native_error)?;
-                    window_2
-                        .SetSystemBackdrop(&backdrop)
-                        .map_err(native_error)?;
-                }
+        if changes.backdrop || changes.backdrop_tuning {
+            let backdrop_window = self
+                .windows
+                .get(&node)
+                .cloned()
+                .ok_or(RuntimeError::MissingNode(node))?;
+            let previous = self.window_backdrops.borrow_mut().remove(&node);
+            if let Some(host) = rebuild_window_backdrop(&backdrop_window, visuals, previous)? {
+                self.window_backdrops.borrow_mut().insert(node, host);
             }
+        }
+
+        if changes.corner || changes.border {
+            apply_window_frame(window_handle()?, visuals)?;
         }
 
         if changes.theme {
@@ -1066,10 +1360,18 @@ impl WinUiRuntime {
                 .map_err(native_error)?;
         }
 
+        if changes.presenter {
+            let app_window = window_2.AppWindow().map_err(native_error)?;
+            let kind = match visuals.presenter {
+                WindowPresenter::Default => AppWindowPresenterKind::Default,
+                WindowPresenter::FullScreen => AppWindowPresenterKind::FullScreen,
+            };
+            app_window.SetPresenterByKind(kind).map_err(native_error)?;
+        }
+
         if changes.client_size
             && let Some((width, height)) = visuals.client_size
-        {
-            let hwnd = window_handle()?;
+        {            let hwnd = window_handle()?;
             let dpi = unsafe { GetDpiForWindow(hwnd) }.max(96);
             let pixels = |dips: f64| (dips * f64::from(dpi) / 96.0).round() as i32;
             window_2
@@ -1527,8 +1829,23 @@ impl WinUiRuntime {
                     .map_err(native_error)?;
                 let closed = Rc::clone(&self.window_closed);
                 let identity = self.identity.get().unwrap();
+                let backdrops = Rc::clone(&self.window_backdrops);
+                let closed_node = *node;
                 let subscription = window
                     .Closed(move |_, _| {
+                        // Release this window's backdrop controller here, while the
+                        // XAML runtime is still alive.
+                        //
+                        // It has to be *this* window's: `native_window_closed` fires
+                        // for any window, and draining the whole table there tears the
+                        // material out from under every other open window — whose
+                        // composition layer then dereferences a released controller
+                        // (measured: access violation with `SerializeEffectDescription`
+                        // on the stack). It also cannot wait for `WinUiRuntime` to be
+                        // dropped: by then WinUI is gone and `Release` faults.
+                        if let Some(mut host) = backdrops.borrow_mut().remove(&closed_node) {
+                            host.release();
+                        }
                         closed.set(true);
                         dispatch_window_closed(identity);
                     })
@@ -2140,7 +2457,12 @@ impl WinUiRuntime {
                         _ => Err(RuntimeError::UnsupportedKind),
                     };
                 }
-                if *property == PropertyId::ButtonResources {
+                if matches!(
+                    *property,
+                    PropertyId::ButtonResources
+                        | PropertyId::NavigationViewResources
+                        | PropertyId::ToggleButtonResources
+                ) {
                     return match value {
                         PropertyValue::ResourceOverrides(value) => {
                             self.set_resource_overrides(*node, value)
@@ -2238,7 +2560,12 @@ impl WinUiRuntime {
                 ) {
                     return self.set_key_accelerators(*node, &KeyAccelerators::default());
                 }
-                if *property == PropertyId::ButtonResources {
+                if matches!(
+                    *property,
+                    PropertyId::ButtonResources
+                        | PropertyId::NavigationViewResources
+                        | PropertyId::ToggleButtonResources
+                ) {
                     return self.clear_resource_overrides(*node);
                 }
                 let target = PropertyTarget::resolve(self, *node, *property)?;

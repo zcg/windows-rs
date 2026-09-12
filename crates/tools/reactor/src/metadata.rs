@@ -63,6 +63,9 @@ pub enum CollectionType {
 pub enum ReadValueConversion {
     Identity,
     Field(String),
+    /// Projects the named field of a value-type payload that has no `PropValue` variant of
+    /// its own: an `f32` field is widened to the `F64` payload with an `as f64` cast.
+    FieldAsF64(String),
     Nullable,
 }
 
@@ -75,11 +78,26 @@ pub struct MetadataResolver {
     /// Value-type structs that wrap a single primitive field.
     /// Maps `(namespace, name)` to the unwrapped inner `Type`.
     single_field_types: HashMap<(String, String), (String, Type)>,
+    /// Every field of every value-type struct, keyed by `(namespace, name)` and the field's
+    /// snake_case name.
+    ///
+    /// An event payload normally stops at the event-args getter, but some events only expose
+    /// the interesting value one level deeper in a nested struct: `SizeChangedEventArgs`
+    /// carries a `Windows.Foundation.Size`, whose `width` field is the control's new layout
+    /// width. The schema's `value_field` projects such a field through this table.
+    value_fields: HashMap<(String, String), HashMap<String, Type>>,
     /// Maps enum `(namespace, name)` pairs to their variant names.
     enum_variants: HashMap<(String, String), Vec<String>>,
     /// Maps non-generic delegates to argument class short names, resolved from the
     /// delegate's `Invoke` method signature.
     delegate_args: HashMap<String, String>,
+    /// Every method a `Microsoft.UI.Xaml*` class exposes, keyed by `(class name, method name)`
+    /// and valued by the interface that declares it.
+    ///
+    /// This is a superset of `lookup`: `lookup` deliberately keeps only accessors
+    /// (`get_`/`put_`/`add_`/`remove_`), while event payloads also call plain methods such as
+    /// `RefreshRequestedEventArgs.GetDeferral`.
+    class_methods: HashMap<(String, String), InterfaceRef>,
     content_properties: HashMap<(String, String), String>,
 }
 
@@ -118,6 +136,7 @@ impl MetadataResolver {
         let mut interface_owners = HashMap::new();
         let mut base_classes = HashMap::new();
         let mut content_properties = HashMap::new();
+        let mut class_methods = HashMap::new();
 
         // Walk all types in the index, collecting method-to-interface mappings for classes
         // in Microsoft.UI.Xaml namespaces.
@@ -173,7 +192,7 @@ impl MetadataResolver {
                         })
                         .or_insert(Some(owner));
                 }
-                Self::collect_methods_for_class(&index, name, &typedef, &mut lookup);
+                Self::collect_methods_for_class(&index, name, &typedef, &mut lookup, &mut class_methods);
             }
         }
 
@@ -187,6 +206,7 @@ impl MetadataResolver {
 
         // Map single-field value types to their inner primitive type.
         let mut single_field_types = HashMap::new();
+        let mut value_fields: HashMap<(String, String), HashMap<String, Type>> = HashMap::new();
         let mut enum_variants = HashMap::new();
         for (namespace, name, typedef) in index.iter() {
             let fields: Vec<_> = typedef.fields().collect();
@@ -200,13 +220,23 @@ impl MetadataResolver {
 
             if has_value_field && !variant_names.is_empty() {
                 enum_variants.insert((namespace.to_string(), name.to_string()), variant_names);
-            } else if fields.len() == 1 {
-                let inner_ty = fields[0].ty();
-                if Self::primitive_value_for_type(&inner_ty).is_some() {
-                    single_field_types.insert(
-                        (namespace.to_string(), name.to_string()),
-                        (crate::helpers::to_snake_case(fields[0].name()), inner_ty),
-                    );
+            } else if !fields.is_empty() {
+                // Structs (value types) publish their fields so an event payload can project
+                // one of them (see `value_fields`).
+                let projected = value_fields
+                    .entry((namespace.to_string(), name.to_string()))
+                    .or_default();
+                for field in &fields {
+                    projected.insert(crate::helpers::to_snake_case(field.name()), field.ty());
+                }
+                if fields.len() == 1 {
+                    let inner_ty = fields[0].ty();
+                    if Self::primitive_value_for_type(&inner_ty).is_some() {
+                        single_field_types.insert(
+                            (namespace.to_string(), name.to_string()),
+                            (crate::helpers::to_snake_case(fields[0].name()), inner_ty),
+                        );
+                    }
                 }
             }
         }
@@ -251,8 +281,10 @@ impl MetadataResolver {
             base_classes,
             interface_owners,
             single_field_types,
+            value_fields,
             enum_variants,
             delegate_args,
+            class_methods,
             content_properties,
         }
     }
@@ -292,6 +324,7 @@ impl MetadataResolver {
         class_name: &str,
         typedef: &TypeDef<'_>,
         lookup: &mut HashMap<(String, String), MethodRef>,
+        class_methods: &mut HashMap<(String, String), InterfaceRef>,
     ) {
         // Walk implemented interfaces.
         for iface_impl in typedef.interface_impls() {
@@ -310,6 +343,14 @@ impl MetadataResolver {
 
             for method in iface_def.methods() {
                 let method_name = method.name();
+                // Full method surface (used to validate plain calls such as
+                // `RefreshRequestedEventArgs.GetDeferral`).
+                class_methods
+                    .entry((class_name.to_string(), method_name.to_string()))
+                    .or_insert_with(|| InterfaceRef {
+                        namespace: iface_ns.to_string(),
+                        name: iface_name.to_string(),
+                    });
                 if method_name.starts_with("put_")
                     || method_name.starts_with("get_")
                     || method_name.starts_with("add_")
@@ -348,7 +389,7 @@ impl MetadataResolver {
 
         // Resolve the base class and recurse.
         if let Some(base_def) = index.get(&base_ns, &base_name).next() {
-            Self::collect_methods_for_class(index, &base_name, &base_def, lookup);
+            Self::collect_methods_for_class(index, &base_name, &base_def, lookup, class_methods);
 
             // Propagate base class methods to the derived class.
             let base_methods: Vec<(String, MethodRef)> = lookup
@@ -360,6 +401,16 @@ impl MetadataResolver {
                 lookup
                     .entry((class_name.to_string(), method_name))
                     .or_insert(method_ref);
+            }
+            let base_plain: Vec<(String, InterfaceRef)> = class_methods
+                .iter()
+                .filter(|((cn, _), _)| cn == &base_name)
+                .map(|((_, mn), interface)| (mn.clone(), interface.clone()))
+                .collect();
+            for (method_name, interface) in base_plain {
+                class_methods
+                    .entry((class_name.to_string(), method_name))
+                    .or_insert(interface);
             }
         }
     }
@@ -480,6 +531,20 @@ impl MetadataResolver {
         Some((value, getter_ref.interface.full_path(), conversion))
     }
 
+    /// Resolves an event-args property that returns a value type, projecting the named
+    /// snake_case field of that struct as the payload.
+    pub fn resolve_event_args_property_field(
+        &self,
+        class_name: &str,
+        add_event: &str,
+        property: &str,
+        field: &str,
+    ) -> Option<(String, String, ReadValueConversion)> {
+        let getter_ref = self.resolve_event_args_getter(class_name, add_event, property)?;
+        let (value, conversion) = self.read_value_for_field(&getter_ref.return_type, field)?;
+        Some((value, getter_ref.interface.full_path(), conversion))
+    }
+
     pub fn resolve_event_args_property_interface(
         &self,
         class_name: &str,
@@ -513,25 +578,46 @@ impl MetadataResolver {
             .then(|| getter_ref.interface.full_path())
     }
 
+    /// Resolves the event-args class of `add_event` on `class_name`.
+    ///
+    /// The `add_` method takes an event handler whose second generic parameter (or whose
+    /// delegate `Invoke` signature, for non-generic delegates) names the args class.
+    fn event_args_class(&self, class_name: &str, add_event: &str) -> Option<String> {
+        let add_ref = self
+            .lookup
+            .get(&(class_name.to_string(), add_event.to_string()))?;
+        let delegate_type = add_ref.param_types.first()?;
+        match delegate_type {
+            Type::ClassName(tn) if tn.generics.len() == 2 => match &tn.generics[1] {
+                Type::ClassName(args_tn) => Some(args_tn.name.clone()),
+                Type::ValueName(args_tn) => Some(args_tn.name.clone()),
+                _ => None,
+            },
+            Type::ClassName(tn) => self.delegate_args.get(&tn.name).cloned(),
+            _ => None,
+        }
+    }
+
+    /// Resolves a plain method on an event's args class (for example `GetDeferral`) and
+    /// returns the interface that declares it.
+    pub fn resolve_event_args_method(
+        &self,
+        class_name: &str,
+        add_event: &str,
+        method: &str,
+    ) -> Option<&InterfaceRef> {
+        let args_class = self.event_args_class(class_name, add_event)?;
+        self.class_methods
+            .get(&(args_class, method.to_string()))
+    }
+
     fn resolve_event_args_getter(
         &self,
         class_name: &str,
         add_event: &str,
         property: &str,
     ) -> Option<&MethodRef> {
-        let add_ref = self
-            .lookup
-            .get(&(class_name.to_string(), add_event.to_string()))?;
-        let delegate_type = add_ref.param_types.first()?;
-        let args_class = match delegate_type {
-            Type::ClassName(tn) if tn.generics.len() == 2 => match &tn.generics[1] {
-                Type::ClassName(args_tn) => args_tn.name.clone(),
-                Type::ValueName(args_tn) => args_tn.name.clone(),
-                _ => return None,
-            },
-            Type::ClassName(tn) => self.delegate_args.get(&tn.name)?.clone(),
-            _ => return None,
-        };
+        let args_class = self.event_args_class(class_name, add_event)?;
         let getter = format!("get_{property}");
         self.lookup.get(&(args_class, getter))
     }
@@ -660,6 +746,32 @@ impl MetadataResolver {
                 ReadValueConversion::Identity,
             )),
         }
+    }
+
+    /// Projects one field of a value-type payload.
+    ///
+    /// `field` is the snake_case field name as it appears in the generated bindings. The
+    /// field's own metadata type selects the payload: an `f32` becomes `F64` through an
+    /// `as f64` cast (there is no `f32` payload), and any other primitive keeps its natural
+    /// payload with a plain field projection.
+    fn read_value_for_field(&self, ty: &Type, field: &str) -> Option<(String, ReadValueConversion)> {
+        let Type::ValueName(type_name) = ty else {
+            return None;
+        };
+        let field_ty = self
+            .value_fields
+            .get(&(type_name.namespace.clone(), type_name.name.clone()))?
+            .get(field)?;
+        if matches!(field_ty, Type::F32) {
+            return Some((
+                "F64".to_string(),
+                ReadValueConversion::FieldAsF64(field.to_string()),
+            ));
+        }
+        Some((
+            Self::primitive_value_for_type(field_ty)?,
+            ReadValueConversion::Field(field.to_string()),
+        ))
     }
 
     /// Map primitive and well-known Type variants to PropValue names.

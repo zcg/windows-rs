@@ -135,8 +135,21 @@ impl Config<'_> {
 
     fn write_flat(&self, tree: TypeTree) -> TokenStream {
         let mut tokens = TokenStream::new();
+        // `--flat` drops namespace modules, so two types that differ only by
+        // namespace collide on one output name: asking for
+        // `Microsoft.UI.Composition.SystemBackdrops.MicaController` also pulls in
+        // its `Windows.UI.Composition` neighbours, and `CompositionObject` /
+        // `CompositionTarget` / `ICompositionObject` / `ICompositionTarget` exist
+        // under both. Emitting both is a duplicate definition, so only the first
+        // of a name survives. `flatten_types` yields a deterministic order, and
+        // because a `TypeName` orders by namespace before name, the `Microsoft`
+        // projection wins over the `Windows` one it was pulled in alongside.
+        let mut emitted = HashSet::new();
 
         for ty in tree.flatten_types() {
+            if !emitted.insert(ty.output_name()) {
+                continue;
+            }
             tokens.combine(ty.write(self));
         }
 

@@ -1130,7 +1130,10 @@ fn generate_event_dispatchers(control: &ResolvedControl) -> Vec<TokenStream> {
                 quote! { callback.call(value.tag.clone()) }
             } else if event.payload == "StrList" {
                 quote! { callback.call(value.as_ref().clone()) }
-            } else if matches!(event.payload.as_str(), "Str" | "DroppedData") {
+            } else if matches!(
+                event.payload.as_str(),
+                "Str" | "DroppedData" | "RefreshDeferral"
+            ) {
                 quote! { callback.call(value.clone()) }
             } else {
                 quote! { callback.call(*value) }

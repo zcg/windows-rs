@@ -441,15 +441,23 @@ impl ElementRef<crate::Grid> {
     }
 }
 
-/// Scroll position reported by scroll-offset observations.
+/// Scroll position and extent reported by scroll-offset observations.
 ///
-/// Offsets are in device-independent pixels (DIPs). `zoom` is the current
-/// zoom factor, `1.0` when zooming is disabled.
+/// Offsets, extents and viewport sizes are in device-independent pixels (DIPs). `zoom` is the
+/// current zoom factor, `1.0` when zooming is disabled.
+///
+/// `viewport_*` is the visible part of the content and `extent_*` is the full scrollable
+/// content, so a host can detect that the content end is reached - the condition for paging in
+/// more items is `vertical + viewport_height >= extent_height`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ScrollOffsets {
     pub horizontal: f64,
     pub vertical: f64,
     pub zoom: f32,
+    pub extent_width: f64,
+    pub extent_height: f64,
+    pub viewport_width: f64,
+    pub viewport_height: f64,
 }
 
 impl ElementRef<crate::ScrollViewer> {
