@@ -601,6 +601,54 @@ fn build_menu_items(
             MenuItem::Separator { .. } => MenuFlyoutSeparator::new()
                 .and_then(|separator| separator.cast())
                 .map_err(native_error)?,
+            MenuItem::Radio {
+                label,
+                group,
+                checked,
+                ..
+            } => {
+                let item = RadioMenuFlyoutItem::new().map_err(native_error)?;
+                let text: IMenuFlyoutItem = item.cast().map_err(native_error)?;
+                text.SetText(label).map_err(native_error)?;
+                let state: IRadioMenuFlyoutItem = item.cast().map_err(native_error)?;
+                state.SetGroupName(group).map_err(native_error)?;
+                state.SetIsChecked(*checked).map_err(native_error)?;
+                let label = label.clone();
+                let sink = sink.clone();
+                revokers.push(
+                    text.Click(move |_, _| {
+                        sink.enqueue(
+                            owner,
+                            EventId::OwnedMenuItemInvoked,
+                            revision,
+                            EventPayload::String(label.clone()),
+                        );
+                    })
+                    .map_err(native_error)?,
+                );
+                item.cast().map_err(native_error)?
+            }
+            MenuItem::Toggle { label, checked, .. } => {
+                let item = ToggleMenuFlyoutItem::new().map_err(native_error)?;
+                let text: IMenuFlyoutItem = item.cast().map_err(native_error)?;
+                text.SetText(label).map_err(native_error)?;
+                let state: IToggleMenuFlyoutItem = item.cast().map_err(native_error)?;
+                state.SetIsChecked(*checked).map_err(native_error)?;
+                let label = label.clone();
+                let sink = sink.clone();
+                revokers.push(
+                    text.Click(move |_, _| {
+                        sink.enqueue(
+                            owner,
+                            EventId::OwnedMenuItemInvoked,
+                            revision,
+                            EventPayload::String(label.clone()),
+                        );
+                    })
+                    .map_err(native_error)?,
+                );
+                item.cast().map_err(native_error)?
+            }
             MenuItem::Submenu { label, items, .. } => {
                 let submenu = MenuFlyoutSubItem::new().map_err(native_error)?;
                 submenu.SetText(label).map_err(native_error)?;
@@ -2358,6 +2406,26 @@ impl WinUiRuntime {
                         self.release_encoded_image_source(*node);
                         control.SetSource(source.as_ref()).map_err(native_error)
                     })
+                });
+                _ = completion.call(result);
+            }
+            Command::SetMediaSource {
+                node,
+                source,
+                completion,
+            } => {
+                let control = match self.handles.get(node) {
+                    Some(Handle::MediaPlayerElement(control)) => Ok(control.clone()),
+                    Some(_) => Err(RuntimeError::UnsupportedKind),
+                    None => Err(RuntimeError::MissingNode(*node)),
+                };
+                let source = source
+                    .as_ref()
+                    .map(|source| source.cast::<IMediaPlaybackSource>().map_err(native_error))
+                    .transpose();
+                let result = control.and_then(|control| {
+                    source
+                        .and_then(|source| control.SetSource(source.as_ref()).map_err(native_error))
                 });
                 _ = completion.call(result);
             }

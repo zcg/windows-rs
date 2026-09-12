@@ -1,7 +1,7 @@
 # Reactor gallery
 
-This sample is the `windows-reactor` port of the WinUI control gallery. It contains 65
-destinations across 11 categories:
+This sample is the `windows-reactor` port of the WinUI control gallery. It contains 104
+destinations across 12 categories:
 
 - Basic Input
 - Collections
@@ -13,6 +13,7 @@ destinations across 11 categories:
 - Menus and Toolbars
 - Navigation
 - Status and Info
+- System
 - Text
 
 Run it with:
@@ -60,6 +61,15 @@ changes the live window backdrop between Mica, Mica Alt, Acrylic, and a solid ba
 The gallery uses generated `GridView` selection feedback, `BreadcrumbBar` item-click events, and
 the `Viewbox` child slot. Flyout, SplitButton, TabView, and InfoBar examples use their native event
 and ownership contracts rather than substituting pointer handlers.
+
+The Camera page is the one destination that needs the MSIX install: `MediaCapture` resolves
+through the package identity, and the packaged launch is what raises the per-app camera prompt.
+Windows 11 builds that ship that prompt default the answer to "No", so the page cannot show frames
+until it is allowed under Settings > Privacy & security > Camera.
+
+The SwapChainPanel page hosts a Direct2D surface through the `windows-canvas` Reactor integration:
+the panel publishes its element reference, the integration creates the swap chain through
+`ISwapChainPanelNative::SetSwapChain`, and each composition frame redraws the surface.
 
 Recording-runtime tests mount the full gallery, replace pages through shell navigation, mount every
 registered destination, drive representative controlled input, reject events from retired pages,

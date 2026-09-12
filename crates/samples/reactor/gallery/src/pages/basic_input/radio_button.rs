@@ -2,27 +2,35 @@ use crate::controls::*;
 use windows_reactor::*;
 
 pub struct RadioButtonPage {
-    selected: Option<usize>,
+    first: bool,
+    second: bool,
+}
+
+#[derive(Clone)]
+pub enum Message {
+    First(bool),
+    Second(bool),
 }
 
 impl Component for RadioButtonPage {
-    type Message = Option<usize>;
+    type Message = Message;
     type Input = ();
 
     fn create(_: &(), _: &ComponentContext<Self>) -> Self {
-        Self { selected: Some(0) }
+        Self {
+            first: true,
+            second: false,
+        }
     }
 
-    fn update(&mut self, selected: Option<usize>, _: &ComponentContext<Self>) {
-        self.selected = selected;
+    fn update(&mut self, message: Message, _: &ComponentContext<Self>) {
+        match message {
+            Message::First(checked) => self.first = checked,
+            Message::Second(checked) => self.second = checked,
+        }
     }
 
     fn view(&self, _: &(), context: &mut ViewContext<Self>) -> View {
-        let options = ["Option A", "Option B", "Option C"];
-        let label = self
-            .selected
-            .and_then(|index| options.get(index))
-            .unwrap_or(&"?");
         page_content(
             "RadioButton",
             "Select one option from a group.",
@@ -30,29 +38,37 @@ impl Component for RadioButtonPage {
                 KeyedView::new(
                     "basic",
                     sample_card(
-                        "Basic RadioButtons",
+                        "Grouped buttons",
                         StackPanel::new().spacing(8.0).children((
-                            RadioButtons::new()
-                                .items_source(options)
-                                .selected_index(self.selected)
-                                .on_selection_changed(context.forward())
-                                .header("Pick one"),
+                            RadioButton::new()
+                                .group_name("drive")
+                                .is_checked(self.first)
+                                .on_checked(context.callback(Message::First))
+                                .content("Automatic"),
+                            RadioButton::new()
+                                .group_name("drive")
+                                .is_checked(self.second)
+                                .on_checked(context.callback(Message::Second))
+                                .content("Manual"),
                             TextBlock::new()
-                                .text(format!("Selected: {label}"))
+                                .text(format!(
+                                    "Automatic: {}, Manual: {}",
+                                    self.first, self.second
+                                ))
                                 .opacity(0.6),
                         )),
-                        "RadioButtons::new().items_source(options).selected_index(index)",
+                        "RadioButton::new().group_name(group).is_checked(flag).on_checked(handler)",
                     ),
                 ),
                 KeyedView::new(
-                    "sizes",
+                    "disabled",
                     sample_card(
-                        "RadioButtons with Header",
-                        RadioButtons::new()
-                            .items_source(["Small", "Medium", "Large", "Extra Large"])
-                            .selected_index(1)
-                            .header("T-shirt size"),
-                        "RadioButtons::new().items_source(sizes).selected_index(1)",
+                        "Disabled button",
+                        RadioButton::new()
+                            .group_name("unavailable")
+                            .is_enabled(false)
+                            .content("Not available"),
+                        "RadioButton::new().is_enabled(false)",
                     ),
                 ),
             ],

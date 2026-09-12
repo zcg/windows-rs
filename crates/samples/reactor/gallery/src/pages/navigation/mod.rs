@@ -1,5 +1,7 @@
 mod breadcrumb_bar;
 pub use breadcrumb_bar::BreadcrumbBarPage;
+mod frame;
+pub use frame::FramePage;
 mod navigation_view;
 pub use navigation_view::NavigationViewPage;
 mod pivot;

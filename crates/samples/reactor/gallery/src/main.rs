@@ -1,6 +1,11 @@
 #![windows_subsystem = "windows"]
 
 mod controls;
+mod pages;
+mod registry;
+mod router;
+mod shell;
+
 // Generated bindings: allow style lints unconditionally so filter edits never
 // trip `unfulfilled_lint_expectations` under `-D warnings`.
 #[allow(
@@ -11,10 +16,6 @@ mod controls;
     clippy::too_many_arguments
 )]
 mod notifications_bindings;
-mod pages;
-mod registry;
-mod router;
-mod shell;
 
 #[cfg(test)]
 mod tests;

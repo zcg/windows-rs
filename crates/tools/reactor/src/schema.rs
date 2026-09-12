@@ -442,8 +442,8 @@ impl PropertyAdapter {
             ),
             Self::MediaSource => property(
                 OneOf(&[(MEDIA_PLAYER_ELEMENT, "Source")]),
-                ParamType("Windows.Media.Playback.IMediaPlaybackSource"),
-                "Str",
+                None,
+                "IUnknown",
                 false,
                 "media_source requires MediaPlayerElement.Source",
             ),

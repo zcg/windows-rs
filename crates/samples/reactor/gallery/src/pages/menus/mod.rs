@@ -8,6 +8,9 @@ pub use app_bar_separator::AppBarSeparatorPage;
 mod app_bar_toggle_button;
 pub use app_bar_toggle_button::AppBarToggleButtonPage;
 
+mod app_bar_element_container;
+pub use app_bar_element_container::AppBarElementContainerPage;
+
 mod menu_bar;
 pub use menu_bar::MenuBarPage;
 

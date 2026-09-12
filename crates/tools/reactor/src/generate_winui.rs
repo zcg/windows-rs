@@ -192,10 +192,6 @@ pub(crate) fn generate_control_bindings_filter(schema: &ResolvedSchema) -> Strin
                         .to_string(),
                 );
             }
-            if property.adapter == Some(PropertyAdapter::MediaSource) {
-                entries.insert("Windows::Foundation::Uri::CreateUri".to_string());
-                entries.insert("Windows::Media::Core::MediaSource::CreateFromUri".to_string());
-            }
             if property.adapter == Some(PropertyAdapter::FontFamily) {
                 entries.insert(
                     "Microsoft::UI::Xaml::Media::FontFamily::CreateInstanceWithName".to_string(),
@@ -214,6 +210,13 @@ pub(crate) fn generate_control_bindings_filter(schema: &ResolvedSchema) -> Strin
                 );
                 entries.insert(
                     "Microsoft::UI::Xaml::Controls::IUniformGridLayout::{put_MinItemWidth, put_MinItemHeight, put_MinRowSpacing, put_MinColumnSpacing}"
+                        .to_string(),
+                );
+                entries.insert(
+                    "Microsoft::UI::Xaml::Controls::LinedFlowLayout::CreateInstance".to_string(),
+                );
+                entries.insert(
+                    "Microsoft::UI::Xaml::Controls::ILinedFlowLayout::{put_ItemsStretch, put_LineSpacing, put_MinItemSpacing}"
                         .to_string(),
                 );
             }
@@ -2353,12 +2356,9 @@ fn generate_set_property(control: &ResolvedControl, property: &ResolvedProperty)
             (
                 Handle::#control_name(control),
                 PropertyId::#property_id,
-                PropertyValue::Str(value),
+                PropertyValue::IUnknown(value),
             ) => {
-                let uri = Uri::CreateUri(value).map_err(native_error)?;
-                let source = MediaSource::CreateFromUri(&uri).map_err(native_error)?;
-                let source: IMediaPlaybackSource =
-                    source.cast().map_err(native_error)?;
+                let source: IMediaPlaybackSource = value.cast().map_err(native_error)?;
                 #receiver.#setter(&source).map_err(native_error)
             }
         };
@@ -2397,6 +2397,15 @@ fn generate_set_property(control: &ResolvedControl, property: &ResolvedProperty)
                         layout.SetMinItemHeight(48.0).map_err(native_error)?;
                         layout.SetMinRowSpacing(8.0).map_err(native_error)?;
                         layout.SetMinColumnSpacing(8.0).map_err(native_error)?;
+                        layout.cast().map_err(native_error)?
+                    }
+                    crate::ItemsViewLayout::Lined => {
+                        let layout = LinedFlowLayout::new().map_err(native_error)?;
+                        layout
+                            .SetItemsStretch(bindings::LinedFlowLayoutItemsStretch::Fill)
+                            .map_err(native_error)?;
+                        layout.SetLineSpacing(8.0).map_err(native_error)?;
+                        layout.SetMinItemSpacing(8.0).map_err(native_error)?;
                         layout.cast().map_err(native_error)?
                     }
                 };

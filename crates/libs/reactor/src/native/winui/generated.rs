@@ -91,6 +91,16 @@ pub enum Handle {
     MapControl(bindings::MapControl),
     SwipeControl(bindings::SwipeControl),
     RefreshContainer(bindings::RefreshContainer),
+    AppBarElementContainer(bindings::AppBarElementContainer),
+    ItemContainer(bindings::ItemContainer),
+    ItemsRepeaterScrollHost(bindings::ItemsRepeaterScrollHost),
+    Frame(bindings::Frame),
+    TwoPaneView(bindings::TwoPaneView),
+    RefreshVisualizer(bindings::RefreshVisualizer),
+    AnimatedVisualPlayer(bindings::AnimatedVisualPlayer),
+    AnimatedIcon(bindings::AnimatedIcon),
+    MediaTransportControls(bindings::MediaTransportControls),
+    SystemBackdropElement(bindings::SystemBackdropElement),
 }
 pub enum SlotCollection {
     Inspectable(windows_collections::IVector<windows_core::IInspectable>),
@@ -394,6 +404,34 @@ impl Handle {
             MountedKind::RefreshContainer => {
                 Self::RefreshContainer(bindings::RefreshContainer::new().map_err(native_error)?)
             }
+            MountedKind::AppBarElementContainer => Self::AppBarElementContainer(
+                bindings::AppBarElementContainer::new().map_err(native_error)?,
+            ),
+            MountedKind::ItemContainer => {
+                Self::ItemContainer(bindings::ItemContainer::new().map_err(native_error)?)
+            }
+            MountedKind::ItemsRepeaterScrollHost => Self::ItemsRepeaterScrollHost(
+                bindings::ItemsRepeaterScrollHost::new().map_err(native_error)?,
+            ),
+            MountedKind::Frame => Self::Frame(bindings::Frame::new().map_err(native_error)?),
+            MountedKind::TwoPaneView => {
+                Self::TwoPaneView(bindings::TwoPaneView::new().map_err(native_error)?)
+            }
+            MountedKind::RefreshVisualizer => {
+                Self::RefreshVisualizer(bindings::RefreshVisualizer::new().map_err(native_error)?)
+            }
+            MountedKind::AnimatedVisualPlayer => Self::AnimatedVisualPlayer(
+                bindings::AnimatedVisualPlayer::new().map_err(native_error)?,
+            ),
+            MountedKind::AnimatedIcon => {
+                Self::AnimatedIcon(bindings::AnimatedIcon::new().map_err(native_error)?)
+            }
+            MountedKind::MediaTransportControls => Self::MediaTransportControls(
+                bindings::MediaTransportControls::new().map_err(native_error)?,
+            ),
+            MountedKind::SystemBackdropElement => Self::SystemBackdropElement(
+                bindings::SystemBackdropElement::new().map_err(native_error)?,
+            ),
             MountedKind::ItemsRepeater => return Err(RuntimeError::UnsupportedKind),
         })
     }
@@ -488,6 +526,16 @@ impl Handle {
             Self::MapControl(value) => value.cast(),
             Self::SwipeControl(value) => value.cast(),
             Self::RefreshContainer(value) => value.cast(),
+            Self::AppBarElementContainer(value) => value.cast(),
+            Self::ItemContainer(value) => value.cast(),
+            Self::ItemsRepeaterScrollHost(value) => value.cast(),
+            Self::Frame(value) => value.cast(),
+            Self::TwoPaneView(value) => value.cast(),
+            Self::RefreshVisualizer(value) => value.cast(),
+            Self::AnimatedVisualPlayer(value) => value.cast(),
+            Self::AnimatedIcon(value) => value.cast(),
+            Self::MediaTransportControls(value) => value.cast(),
+            Self::SystemBackdropElement(value) => value.cast(),
         }
     }
     pub fn dependency_object(&self) -> windows_core::Result<IDependencyObject> {
@@ -581,6 +629,16 @@ impl Handle {
             Self::MapControl(value) => value.cast(),
             Self::SwipeControl(value) => value.cast(),
             Self::RefreshContainer(value) => value.cast(),
+            Self::AppBarElementContainer(value) => value.cast(),
+            Self::ItemContainer(value) => value.cast(),
+            Self::ItemsRepeaterScrollHost(value) => value.cast(),
+            Self::Frame(value) => value.cast(),
+            Self::TwoPaneView(value) => value.cast(),
+            Self::RefreshVisualizer(value) => value.cast(),
+            Self::AnimatedVisualPlayer(value) => value.cast(),
+            Self::AnimatedIcon(value) => value.cast(),
+            Self::MediaTransportControls(value) => value.cast(),
+            Self::SystemBackdropElement(value) => value.cast(),
         }
     }
     pub fn kind(&self) -> MountedKind {
@@ -674,6 +732,16 @@ impl Handle {
             Self::MapControl(_) => MountedKind::MapControl,
             Self::SwipeControl(_) => MountedKind::SwipeControl,
             Self::RefreshContainer(_) => MountedKind::RefreshContainer,
+            Self::AppBarElementContainer(_) => MountedKind::AppBarElementContainer,
+            Self::ItemContainer(_) => MountedKind::ItemContainer,
+            Self::ItemsRepeaterScrollHost(_) => MountedKind::ItemsRepeaterScrollHost,
+            Self::Frame(_) => MountedKind::Frame,
+            Self::TwoPaneView(_) => MountedKind::TwoPaneView,
+            Self::RefreshVisualizer(_) => MountedKind::RefreshVisualizer,
+            Self::AnimatedVisualPlayer(_) => MountedKind::AnimatedVisualPlayer,
+            Self::AnimatedIcon(_) => MountedKind::AnimatedIcon,
+            Self::MediaTransportControls(_) => MountedKind::MediaTransportControls,
+            Self::SystemBackdropElement(_) => MountedKind::SystemBackdropElement,
         }
     }
     pub fn is_content(&self) -> bool {
@@ -699,6 +767,9 @@ impl Handle {
                 | Self::GridViewItem(_)
                 | Self::ToggleSplitButton(_)
                 | Self::RefreshContainer(_)
+                | Self::AppBarElementContainer(_)
+                | Self::ItemContainer(_)
+                | Self::Frame(_)
         )
     }
     pub fn child_collection(&self) -> Result<Option<UIElementCollection>, RuntimeError> {
@@ -906,6 +977,28 @@ pub fn set_content(handle: &Handle, child: Option<&UIElement>) -> Result<(), Run
             }
         }
         Handle::RefreshContainer(control) => {
+            let control = control.cast::<IContentControl>().map_err(native_error)?;
+            match child {
+                Some(child) => control.SetContent(child).map_err(native_error),
+                None => control
+                    .SetContent(None::<&windows_core::IInspectable>)
+                    .map_err(native_error),
+            }
+        }
+        Handle::AppBarElementContainer(control) => {
+            let control = control.cast::<IContentControl>().map_err(native_error)?;
+            match child {
+                Some(child) => control.SetContent(child).map_err(native_error),
+                None => control
+                    .SetContent(None::<&windows_core::IInspectable>)
+                    .map_err(native_error),
+            }
+        }
+        Handle::ItemContainer(control) => match child {
+            Some(child) => control.SetChild(child).map_err(native_error),
+            None => control.SetChild(None::<&UIElement>).map_err(native_error),
+        },
+        Handle::Frame(control) => {
             let control = control.cast::<IContentControl>().map_err(native_error)?;
             match child {
                 Some(child) => control.SetContent(child).map_err(native_error),
@@ -3445,6 +3538,15 @@ pub fn set_property(
                     layout.SetMinColumnSpacing(8.0).map_err(native_error)?;
                     layout.cast().map_err(native_error)?
                 }
+                crate::ItemsViewLayout::Lined => {
+                    let layout = LinedFlowLayout::new().map_err(native_error)?;
+                    layout
+                        .SetItemsStretch(bindings::LinedFlowLayoutItemsStretch::Fill)
+                        .map_err(native_error)?;
+                    layout.SetLineSpacing(8.0).map_err(native_error)?;
+                    layout.SetMinItemSpacing(8.0).map_err(native_error)?;
+                    layout.cast().map_err(native_error)?
+                }
             };
             control.SetLayout(&layout).map_err(native_error)
         }
@@ -3467,11 +3569,9 @@ pub fn set_property(
         (
             Handle::MediaPlayerElement(control),
             PropertyId::MediaPlayerElementSource,
-            PropertyValue::Str(value),
+            PropertyValue::IUnknown(value),
         ) => {
-            let uri = Uri::CreateUri(value).map_err(native_error)?;
-            let source = MediaSource::CreateFromUri(&uri).map_err(native_error)?;
-            let source: IMediaPlaybackSource = source.cast().map_err(native_error)?;
+            let source: IMediaPlaybackSource = value.cast().map_err(native_error)?;
             control.SetSource(&source).map_err(native_error)
         }
         (
@@ -3486,6 +3586,18 @@ pub fn set_property(
             PropertyId::MediaPlayerElementAutoPlay,
             PropertyValue::Bool(value),
         ) => control.SetAutoPlay(*value).map_err(native_error),
+        (
+            Handle::MediaPlayerElement(control),
+            PropertyId::MediaPlayerElementStretch,
+            PropertyValue::Stretch(value),
+        ) => control
+            .SetStretch(match value {
+                crate::Stretch::None => bindings::Stretch::None,
+                crate::Stretch::Fill => bindings::Stretch::Fill,
+                crate::Stretch::Uniform => bindings::Stretch::Uniform,
+                crate::Stretch::UniformToFill => bindings::Stretch::UniformToFill,
+            })
+            .map_err(native_error),
         (
             Handle::SemanticZoom(control),
             PropertyId::SemanticZoomIsZoomedInViewActive,
@@ -3543,6 +3655,31 @@ pub fn set_property(
                 }
             })
             .map_err(native_error),
+        (
+            Handle::RefreshVisualizer(control),
+            PropertyId::RefreshVisualizerOrientation,
+            PropertyValue::RefreshVisualizerOrientation(value),
+        ) => control
+            .SetOrientation(match value {
+                crate::RefreshVisualizerOrientation::Auto => {
+                    bindings::RefreshVisualizerOrientation::Auto
+                }
+                crate::RefreshVisualizerOrientation::Normal => {
+                    bindings::RefreshVisualizerOrientation::Normal
+                }
+                crate::RefreshVisualizerOrientation::Rotate90DegreesCounterclockwise => {
+                    bindings::RefreshVisualizerOrientation::Rotate90DegreesCounterclockwise
+                }
+                crate::RefreshVisualizerOrientation::Rotate270DegreesCounterclockwise => {
+                    bindings::RefreshVisualizerOrientation::Rotate270DegreesCounterclockwise
+                }
+            })
+            .map_err(native_error),
+        (
+            Handle::AnimatedVisualPlayer(control),
+            PropertyId::AnimatedVisualPlayerAutoPlay,
+            PropertyValue::Bool(value),
+        ) => control.SetAutoPlay(*value).map_err(native_error),
         _ => Err(RuntimeError::UnsupportedKind),
     }
 }
@@ -4526,6 +4663,9 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
                 )
                 .map_err(native_error)
         }
+        (Handle::MediaPlayerElement(_), PropertyId::MediaPlayerElementStretch) => dependency_object
+            .ClearValue(&bindings::MediaPlayerElement::StretchProperty().map_err(native_error)?)
+            .map_err(native_error),
         (Handle::SemanticZoom(_), PropertyId::SemanticZoomIsZoomedInViewActive) => {
             dependency_object
                 .ClearValue(
@@ -4565,6 +4705,20 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
             dependency_object
                 .ClearValue(
                     &bindings::RefreshContainer::PullDirectionProperty().map_err(native_error)?,
+                )
+                .map_err(native_error)
+        }
+        (Handle::RefreshVisualizer(_), PropertyId::RefreshVisualizerOrientation) => {
+            dependency_object
+                .ClearValue(
+                    &bindings::RefreshVisualizer::OrientationProperty().map_err(native_error)?,
+                )
+                .map_err(native_error)
+        }
+        (Handle::AnimatedVisualPlayer(_), PropertyId::AnimatedVisualPlayerAutoPlay) => {
+            dependency_object
+                .ClearValue(
+                    &bindings::AnimatedVisualPlayer::AutoPlayProperty().map_err(native_error)?,
                 )
                 .map_err(native_error)
         }
@@ -4804,6 +4958,14 @@ pub fn set_slot(
                     .map_err(native_error),
             }
         }
+        (Handle::TwoPaneView(control), SlotId::TwoPaneViewPane1) => match child {
+            Some(child) => control.SetPane1(child).map_err(native_error),
+            None => control.SetPane1(None::<&UIElement>).map_err(native_error),
+        },
+        (Handle::TwoPaneView(control), SlotId::TwoPaneViewPane2) => match child {
+            Some(child) => control.SetPane2(child).map_err(native_error),
+            None => control.SetPane2(None::<&UIElement>).map_err(native_error),
+        },
         _ => Err(RuntimeError::UnsupportedKind),
     }
 }

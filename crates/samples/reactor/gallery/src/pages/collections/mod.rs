@@ -10,6 +10,12 @@ pub use grid_view::GridViewPage;
 mod items_repeater;
 pub use items_repeater::ItemsRepeaterPage;
 
+mod items_repeater_scroll_host;
+pub use items_repeater_scroll_host::ItemsRepeaterScrollHostPage;
+
+mod item_container;
+pub use item_container::ItemContainerPage;
+
 mod items_view;
 pub use items_view::ItemsViewPage;
 

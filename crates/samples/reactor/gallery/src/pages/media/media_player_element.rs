@@ -1,4 +1,7 @@
 use crate::controls::*;
+use windows::Foundation::Uri;
+use windows::Media::Core::MediaSource;
+use windows_core::{HSTRING, IUnknown, Interface};
 use windows_reactor::*;
 
 const SAMPLE: &str =
@@ -15,6 +18,13 @@ impl Component for MediaPlayerElementPage {
     }
 
     fn view(&self, _: &(), _: &mut ViewContext<Self>) -> View {
+        let player: View = match build_player() {
+            Ok(player) => player.into(),
+            Err(error) => TextBlock::new()
+                .text(format!("Playback unavailable: {error}"))
+                .into(),
+        };
+
         page_content(
             "MediaPlayerElement",
             "Hosts a MediaPlayer for audio/video playback with optional transport controls.",
@@ -22,16 +32,24 @@ impl Component for MediaPlayerElementPage {
                 "basic",
                 sample_card(
                     "Basic MediaPlayerElement",
-                    MediaPlayerElement::new()
-                        .source(SAMPLE)
-                        .unwrap()
-                        .are_transport_controls_enabled(true)
-                        .auto_play(false)
-                        .width(480.0)
-                        .height(270.0),
-                    "MediaPlayerElement::new().source(url).unwrap()",
+                    player,
+                    "MediaSource::CreateFromUri(&uri)?; MediaPlayerElement::new().source(source)",
                 ),
             )],
         )
     }
+}
+
+/// Builds the sample player. `MediaPlayerElement::source` takes a media
+/// playback source object, so the URI is wrapped in a `MediaSource` first.
+fn build_player() -> windows::core::Result<MediaPlayerElement> {
+    let uri = Uri::CreateUri(&HSTRING::from(SAMPLE))?;
+    let source = MediaSource::CreateFromUri(&uri)?;
+
+    Ok(MediaPlayerElement::new()
+        .source(source.cast::<IUnknown>()?)
+        .are_transport_controls_enabled(true)
+        .auto_play(false)
+        .width(480.0)
+        .height(270.0))
 }

@@ -5,8 +5,10 @@ edition = "2024"
 publish = false
 
 [dependencies]
+windows-canvas = { workspace = true, features = ["reactor"] }
 windows-core = { workspace = true }
 windows-future = { workspace = true }
+windows-numerics = { workspace = true, features = ["std"] }
 windows-reactor = { workspace = true }
 windows-webview = { workspace = true, features = ["reactor"] }
 
@@ -17,6 +19,11 @@ features = [
     "ApplicationModel_DataTransfer",
     "Data_Xml_Dom",
     "Foundation",
+    "Media_Capture",
+    "Media_Capture_Frames",
+    "Media_Core",
+    "Media_MediaProperties",
+    "Media_Playback",
     "Storage",
     "Storage_Pickers",
     "Storage_Streams",
@@ -28,6 +35,9 @@ features = [
 
 [dev-dependencies]
 windows-reactor = { workspace = true, features = ["test"] }
+
+[build-dependencies]
+windows-reactor-setup = { workspace = true }
 
 [lints]
 workspace = true

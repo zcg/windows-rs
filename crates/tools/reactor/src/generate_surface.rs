@@ -107,6 +107,11 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
             }
         });
         for property in &control.properties {
+            // An `IUnknown` property (the media source) has no constructible test value, so a
+            // surface case would only restate the builder signature.
+            if property.value == "IUnknown" {
+                continue;
+            }
             let function = ident(&format!(
                 "property_{}_{}",
                 to_snake_case(&control.name),
@@ -372,11 +377,14 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
         }
     }
     let control_count = schema.controls.len();
+    // Properties whose value type has no constructible test value stay out of the inventory, which
+    // mirrors the per-property cases built below.
     let property_count = schema
         .controls
         .iter()
-        .map(|control| control.properties.len())
-        .sum::<usize>();
+        .flat_map(|control| control.properties.iter())
+        .filter(|property| property.value != "IUnknown")
+        .count();
     let event_count = schema
         .controls
         .iter()
@@ -385,33 +393,37 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
     let capability_property_count = capability_properties.len();
     let structural_count = structural_inventory.len();
     let properties = schema.controls.iter().flat_map(|control| {
-        control.properties.iter().map(|property| {
-            let control_name = &control.name;
-            let property_name = &property.name;
-            let value = &property.value;
-            let adapter = property
-                .adapter
-                .map_or_else(|| "direct".to_string(), |adapter| format!("{adapter:?}"));
-            let validation = property.validation.map_or_else(
-                || quote! { None },
-                |validation| {
-                    let validation = format!("{validation:?}");
-                    quote! { Some(#validation) }
-                },
-            );
-            let theme_style = property.theme_style;
-            quote! {
-                PropertySurface {
-                    control: #control_name,
-                    property: #property_name,
-                    value: #value,
-                    adapter: #adapter,
-                    validation: #validation,
-                    clearable: true,
-                    theme_style: #theme_style,
+        control
+            .properties
+            .iter()
+            .filter(|property| property.value != "IUnknown")
+            .map(|property| {
+                let control_name = &control.name;
+                let property_name = &property.name;
+                let value = &property.value;
+                let adapter = property
+                    .adapter
+                    .map_or_else(|| "direct".to_string(), |adapter| format!("{adapter:?}"));
+                let validation = property.validation.map_or_else(
+                    || quote! { None },
+                    |validation| {
+                        let validation = format!("{validation:?}");
+                        quote! { Some(#validation) }
+                    },
+                );
+                let theme_style = property.theme_style;
+                quote! {
+                    PropertySurface {
+                        control: #control_name,
+                        property: #property_name,
+                        value: #value,
+                        adapter: #adapter,
+                        validation: #validation,
+                        clearable: true,
+                        theme_style: #theme_style,
+                    }
                 }
-            }
-        })
+            })
     });
     let events = schema.controls.iter().flat_map(|control| {
         control.events.iter().map(|event| {
@@ -992,7 +1004,7 @@ fn apply_property(
     let field = ident(&property.field);
     let builder = if matches!(
         property.adapter,
-        Some(PropertyAdapter::ImageUri | PropertyAdapter::Uri | PropertyAdapter::MediaSource)
+        Some(PropertyAdapter::ImageUri | PropertyAdapter::Uri)
     ) {
         quote! { #control_name::new().#field(#value).unwrap() }
     } else {
@@ -1055,10 +1067,6 @@ fn property_values(
         Some(PropertyAdapter::Uri) => (
             quote! { "https://example.com/a" },
             quote! { "https://example.com/b" },
-        ),
-        Some(PropertyAdapter::MediaSource) => (
-            quote! { "https://example.com/a.mp4" },
-            quote! { "https://example.com/b.mp4" },
         ),
         // Two-argument builder: the pair splices directly into `center(lat, lon)`.
         Some(PropertyAdapter::MapCenter) => (

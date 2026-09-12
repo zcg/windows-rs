@@ -90,6 +90,13 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         image: "RadioButton.png",
     },
     ControlInfo {
+        title: "RadioButtons",
+        description: "Presents a list of options and keeps one selected.",
+        category: "Basic Input",
+        tag: "radio-buttons",
+        image: "",
+    },
+    ControlInfo {
         title: "RatingControl",
         description: "A control that lets users provide a star rating.",
         category: "Basic Input",
@@ -164,6 +171,20 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         description: "Virtualizes large lists, realizing only visible items.",
         category: "Collections",
         tag: "items-repeater",
+        image: "",
+    },
+    ControlInfo {
+        title: "ItemsRepeaterScrollHost",
+        description: "Bridges a repeater to a scroll viewer it does not own.",
+        category: "Collections",
+        tag: "items-repeater-scroll-host",
+        image: "",
+    },
+    ControlInfo {
+        title: "ItemContainer",
+        description: "Wraps a repeater item with its selection states.",
+        category: "Collections",
+        tag: "item-container",
         image: "",
     },
     ControlInfo {
@@ -300,6 +321,13 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         image: "Acrylic.png",
     },
     ControlInfo {
+        title: "SystemBackdropElement",
+        description: "Applies a window backdrop material to a single element.",
+        category: "Design Guidance",
+        tag: "system-backdrop-element",
+        image: "",
+    },
+    ControlInfo {
         title: "CommandBarFlyout",
         description: "A flyout that provides quick access to common commands.",
         category: "Dialogs and Flyouts",
@@ -412,6 +440,20 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         image: "StackPanel.png",
     },
     ControlInfo {
+        title: "SwapChainPanel",
+        description: "Hosts a Direct2D swap chain inside the XAML tree.",
+        category: "Layout",
+        tag: "swap-chain-panel",
+        image: "",
+    },
+    ControlInfo {
+        title: "TwoPaneView",
+        description: "Lays out two panes that adapt to the window width.",
+        category: "Layout",
+        tag: "two-pane-view",
+        image: "",
+    },
+    ControlInfo {
         title: "Viewbox",
         description: "Scales its child to fill available space.",
         category: "Layout",
@@ -451,6 +493,27 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         description: "Hosts a MediaPlayer for audio/video playback.",
         category: "Media",
         tag: "media-player-element",
+        image: "",
+    },
+    ControlInfo {
+        title: "MediaTransportControls",
+        description: "The play, seek, and volume bar shown over media playback.",
+        category: "Media",
+        tag: "media-transport-controls",
+        image: "",
+    },
+    ControlInfo {
+        title: "AnimatedVisualPlayer",
+        description: "Plays a Lottie animation inside the XAML tree.",
+        category: "Media",
+        tag: "animated-visual-player",
+        image: "",
+    },
+    ControlInfo {
+        title: "AnimatedIcon",
+        description: "Plays a Lottie animation in place of a static icon.",
+        category: "Media",
+        tag: "animated-icon",
         image: "",
     },
     ControlInfo {
@@ -496,6 +559,13 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         image: "",
     },
     ControlInfo {
+        title: "AppBarElementContainer",
+        description: "Hosts a regular control inside a command bar.",
+        category: "Menus and Toolbars",
+        tag: "app-bar-element-container",
+        image: "",
+    },
+    ControlInfo {
         title: "MenuBar",
         description: "A horizontal bar hosting drop-down menus.",
         category: "Menus and Toolbars",
@@ -515,6 +585,13 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         category: "Navigation",
         tag: "breadcrumb-bar",
         image: "BreadcrumbBar.png",
+    },
+    ControlInfo {
+        title: "Frame",
+        description: "A navigation host that keeps a journal of visited content.",
+        category: "Navigation",
+        tag: "frame",
+        image: "",
     },
     ControlInfo {
         title: "NavigationView",
@@ -580,6 +657,13 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         image: "",
     },
     ControlInfo {
+        title: "RefreshVisualizer",
+        description: "Draws the pull-to-refresh spinner for a refresh container.",
+        category: "Status and Info",
+        tag: "refresh-visualizer",
+        image: "",
+    },
+    ControlInfo {
         title: "ToolTip",
         description: "A popup with helpful text on hover.",
         category: "Status and Info",
@@ -613,6 +697,13 @@ pub const ALL_CONTROLS: &[ControlInfo] = &[
         category: "Text",
         tag: "text-block",
         image: "TextBlock.png",
+    },
+    ControlInfo {
+        title: "Camera",
+        description: "Capture photos and video with the system camera UI.",
+        category: "System",
+        tag: "camera",
+        image: "",
     },
     ControlInfo {
         title: "Clipboard",

@@ -863,6 +863,20 @@ impl RecordingRuntime {
                 };
                 _ = completion.call(result);
             }
+            Command::SetMediaSource {
+                node, completion, ..
+            } => {
+                let recorded = self
+                    .nodes
+                    .get(node)
+                    .ok_or(RuntimeError::MissingNode(*node))?;
+                let result = if recorded.kind == Some(MountedKind::MediaPlayerElement) {
+                    Ok(())
+                } else {
+                    Err(RuntimeError::UnsupportedKind)
+                };
+                _ = completion.call(result);
+            }
             Command::ObserveImageScale { node, .. } => {
                 let recorded = self
                     .nodes

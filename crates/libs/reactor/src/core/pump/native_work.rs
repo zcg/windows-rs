@@ -108,6 +108,21 @@ impl<R: NativeRuntime> Pump<R> {
                         completion,
                     });
                 }
+                ImperativeRequest::SetMediaSource {
+                    node,
+                    source,
+                    completion,
+                } => {
+                    if self.tree.try_native(node).is_none() {
+                        _ = completion.call(Err(RuntimeError::MissingNode(node)));
+                        continue;
+                    }
+                    commands.push(Command::SetMediaSource {
+                        node,
+                        source,
+                        completion,
+                    });
+                }
                 ImperativeRequest::ObserveImageScale {
                     node,
                     observation,

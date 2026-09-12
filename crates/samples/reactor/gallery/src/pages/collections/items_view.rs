@@ -16,6 +16,7 @@ pub enum Message {
     Multiple,
     Stack,
     Grid,
+    Lined,
 }
 
 impl Component for ItemsViewPage {
@@ -37,6 +38,7 @@ impl Component for ItemsViewPage {
             Message::Multiple => self.selection = ItemsViewSelectionMode::Multiple,
             Message::Stack => self.layout = ItemsViewLayout::Stack,
             Message::Grid => self.layout = ItemsViewLayout::Grid,
+            Message::Lined => self.layout = ItemsViewLayout::Lined,
         }
     }
 
@@ -71,6 +73,9 @@ impl Component for ItemsViewPage {
                                 Button::new()
                                     .on_click(context.message(Message::Grid))
                                     .content("Grid layout"),
+                                Button::new()
+                                    .on_click(context.message(Message::Lined))
+                                    .content("Lined layout"),
                                 TextBlock::new()
                                     .text(format!("Invoked: {}", self.invoked))
                                     .opacity(0.6),

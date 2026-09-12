@@ -63,5 +63,12 @@
   <Capabilities>
     <!-- The official WinUI 3 Gallery uses the same full-trust desktop model. -->
     <rescap:Capability Name="runFullTrust" />
+    <!-- Camera and microphone back the Camera page (MediaCapture). Windows
+         App SDK packaged apps declare device capabilities the same way UWP apps
+         do. On Windows 11 26H2 the first camera use also raises the per-app
+         desktop privacy prompt (Settings > Privacy & security > Camera); the
+         user decides there, and the choice is remembered per app. -->
+    <DeviceCapability Name="webcam" />
+    <DeviceCapability Name="microphone" />
   </Capabilities>
 </Package>

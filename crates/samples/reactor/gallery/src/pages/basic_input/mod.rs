@@ -16,6 +16,8 @@ mod password_box;
 pub use password_box::PasswordBoxPage;
 mod radio_button;
 pub use radio_button::RadioButtonPage;
+mod radio_buttons;
+pub use radio_buttons::RadioButtonsPage;
 mod rating_control;
 pub use rating_control::RatingControlPage;
 mod repeat_button;

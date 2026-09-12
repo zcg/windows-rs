@@ -1,3 +1,5 @@
+mod camera;
+pub use camera::CameraPage;
 mod clipboard;
 pub use clipboard::ClipboardPage;
 mod jump_list;

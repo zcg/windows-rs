@@ -998,7 +998,7 @@ fn generate_mounted_props_visitor(control: &ResolvedControl) -> TokenStream {
         let value = match property.value.as_str() {
             "Str" => quote! { value.as_str() },
             "KeyAccelerators" | "ResourceOverrides" | "RichText" | "StrList" | "Thickness"
-            | "CornerRadius" | "DragDropPolicy" => {
+            | "CornerRadius" | "DragDropPolicy" | "IUnknown" => {
                 quote! { value }
             }
             _ => quote! { *value },
@@ -1257,6 +1257,7 @@ fn generate_property_values(schema: &ResolvedSchema) -> TokenStream {
     let mut values = BTreeMap::from([
         ("EncodedImage".to_string(), quote! { EncodedImage }),
         ("F64".to_string(), quote! { f64 }),
+        ("IUnknown".to_string(), quote! { windows_core::IUnknown }),
         (
             "GridLengths".to_string(),
             quote! { std::rc::Rc<Vec<GridLength>> },
@@ -1299,6 +1300,7 @@ fn generate_property_values(schema: &ResolvedSchema) -> TokenStream {
             "KeyAccelerators" => quote! { &'a KeyAccelerators },
             "DragDropPolicy" => quote! { &'a DragDropPolicy },
             "EncodedImage" => quote! { &'a EncodedImage },
+            "IUnknown" => quote! { &'a windows_core::IUnknown },
             "Str" => quote! { &'a str },
             "Thickness" => quote! { &'a Thickness },
             "CornerRadius" => quote! { &'a CornerRadius },
@@ -1362,6 +1364,7 @@ fn generate_property_values(schema: &ResolvedSchema) -> TokenStream {
                 | "CornerRadius"
                 | "DragDropPolicy"
                 | "EncodedImage"
+                | "IUnknown"
         ) {
             quote! {
                 (Self::#variant(left), PropertyValue::#variant(right)) => left == right
@@ -1382,7 +1385,7 @@ fn generate_property_values(schema: &ResolvedSchema) -> TokenStream {
                 Self::#variant(value) => PropertyValue::#variant(value.to_string())
             },
             "KeyAccelerators" | "ResourceOverrides" | "RichText" | "Thickness" | "CornerRadius"
-            | "DragDropPolicy" | "EncodedImage" => {
+            | "DragDropPolicy" | "EncodedImage" | "IUnknown" => {
                 quote! {
                     Self::#variant(value) => PropertyValue::#variant(value.clone())
                 }
@@ -1720,9 +1723,21 @@ fn generate_element(control: &ResolvedControl) -> TokenStream {
                     self
                 }
             }
+        } else if property.adapter == Some(PropertyAdapter::MediaSource) {
+            // A media source is an object, not a URI: the caller builds a
+            // MediaSource (from a URI or a camera frame source) and hands it in.
+            quote! {
+                pub fn #field(
+                    mut self,
+                    value: windows_core::IUnknown,
+                ) -> Self {
+                    self.#field = Property::Set(value);
+                    self
+                }
+            }
         } else if matches!(
             property.adapter,
-            Some(PropertyAdapter::Uri | PropertyAdapter::MediaSource)
+            Some(PropertyAdapter::Uri)
         ) {
             let optional = ident(&format!("{}_optional", property.field));
             quote! {
@@ -2491,6 +2506,7 @@ fn value_type(value: &str) -> TokenStream {
         "Bool" => quote! { bool },
         "F64" => quote! { f64 },
         "I32" => quote! { i32 },
+        "IUnknown" => quote! { windows_core::IUnknown },
         "U16" => quote! { u16 },
         "U32" => quote! { u32 },
         "U8" => quote! { u8 },

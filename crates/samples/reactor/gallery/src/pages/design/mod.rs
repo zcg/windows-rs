@@ -6,6 +6,8 @@ mod iconography;
 pub use iconography::IconographyPage;
 mod materials;
 pub use materials::{MaterialsInput, MaterialsPage};
+mod system_backdrop_element;
+pub use system_backdrop_element::SystemBackdropElementPage;
 mod spacing;
 pub use spacing::SpacingPage;
 mod theme;

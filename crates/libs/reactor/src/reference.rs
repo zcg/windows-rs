@@ -574,6 +574,34 @@ impl ElementRef<Image> {
     }
 }
 
+impl ElementRef<MediaPlayerElement> {
+    /// Assigns an application-owned media playback source to the published control.
+    ///
+    /// The source is a `Windows.Media.Playback.IMediaPlaybackSource`, which covers a
+    /// `MediaSource` built from a camera frame source
+    /// (`MediaSource::CreateFromMediaFrameSource`). Passing `None` clears the source.
+    #[must_use = "false means the reference is currently unbound"]
+    pub fn request_set_media_source(
+        &self,
+        source: Option<windows_core::IUnknown>,
+        completion: impl Fn(Result<(), MediaSourceError>) + 'static,
+    ) -> bool {
+        let Some(binding) = self.target.borrow().binding.clone() else {
+            return false;
+        };
+        binding.endpoint.enqueue(NativeWork {
+            identity: binding.identity,
+            work: ImperativeRequest::SetMediaSource {
+                node: binding.node,
+                source,
+                completion: Callback::new(move |result: Result<(), RuntimeError>| {
+                    completion(result.map_err(MediaSourceError::from_runtime));
+                }),
+            },
+        })
+    }
+}
+
 impl ElementRef<Grid> {
     /// Observes an application-owned lifted Composition host across published bindings.
     ///
@@ -705,6 +733,8 @@ pub type ImageSourceError = IntegrationError;
 pub type SwapChainPanelError = IntegrationError;
 /// Errors from WebView2 integration requests.
 pub type WebView2Error = IntegrationError;
+/// Errors from media-playback-source requests.
+pub type MediaSourceError = IntegrationError;
 /// Rendering and layout events from a swap-chain panel.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SwapChainPanelEvent {
@@ -1076,6 +1106,11 @@ pub(crate) enum ImperativeRequest {
         source: Option<windows_core::IUnknown>,
         completion: Callback<Result<(), RuntimeError>>,
     },
+    SetMediaSource {
+        node: NodeId,
+        source: Option<windows_core::IUnknown>,
+        completion: Callback<Result<(), RuntimeError>>,
+    },
     ObserveImageScale {
         node: NodeId,
         observation: u64,
@@ -1116,6 +1151,9 @@ impl ImperativeRequest {
             }
             | Self::RequestSwapChainPanelFrame { node, completion }
             | Self::SetNativeImageSource {
+                node, completion, ..
+            }
+            | Self::SetMediaSource {
                 node, completion, ..
             }
             | Self::SetCompositionChildVisual {

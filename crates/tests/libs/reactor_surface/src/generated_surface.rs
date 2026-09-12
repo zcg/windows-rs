@@ -45,11 +45,11 @@ pub struct StructuralSurface {
 pub struct ExtensionSurface {
     pub name: &'static str,
 }
-pub(crate) const PROJECTED_CONTROL_COUNT: usize = 90usize;
-pub(crate) const PROJECTED_PROPERTY_COUNT: usize = 281usize;
+pub(crate) const PROJECTED_CONTROL_COUNT: usize = 100usize;
+pub(crate) const PROJECTED_PROPERTY_COUNT: usize = 283usize;
 pub(crate) const PROJECTED_EVENT_COUNT: usize = 84usize;
 pub(crate) const CAPABILITY_PROPERTY_COUNT: usize = 27usize;
-pub(crate) const STRUCTURAL_COUNT: usize = 73usize;
+pub(crate) const STRUCTURAL_COUNT: usize = 78usize;
 pub(crate) const EXTENSION_COUNT: usize = 5;
 fn construct_text_block(_stage: usize) -> View {
     Grid::new().children((TextBlock::new(),))
@@ -322,6 +322,36 @@ fn construct_swipe_control(_stage: usize) -> View {
 }
 fn construct_refresh_container(_stage: usize) -> View {
     Grid::new().children((RefreshContainer::new(),))
+}
+fn construct_app_bar_element_container(_stage: usize) -> View {
+    Grid::new().children((AppBarElementContainer::new(),))
+}
+fn construct_item_container(_stage: usize) -> View {
+    Grid::new().children((ItemContainer::new(),))
+}
+fn construct_items_repeater_scroll_host(_stage: usize) -> View {
+    Grid::new().children((ItemsRepeaterScrollHost::new(),))
+}
+fn construct_frame(_stage: usize) -> View {
+    Grid::new().children((Frame::new(),))
+}
+fn construct_two_pane_view(_stage: usize) -> View {
+    Grid::new().children((TwoPaneView::new(),))
+}
+fn construct_refresh_visualizer(_stage: usize) -> View {
+    Grid::new().children((RefreshVisualizer::new(),))
+}
+fn construct_animated_visual_player(_stage: usize) -> View {
+    Grid::new().children((AnimatedVisualPlayer::new(),))
+}
+fn construct_animated_icon(_stage: usize) -> View {
+    Grid::new().children((AnimatedIcon::new(),))
+}
+fn construct_media_transport_controls(_stage: usize) -> View {
+    Grid::new().children((MediaTransportControls::new(),))
+}
+fn construct_system_backdrop_element(_stage: usize) -> View {
+    Grid::new().children((SystemBackdropElement::new(),))
 }
 fn property_text_block_text(stage: usize) -> View {
     match stage {
@@ -2544,18 +2574,6 @@ fn property_items_view_selection_mode(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
-fn property_media_player_element_source(stage: usize) -> View {
-    match stage {
-        0 | 3 => Grid::new().children((MediaPlayerElement::new(),)),
-        1 => Grid::new().children((MediaPlayerElement::new()
-            .source("https://example.com/a.mp4")
-            .unwrap(),)),
-        2 => Grid::new().children((MediaPlayerElement::new()
-            .source("https://example.com/b.mp4")
-            .unwrap(),)),
-        _ => unreachable!(),
-    }
-}
 fn property_media_player_element_are_transport_controls_enabled(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((MediaPlayerElement::new(),)),
@@ -2573,6 +2591,14 @@ fn property_media_player_element_auto_play(stage: usize) -> View {
         0 | 3 => Grid::new().children((MediaPlayerElement::new(),)),
         1 => Grid::new().children((MediaPlayerElement::new().auto_play(true),)),
         2 => Grid::new().children((MediaPlayerElement::new().auto_play(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_media_player_element_stretch(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((MediaPlayerElement::new(),)),
+        1 => Grid::new().children((MediaPlayerElement::new().stretch(Stretch::None),)),
+        2 => Grid::new().children((MediaPlayerElement::new().stretch(Stretch::Fill),)),
         _ => unreachable!(),
     }
 }
@@ -2639,6 +2665,25 @@ fn property_refresh_container_pull_direction(stage: usize) -> View {
             .children((RefreshContainer::new().pull_direction(RefreshPullDirection::LeftToRight),)),
         2 => Grid::new()
             .children((RefreshContainer::new().pull_direction(RefreshPullDirection::TopToBottom),)),
+        _ => unreachable!(),
+    }
+}
+fn property_refresh_visualizer_orientation(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((RefreshVisualizer::new(),)),
+        1 => Grid::new()
+            .children((RefreshVisualizer::new().orientation(RefreshVisualizerOrientation::Auto),)),
+        2 => Grid::new().children((
+            RefreshVisualizer::new().orientation(RefreshVisualizerOrientation::Normal),
+        )),
+        _ => unreachable!(),
+    }
+}
+fn property_animated_visual_player_auto_play(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((AnimatedVisualPlayer::new(),)),
+        1 => Grid::new().children((AnimatedVisualPlayer::new().auto_play(true),)),
+        2 => Grid::new().children((AnimatedVisualPlayer::new().auto_play(false),)),
         _ => unreachable!(),
     }
 }
@@ -4622,6 +4667,46 @@ fn structural_refresh_container_content(stage: usize) -> View {
         0 | 3 => (RefreshContainer::new()).into(),
         1 => (RefreshContainer::new().content(TextBlock::new().text("surface a"))).into(),
         2 => (RefreshContainer::new().content(TextBlock::new().text("surface b"))).into(),
+        _ => unreachable!(),
+    }
+}
+fn structural_app_bar_element_container_content(stage: usize) -> View {
+    match stage {
+        0 | 3 => (AppBarElementContainer::new()).into(),
+        1 => (AppBarElementContainer::new().content(TextBlock::new().text("surface a"))).into(),
+        2 => (AppBarElementContainer::new().content(TextBlock::new().text("surface b"))).into(),
+        _ => unreachable!(),
+    }
+}
+fn structural_item_container_content(stage: usize) -> View {
+    match stage {
+        0 | 3 => (ItemContainer::new()).into(),
+        1 => (ItemContainer::new().content(TextBlock::new().text("surface a"))).into(),
+        2 => (ItemContainer::new().content(TextBlock::new().text("surface b"))).into(),
+        _ => unreachable!(),
+    }
+}
+fn structural_frame_content(stage: usize) -> View {
+    match stage {
+        0 | 3 => (Frame::new()).into(),
+        1 => (Frame::new().content(TextBlock::new().text("surface a"))).into(),
+        2 => (Frame::new().content(TextBlock::new().text("surface b"))).into(),
+        _ => unreachable!(),
+    }
+}
+fn structural_two_pane_view_slot_pane1(stage: usize) -> View {
+    match stage {
+        0 | 3 => (TwoPaneView::new()).into(),
+        1 => (TwoPaneView::new().pane1(TextBlock::new().text("surface a"))).into(),
+        2 => (TwoPaneView::new().pane1(TextBlock::new().text("surface b"))).into(),
+        _ => unreachable!(),
+    }
+}
+fn structural_two_pane_view_slot_pane2(stage: usize) -> View {
+    match stage {
+        0 | 3 => (TwoPaneView::new()).into(),
+        1 => (TwoPaneView::new().pane2(TextBlock::new().text("surface a"))).into(),
+        2 => (TwoPaneView::new().pane2(TextBlock::new().text("surface b"))).into(),
         _ => unreachable!(),
     }
 }
@@ -8416,13 +8501,6 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: construct_media_player_element,
     },
     SurfaceCase {
-        name: "property.MediaPlayerElement.Source",
-        kind: SurfaceKind::Property,
-        stages: 4,
-        subscription_delta: None,
-        build: property_media_player_element_source,
-    },
-    SurfaceCase {
         name: "property.MediaPlayerElement.AreTransportControlsEnabled",
         kind: SurfaceKind::Property,
         stages: 4,
@@ -8435,6 +8513,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: None,
         build: property_media_player_element_auto_play,
+    },
+    SurfaceCase {
+        name: "property.MediaPlayerElement.Stretch",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_media_player_element_stretch,
     },
     SurfaceCase {
         name: "control.SemanticZoom.construct",
@@ -8582,6 +8667,125 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: Some(1usize),
         build: event_refresh_container_on_refresh_requested,
+    },
+    SurfaceCase {
+        name: "control.AppBarElementContainer.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_app_bar_element_container,
+    },
+    SurfaceCase {
+        name: "structural.AppBarElementContainer.Content",
+        kind: SurfaceKind::Structural,
+        stages: 4,
+        subscription_delta: None,
+        build: structural_app_bar_element_container_content,
+    },
+    SurfaceCase {
+        name: "control.ItemContainer.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_item_container,
+    },
+    SurfaceCase {
+        name: "structural.ItemContainer.Content",
+        kind: SurfaceKind::Structural,
+        stages: 4,
+        subscription_delta: None,
+        build: structural_item_container_content,
+    },
+    SurfaceCase {
+        name: "control.ItemsRepeaterScrollHost.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_items_repeater_scroll_host,
+    },
+    SurfaceCase {
+        name: "control.Frame.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_frame,
+    },
+    SurfaceCase {
+        name: "structural.Frame.Content",
+        kind: SurfaceKind::Structural,
+        stages: 4,
+        subscription_delta: None,
+        build: structural_frame_content,
+    },
+    SurfaceCase {
+        name: "control.TwoPaneView.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_two_pane_view,
+    },
+    SurfaceCase {
+        name: "structural.TwoPaneView.Slot.Pane1",
+        kind: SurfaceKind::Structural,
+        stages: 4,
+        subscription_delta: None,
+        build: structural_two_pane_view_slot_pane1,
+    },
+    SurfaceCase {
+        name: "structural.TwoPaneView.Slot.Pane2",
+        kind: SurfaceKind::Structural,
+        stages: 4,
+        subscription_delta: None,
+        build: structural_two_pane_view_slot_pane2,
+    },
+    SurfaceCase {
+        name: "control.RefreshVisualizer.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_refresh_visualizer,
+    },
+    SurfaceCase {
+        name: "property.RefreshVisualizer.Orientation",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_refresh_visualizer_orientation,
+    },
+    SurfaceCase {
+        name: "control.AnimatedVisualPlayer.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_animated_visual_player,
+    },
+    SurfaceCase {
+        name: "property.AnimatedVisualPlayer.AutoPlay",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_animated_visual_player_auto_play,
+    },
+    SurfaceCase {
+        name: "control.AnimatedIcon.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_animated_icon,
+    },
+    SurfaceCase {
+        name: "control.MediaTransportControls.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_media_transport_controls,
+    },
+    SurfaceCase {
+        name: "control.SystemBackdropElement.construct",
+        kind: SurfaceKind::Control,
+        stages: 1,
+        subscription_delta: None,
+        build: construct_system_backdrop_element,
     },
     SurfaceCase {
         name: "control.TitleBar.construct",
@@ -11087,15 +11291,6 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
     },
     PropertySurface {
         control: "MediaPlayerElement",
-        property: "Source",
-        value: "Str",
-        adapter: "MediaSource",
-        validation: None,
-        clearable: true,
-        theme_style: false,
-    },
-    PropertySurface {
-        control: "MediaPlayerElement",
         property: "AreTransportControlsEnabled",
         value: "Bool",
         adapter: "direct",
@@ -11107,6 +11302,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         control: "MediaPlayerElement",
         property: "AutoPlay",
         value: "Bool",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "MediaPlayerElement",
+        property: "Stretch",
+        value: "Stretch",
         adapter: "direct",
         validation: None,
         clearable: true,
@@ -11179,6 +11383,24 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         control: "RefreshContainer",
         property: "PullDirection",
         value: "RefreshPullDirection",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "RefreshVisualizer",
+        property: "Orientation",
+        value: "RefreshVisualizerOrientation",
+        adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "AnimatedVisualPlayer",
+        property: "AutoPlay",
+        value: "Bool",
         adapter: "direct",
         validation: None,
         clearable: true,
@@ -12337,6 +12559,26 @@ pub static STRUCTURAL_SURFACES: &[StructuralSurface] = &[
     StructuralSurface {
         control: "RefreshContainer",
         member: "Content",
+    },
+    StructuralSurface {
+        control: "AppBarElementContainer",
+        member: "Content",
+    },
+    StructuralSurface {
+        control: "ItemContainer",
+        member: "Content",
+    },
+    StructuralSurface {
+        control: "Frame",
+        member: "Content",
+    },
+    StructuralSurface {
+        control: "TwoPaneView",
+        member: "Slot.Pane1",
+    },
+    StructuralSurface {
+        control: "TwoPaneView",
+        member: "Slot.Pane2",
     },
     StructuralSurface {
         control: "TitleBar",

@@ -298,6 +298,8 @@ pub enum ItemsViewLayout {
     Stack,
     /// Uniform grid of items.
     Grid,
+    /// Rows of equal-height items, wrapped to the available width.
+    Lined,
 }
 impl Brush {
     pub(crate) const fn theme(self) -> Option<ThemeBrush> {
@@ -641,6 +643,17 @@ pub enum MenuItem {
         label: String,
         enabled: bool,
     },
+    Radio {
+        key: Key,
+        label: String,
+        group: String,
+        checked: bool,
+    },
+    Toggle {
+        key: Key,
+        label: String,
+        checked: bool,
+    },
     Separator {
         key: Key,
     },
@@ -670,6 +683,30 @@ impl MenuItem {
         }
     }
 
+    /// Creates an item that is checked exclusively within `group`.
+    pub fn radio(
+        key: impl Into<Key>,
+        label: impl Into<String>,
+        group: impl Into<String>,
+        checked: bool,
+    ) -> Self {
+        Self::Radio {
+            key: key.into(),
+            label: label.into(),
+            group: group.into(),
+            checked,
+        }
+    }
+
+    /// Creates an item that keeps its own checked state.
+    pub fn toggle(key: impl Into<Key>, label: impl Into<String>, checked: bool) -> Self {
+        Self::Toggle {
+            key: key.into(),
+            label: label.into(),
+            checked,
+        }
+    }
+
     /// Creates a separator.
     pub fn separator(key: impl Into<Key>) -> Self {
         Self::Separator { key: key.into() }
@@ -690,7 +727,11 @@ impl MenuItem {
 
     pub(crate) fn key(&self) -> &Key {
         match self {
-            Self::Item { key, .. } | Self::Separator { key } | Self::Submenu { key, .. } => key,
+            Self::Item { key, .. }
+            | Self::Radio { key, .. }
+            | Self::Toggle { key, .. }
+            | Self::Separator { key }
+            | Self::Submenu { key, .. } => key,
         }
     }
 }

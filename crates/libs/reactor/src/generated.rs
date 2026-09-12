@@ -169,6 +169,14 @@ pub mod public {
     }
     #[non_exhaustive]
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum RefreshVisualizerOrientation {
+        Auto,
+        Normal,
+        Rotate90DegreesCounterclockwise,
+        Rotate270DegreesCounterclockwise,
+    }
+    #[non_exhaustive]
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum ScrollBarVisibility {
         Disabled,
         Auto,
@@ -6191,34 +6199,24 @@ pub mod public {
     impl LayoutControl for ItemsView {}
     #[derive(Clone, Debug, Default, PartialEq)]
     pub struct MediaPlayerElement {
-        source: Property<String>,
+        source: Property<windows_core::IUnknown>,
         are_transport_controls_enabled: Property<bool>,
         auto_play: Property<bool>,
+        stretch: Property<Stretch>,
+        reference: Option<NativeElementRef>,
         element_state: Option<std::rc::Rc<ElementState>>,
     }
     impl MediaPlayerElement {
         pub fn new() -> Self {
             Self::default()
         }
-        pub fn source(mut self, value: impl Into<String>) -> windows_core::Result<Self> {
-            let value = value.into();
-            validate_uri(&value)?;
-            self.source = Property::Set(value);
-            Ok(self)
+        pub fn element_ref(mut self, reference: &ElementRef<Self>) -> Self {
+            self.reference = Some(reference.binding());
+            self
         }
-        pub fn source_optional<T>(mut self, value: Option<T>) -> windows_core::Result<Self>
-        where
-            T: Into<String>,
-        {
-            self.source = match value {
-                Some(value) => {
-                    let value = value.into();
-                    validate_uri(&value)?;
-                    Property::Set(value)
-                }
-                None => Property::Inherited,
-            };
-            Ok(self)
+        pub fn source(mut self, value: windows_core::IUnknown) -> Self {
+            self.source = Property::Set(value);
+            self
         }
         pub fn are_transport_controls_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
             let value = value.into();
@@ -6230,6 +6228,11 @@ pub mod public {
             self.auto_play = Property::from(value);
             self
         }
+        pub fn stretch(mut self, value: impl Into<Option<Stretch>>) -> Self {
+            let value = value.into();
+            self.stretch = Property::from(value);
+            self
+        }
     }
     impl sealed::Sealed for MediaPlayerElement {}
     impl sealed::NativeControl for MediaPlayerElement {
@@ -6237,6 +6240,8 @@ pub mod public {
             self.into()
         }
     }
+    impl crate::reference::sealed::Sealed for MediaPlayerElement {}
+    impl crate::reference::ReferenceControl for MediaPlayerElement {}
     impl sealed::LayoutControl for MediaPlayerElement {
         fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
             &mut self.element_state
@@ -6490,6 +6495,278 @@ pub mod public {
             self
         }
     }
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct AppBarElementContainer {
+        element_state: Option<std::rc::Rc<ElementState>>,
+        content: Option<Box<Element>>,
+    }
+    impl AppBarElementContainer {
+        pub fn new() -> Self {
+            Self::default()
+        }
+    }
+    impl sealed::Sealed for AppBarElementContainer {}
+    impl sealed::NativeControl for AppBarElementContainer {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for AppBarElementContainer {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for AppBarElementContainer {}
+    impl sealed::ContentControl for AppBarElementContainer {}
+    impl ContentControl for AppBarElementContainer {}
+    #[cfg(test)]
+    impl NativeContentTestExt for AppBarElementContainer {
+        fn native_content(mut self, content: impl Into<Element>) -> Self {
+            self.content = Some(Box::new(content.into()));
+            self
+        }
+    }
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct ItemContainer {
+        element_state: Option<std::rc::Rc<ElementState>>,
+        content: Option<Box<Element>>,
+    }
+    impl ItemContainer {
+        pub fn new() -> Self {
+            Self::default()
+        }
+    }
+    impl sealed::Sealed for ItemContainer {}
+    impl sealed::NativeControl for ItemContainer {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for ItemContainer {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for ItemContainer {}
+    impl sealed::ContentControl for ItemContainer {}
+    impl ContentControl for ItemContainer {}
+    #[cfg(test)]
+    impl NativeContentTestExt for ItemContainer {
+        fn native_content(mut self, content: impl Into<Element>) -> Self {
+            self.content = Some(Box::new(content.into()));
+            self
+        }
+    }
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct ItemsRepeaterScrollHost {
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl ItemsRepeaterScrollHost {
+        pub fn new() -> Self {
+            Self::default()
+        }
+    }
+    impl sealed::Sealed for ItemsRepeaterScrollHost {}
+    impl sealed::NativeControl for ItemsRepeaterScrollHost {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for ItemsRepeaterScrollHost {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for ItemsRepeaterScrollHost {}
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct Frame {
+        element_state: Option<std::rc::Rc<ElementState>>,
+        content: Option<Box<Element>>,
+    }
+    impl Frame {
+        pub fn new() -> Self {
+            Self::default()
+        }
+    }
+    impl sealed::Sealed for Frame {}
+    impl sealed::NativeControl for Frame {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for Frame {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for Frame {}
+    impl sealed::ContentControl for Frame {}
+    impl ContentControl for Frame {}
+    #[cfg(test)]
+    impl NativeContentTestExt for Frame {
+        fn native_content(mut self, content: impl Into<Element>) -> Self {
+            self.content = Some(Box::new(content.into()));
+            self
+        }
+    }
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct TwoPaneView {
+        element_state: Option<std::rc::Rc<ElementState>>,
+        slots: Option<std::rc::Rc<Vec<SlottedView>>>,
+    }
+    impl TwoPaneView {
+        pub fn new() -> Self {
+            Self::default()
+        }
+        pub fn pane1(mut self, view: impl Into<View>) -> Self {
+            set_control_slot(
+                &mut self.slots,
+                SlotId::TwoPaneViewPane1,
+                SlotContent::Single(view.into()),
+            );
+            self
+        }
+        pub fn pane2(mut self, view: impl Into<View>) -> Self {
+            set_control_slot(
+                &mut self.slots,
+                SlotId::TwoPaneViewPane2,
+                SlotContent::Single(view.into()),
+            );
+            self
+        }
+    }
+    impl sealed::Sealed for TwoPaneView {}
+    impl sealed::NativeControl for TwoPaneView {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for TwoPaneView {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for TwoPaneView {}
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct RefreshVisualizer {
+        orientation: Property<RefreshVisualizerOrientation>,
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl RefreshVisualizer {
+        pub fn new() -> Self {
+            Self::default()
+        }
+        pub fn orientation(
+            mut self,
+            value: impl Into<Option<RefreshVisualizerOrientation>>,
+        ) -> Self {
+            let value = value.into();
+            self.orientation = Property::from(value);
+            self
+        }
+    }
+    impl sealed::Sealed for RefreshVisualizer {}
+    impl sealed::NativeControl for RefreshVisualizer {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for RefreshVisualizer {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for RefreshVisualizer {}
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct AnimatedVisualPlayer {
+        auto_play: Property<bool>,
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl AnimatedVisualPlayer {
+        pub fn new() -> Self {
+            Self::default()
+        }
+        pub fn auto_play(mut self, value: impl Into<Option<bool>>) -> Self {
+            let value = value.into();
+            self.auto_play = Property::from(value);
+            self
+        }
+    }
+    impl sealed::Sealed for AnimatedVisualPlayer {}
+    impl sealed::NativeControl for AnimatedVisualPlayer {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for AnimatedVisualPlayer {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for AnimatedVisualPlayer {}
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct AnimatedIcon {
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl AnimatedIcon {
+        pub fn new() -> Self {
+            Self::default()
+        }
+    }
+    impl sealed::Sealed for AnimatedIcon {}
+    impl sealed::NativeControl for AnimatedIcon {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for AnimatedIcon {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for AnimatedIcon {}
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct MediaTransportControls {
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl MediaTransportControls {
+        pub fn new() -> Self {
+            Self::default()
+        }
+    }
+    impl sealed::Sealed for MediaTransportControls {}
+    impl sealed::NativeControl for MediaTransportControls {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for MediaTransportControls {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for MediaTransportControls {}
+    #[derive(Clone, Debug, Default, PartialEq)]
+    pub struct SystemBackdropElement {
+        element_state: Option<std::rc::Rc<ElementState>>,
+    }
+    impl SystemBackdropElement {
+        pub fn new() -> Self {
+            Self::default()
+        }
+    }
+    impl sealed::Sealed for SystemBackdropElement {}
+    impl sealed::NativeControl for SystemBackdropElement {
+        fn into_element(self) -> Element {
+            self.into()
+        }
+    }
+    impl sealed::LayoutControl for SystemBackdropElement {
+        fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<ElementState>> {
+            &mut self.element_state
+        }
+    }
+    impl LayoutControl for SystemBackdropElement {}
     #[derive(Clone, Debug, PartialEq)]
     pub(crate) enum Element {
         TextBlock(std::rc::Rc<TextBlock>),
@@ -6583,6 +6860,17 @@ pub mod public {
         MapControl(std::rc::Rc<MapControl>),
         SwipeControl(std::rc::Rc<SwipeControl>),
         RefreshContainer(std::rc::Rc<RefreshContainer>),
+        AppBarElementContainer(std::rc::Rc<AppBarElementContainer>),
+        ItemContainer(std::rc::Rc<ItemContainer>),
+        ItemsRepeaterScrollHost(std::rc::Rc<ItemsRepeaterScrollHost>),
+        Frame(std::rc::Rc<Frame>),
+        TwoPaneView(std::rc::Rc<TwoPaneView>),
+        RefreshVisualizer(std::rc::Rc<RefreshVisualizer>),
+        AnimatedVisualPlayer(std::rc::Rc<AnimatedVisualPlayer>),
+        AnimatedIcon(std::rc::Rc<AnimatedIcon>),
+        MediaTransportControls(std::rc::Rc<MediaTransportControls>),
+        #[allow(clippy::enum_variant_names)]
+        SystemBackdropElement(std::rc::Rc<SystemBackdropElement>),
     }
     impl From<TextBlock> for Element {
         fn from(value: TextBlock) -> Self {
@@ -7618,6 +7906,110 @@ pub mod public {
             Self::native(value)
         }
     }
+    impl From<AppBarElementContainer> for Element {
+        fn from(value: AppBarElementContainer) -> Self {
+            Self::AppBarElementContainer(std::rc::Rc::new(value))
+        }
+    }
+    impl From<AppBarElementContainer> for View {
+        fn from(value: AppBarElementContainer) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<ItemContainer> for Element {
+        fn from(value: ItemContainer) -> Self {
+            Self::ItemContainer(std::rc::Rc::new(value))
+        }
+    }
+    impl From<ItemContainer> for View {
+        fn from(value: ItemContainer) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<ItemsRepeaterScrollHost> for Element {
+        fn from(value: ItemsRepeaterScrollHost) -> Self {
+            Self::ItemsRepeaterScrollHost(std::rc::Rc::new(value))
+        }
+    }
+    impl From<ItemsRepeaterScrollHost> for View {
+        fn from(value: ItemsRepeaterScrollHost) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<Frame> for Element {
+        fn from(value: Frame) -> Self {
+            Self::Frame(std::rc::Rc::new(value))
+        }
+    }
+    impl From<Frame> for View {
+        fn from(value: Frame) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<TwoPaneView> for Element {
+        fn from(value: TwoPaneView) -> Self {
+            Self::TwoPaneView(std::rc::Rc::new(value))
+        }
+    }
+    impl From<TwoPaneView> for View {
+        fn from(value: TwoPaneView) -> Self {
+            let mut value = value;
+            match value.slots.take() {
+                Some(slots) => Self::slotted(value.into(), slots),
+                None => Self::native(value),
+            }
+        }
+    }
+    impl From<RefreshVisualizer> for Element {
+        fn from(value: RefreshVisualizer) -> Self {
+            Self::RefreshVisualizer(std::rc::Rc::new(value))
+        }
+    }
+    impl From<RefreshVisualizer> for View {
+        fn from(value: RefreshVisualizer) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<AnimatedVisualPlayer> for Element {
+        fn from(value: AnimatedVisualPlayer) -> Self {
+            Self::AnimatedVisualPlayer(std::rc::Rc::new(value))
+        }
+    }
+    impl From<AnimatedVisualPlayer> for View {
+        fn from(value: AnimatedVisualPlayer) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<AnimatedIcon> for Element {
+        fn from(value: AnimatedIcon) -> Self {
+            Self::AnimatedIcon(std::rc::Rc::new(value))
+        }
+    }
+    impl From<AnimatedIcon> for View {
+        fn from(value: AnimatedIcon) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<MediaTransportControls> for Element {
+        fn from(value: MediaTransportControls) -> Self {
+            Self::MediaTransportControls(std::rc::Rc::new(value))
+        }
+    }
+    impl From<MediaTransportControls> for View {
+        fn from(value: MediaTransportControls) -> Self {
+            Self::native(value)
+        }
+    }
+    impl From<SystemBackdropElement> for Element {
+        fn from(value: SystemBackdropElement) -> Self {
+            Self::SystemBackdropElement(std::rc::Rc::new(value))
+        }
+    }
+    impl From<SystemBackdropElement> for View {
+        fn from(value: SystemBackdropElement) -> Self {
+            Self::native(value)
+        }
+    }
     impl ElementPartsExt for Element {
         fn kind(&self) -> MountedKind {
             match self {
@@ -7711,6 +8103,16 @@ pub mod public {
                 Self::MapControl(_) => MountedKind::MapControl,
                 Self::SwipeControl(_) => MountedKind::SwipeControl,
                 Self::RefreshContainer(_) => MountedKind::RefreshContainer,
+                Self::AppBarElementContainer(_) => MountedKind::AppBarElementContainer,
+                Self::ItemContainer(_) => MountedKind::ItemContainer,
+                Self::ItemsRepeaterScrollHost(_) => MountedKind::ItemsRepeaterScrollHost,
+                Self::Frame(_) => MountedKind::Frame,
+                Self::TwoPaneView(_) => MountedKind::TwoPaneView,
+                Self::RefreshVisualizer(_) => MountedKind::RefreshVisualizer,
+                Self::AnimatedVisualPlayer(_) => MountedKind::AnimatedVisualPlayer,
+                Self::AnimatedIcon(_) => MountedKind::AnimatedIcon,
+                Self::MediaTransportControls(_) => MountedKind::MediaTransportControls,
+                Self::SystemBackdropElement(_) => MountedKind::SystemBackdropElement,
             }
         }
         fn into_parts(self) -> ElementParts {
@@ -9743,6 +10145,8 @@ pub mod public {
                         source,
                         are_transport_controls_enabled,
                         auto_play,
+                        stretch,
+                        reference,
                         element_state,
                     } = value;
                     ElementParts {
@@ -9752,9 +10156,10 @@ pub mod public {
                                 source,
                                 are_transport_controls_enabled,
                                 auto_play,
+                                stretch,
                             },
                         )),
-                        reference: None,
+                        reference,
                         element_state,
                         window_title_bar: None,
                         structure: ElementStructure::None,
@@ -9875,6 +10280,162 @@ pub mod public {
                         element_state,
                         window_title_bar: None,
                         structure: ElementStructure::Content(content.map(|element| *element)),
+                    }
+                }
+                Self::AppBarElementContainer(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let AppBarElementContainer {
+                        element_state,
+                        content,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::AppBarElementContainer,
+                        props: MountedProps::AppBarElementContainer(std::rc::Rc::new(
+                            AppBarElementContainerMountedProps {},
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::Content(content.map(|element| *element)),
+                    }
+                }
+                Self::ItemContainer(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let ItemContainer {
+                        element_state,
+                        content,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::ItemContainer,
+                        props: MountedProps::ItemContainer(std::rc::Rc::new(
+                            ItemContainerMountedProps {},
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::Content(content.map(|element| *element)),
+                    }
+                }
+                Self::ItemsRepeaterScrollHost(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let ItemsRepeaterScrollHost { element_state } = value;
+                    ElementParts {
+                        kind: MountedKind::ItemsRepeaterScrollHost,
+                        props: MountedProps::ItemsRepeaterScrollHost(std::rc::Rc::new(
+                            ItemsRepeaterScrollHostMountedProps {},
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::Frame(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let Frame {
+                        element_state,
+                        content,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::Frame,
+                        props: MountedProps::Frame(std::rc::Rc::new(FrameMountedProps {})),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::Content(content.map(|element| *element)),
+                    }
+                }
+                Self::TwoPaneView(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let TwoPaneView {
+                        element_state,
+                        slots: _,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::TwoPaneView,
+                        props: MountedProps::TwoPaneView(std::rc::Rc::new(
+                            TwoPaneViewMountedProps {},
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::RefreshVisualizer(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let RefreshVisualizer {
+                        orientation,
+                        element_state,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::RefreshVisualizer,
+                        props: MountedProps::RefreshVisualizer(std::rc::Rc::new(
+                            RefreshVisualizerMountedProps { orientation },
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::AnimatedVisualPlayer(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let AnimatedVisualPlayer {
+                        auto_play,
+                        element_state,
+                    } = value;
+                    ElementParts {
+                        kind: MountedKind::AnimatedVisualPlayer,
+                        props: MountedProps::AnimatedVisualPlayer(std::rc::Rc::new(
+                            AnimatedVisualPlayerMountedProps { auto_play },
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::AnimatedIcon(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let AnimatedIcon { element_state } = value;
+                    ElementParts {
+                        kind: MountedKind::AnimatedIcon,
+                        props: MountedProps::AnimatedIcon(std::rc::Rc::new(
+                            AnimatedIconMountedProps {},
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::MediaTransportControls(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let MediaTransportControls { element_state } = value;
+                    ElementParts {
+                        kind: MountedKind::MediaTransportControls,
+                        props: MountedProps::MediaTransportControls(std::rc::Rc::new(
+                            MediaTransportControlsMountedProps {},
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
+                    }
+                }
+                Self::SystemBackdropElement(value) => {
+                    let value = std::rc::Rc::unwrap_or_clone(value);
+                    let SystemBackdropElement { element_state } = value;
+                    ElementParts {
+                        kind: MountedKind::SystemBackdropElement,
+                        props: MountedProps::SystemBackdropElement(std::rc::Rc::new(
+                            SystemBackdropElementMountedProps {},
+                        )),
+                        reference: None,
+                        element_state,
+                        window_title_bar: None,
+                        structure: ElementStructure::None,
                     }
                 }
             }
@@ -10374,6 +10935,7 @@ pub mod public {
                         && value.are_transport_controls_enabled
                             == mounted.are_transport_controls_enabled
                         && value.auto_play == mounted.auto_play
+                        && value.stretch == mounted.stretch
                 }
                 (Self::SemanticZoom(value), MountedProps::SemanticZoom(mounted)) => {
                     true && value.is_zoomed_in_view_active == mounted.is_zoomed_in_view_active
@@ -10396,6 +10958,23 @@ pub mod public {
                     true && value.pull_direction == mounted.pull_direction
                         && value.on_refresh_requested == mounted.on_refresh_requested
                 }
+                (Self::AppBarElementContainer(_), MountedProps::AppBarElementContainer(_)) => true,
+                (Self::ItemContainer(_), MountedProps::ItemContainer(_)) => true,
+                (Self::ItemsRepeaterScrollHost(_), MountedProps::ItemsRepeaterScrollHost(_)) => {
+                    true
+                }
+                (Self::Frame(_), MountedProps::Frame(_)) => true,
+                (Self::TwoPaneView(_), MountedProps::TwoPaneView(_)) => true,
+                (Self::RefreshVisualizer(value), MountedProps::RefreshVisualizer(mounted)) => {
+                    true && value.orientation == mounted.orientation
+                }
+                (
+                    Self::AnimatedVisualPlayer(value),
+                    MountedProps::AnimatedVisualPlayer(mounted),
+                ) => true && value.auto_play == mounted.auto_play,
+                (Self::AnimatedIcon(_), MountedProps::AnimatedIcon(_)) => true,
+                (Self::MediaTransportControls(_), MountedProps::MediaTransportControls(_)) => true,
+                (Self::SystemBackdropElement(_), MountedProps::SystemBackdropElement(_)) => true,
                 _ => false,
             }
         }
@@ -10484,13 +11063,23 @@ pub mod public {
                 Self::PipsPager(_) => None,
                 Self::ToggleSplitButton(value) => value.reference.as_ref(),
                 Self::ItemsView(_) => None,
-                Self::MediaPlayerElement(_) => None,
+                Self::MediaPlayerElement(value) => value.reference.as_ref(),
                 Self::SemanticZoom(_) => None,
                 Self::ParallaxView(_) => None,
                 Self::AnnotatedScrollBar(_) => None,
                 Self::MapControl(_) => None,
                 Self::SwipeControl(_) => None,
                 Self::RefreshContainer(_) => None,
+                Self::AppBarElementContainer(_) => None,
+                Self::ItemContainer(_) => None,
+                Self::ItemsRepeaterScrollHost(_) => None,
+                Self::Frame(_) => None,
+                Self::TwoPaneView(_) => None,
+                Self::RefreshVisualizer(_) => None,
+                Self::AnimatedVisualPlayer(_) => None,
+                Self::AnimatedIcon(_) => None,
+                Self::MediaTransportControls(_) => None,
+                Self::SystemBackdropElement(_) => None,
             }
         }
         fn element_state(&self) -> Option<&ElementState> {
@@ -10585,6 +11174,16 @@ pub mod public {
                 Self::MapControl(value) => value.element_state.as_deref(),
                 Self::SwipeControl(value) => value.element_state.as_deref(),
                 Self::RefreshContainer(value) => value.element_state.as_deref(),
+                Self::AppBarElementContainer(value) => value.element_state.as_deref(),
+                Self::ItemContainer(value) => value.element_state.as_deref(),
+                Self::ItemsRepeaterScrollHost(value) => value.element_state.as_deref(),
+                Self::Frame(value) => value.element_state.as_deref(),
+                Self::TwoPaneView(value) => value.element_state.as_deref(),
+                Self::RefreshVisualizer(value) => value.element_state.as_deref(),
+                Self::AnimatedVisualPlayer(value) => value.element_state.as_deref(),
+                Self::AnimatedIcon(value) => value.element_state.as_deref(),
+                Self::MediaTransportControls(value) => value.element_state.as_deref(),
+                Self::SystemBackdropElement(value) => value.element_state.as_deref(),
             }
         }
         fn window_title_bar(&self) -> Option<WindowTitleBarHeight> {
@@ -10679,6 +11278,16 @@ pub mod public {
                 Self::MapControl(_) => None,
                 Self::SwipeControl(_) => None,
                 Self::RefreshContainer(_) => None,
+                Self::AppBarElementContainer(_) => None,
+                Self::ItemContainer(_) => None,
+                Self::ItemsRepeaterScrollHost(_) => None,
+                Self::Frame(_) => None,
+                Self::TwoPaneView(_) => None,
+                Self::RefreshVisualizer(_) => None,
+                Self::AnimatedVisualPlayer(_) => None,
+                Self::AnimatedIcon(_) => None,
+                Self::MediaTransportControls(_) => None,
+                Self::SystemBackdropElement(_) => None,
             }
         }
         fn structure(&self) -> ElementStructureRef<'_> {
@@ -10787,6 +11396,20 @@ pub mod public {
                 Self::RefreshContainer(value) => {
                     ElementStructureRef::Content(value.content.as_deref())
                 }
+                Self::AppBarElementContainer(value) => {
+                    ElementStructureRef::Content(value.content.as_deref())
+                }
+                Self::ItemContainer(value) => {
+                    ElementStructureRef::Content(value.content.as_deref())
+                }
+                Self::ItemsRepeaterScrollHost(_) => ElementStructureRef::None,
+                Self::Frame(value) => ElementStructureRef::Content(value.content.as_deref()),
+                Self::TwoPaneView(_) => ElementStructureRef::None,
+                Self::RefreshVisualizer(_) => ElementStructureRef::None,
+                Self::AnimatedVisualPlayer(_) => ElementStructureRef::None,
+                Self::AnimatedIcon(_) => ElementStructureRef::None,
+                Self::MediaTransportControls(_) => ElementStructureRef::None,
+                Self::SystemBackdropElement(_) => ElementStructureRef::None,
             }
         }
         fn visit_events(&self, visit: &mut dyn FnMut(EventId, bool)) {
@@ -11285,6 +11908,16 @@ pub mod public {
                         value.on_refresh_requested.is_some(),
                     );
                 }
+                Self::AppBarElementContainer(_) => {}
+                Self::ItemContainer(_) => {}
+                Self::ItemsRepeaterScrollHost(_) => {}
+                Self::Frame(_) => {}
+                Self::TwoPaneView(_) => {}
+                Self::RefreshVisualizer(_) => {}
+                Self::AnimatedVisualPlayer(_) => {}
+                Self::AnimatedIcon(_) => {}
+                Self::MediaTransportControls(_) => {}
+                Self::SystemBackdropElement(_) => {}
             }
         }
     }
@@ -13434,7 +14067,7 @@ impl MountedPropsExt for MountedProps {
                     PropertyId::MediaPlayerElementSource,
                     match &values.source {
                         Property::Inherited => None,
-                        Property::Set(value) => Some(PropertyValueRef::Str(value.as_str())),
+                        Property::Set(value) => Some(PropertyValueRef::IUnknown(value)),
                     },
                 );
                 visit(
@@ -13449,6 +14082,13 @@ impl MountedPropsExt for MountedProps {
                     match &values.auto_play {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::MediaPlayerElementStretch,
+                    match &values.stretch {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Stretch(*value)),
                     },
                 );
             }
@@ -13521,6 +14161,34 @@ impl MountedPropsExt for MountedProps {
                     },
                 );
             }
+            Self::AppBarElementContainer(_) => {}
+            Self::ItemContainer(_) => {}
+            Self::ItemsRepeaterScrollHost(_) => {}
+            Self::Frame(_) => {}
+            Self::TwoPaneView(_) => {}
+            Self::RefreshVisualizer(values) => {
+                visit(
+                    PropertyId::RefreshVisualizerOrientation,
+                    match &values.orientation {
+                        Property::Inherited => None,
+                        Property::Set(value) => {
+                            Some(PropertyValueRef::RefreshVisualizerOrientation(*value))
+                        }
+                    },
+                );
+            }
+            Self::AnimatedVisualPlayer(values) => {
+                visit(
+                    PropertyId::AnimatedVisualPlayerAutoPlay,
+                    match &values.auto_play {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+            }
+            Self::AnimatedIcon(_) => {}
+            Self::MediaTransportControls(_) => {}
+            Self::SystemBackdropElement(_) => {}
         }
     }
     fn theme_style(&self) -> ThemeStyle {
@@ -13665,6 +14333,16 @@ impl MountedPropsExt for MountedProps {
             Self::MapControl(_) => ThemeStyle::default(),
             Self::SwipeControl(_) => ThemeStyle::default(),
             Self::RefreshContainer(_) => ThemeStyle::default(),
+            Self::AppBarElementContainer(_) => ThemeStyle::default(),
+            Self::ItemContainer(_) => ThemeStyle::default(),
+            Self::ItemsRepeaterScrollHost(_) => ThemeStyle::default(),
+            Self::Frame(_) => ThemeStyle::default(),
+            Self::TwoPaneView(_) => ThemeStyle::default(),
+            Self::RefreshVisualizer(_) => ThemeStyle::default(),
+            Self::AnimatedVisualPlayer(_) => ThemeStyle::default(),
+            Self::AnimatedIcon(_) => ThemeStyle::default(),
+            Self::MediaTransportControls(_) => ThemeStyle::default(),
+            Self::SystemBackdropElement(_) => ThemeStyle::default(),
         }
     }
 }
@@ -14165,6 +14843,16 @@ impl MountedEventsExt for MountedProps {
                     values.on_refresh_requested.is_some(),
                 );
             }
+            Self::AppBarElementContainer(_) => {}
+            Self::ItemContainer(_) => {}
+            Self::ItemsRepeaterScrollHost(_) => {}
+            Self::Frame(_) => {}
+            Self::TwoPaneView(_) => {}
+            Self::RefreshVisualizer(_) => {}
+            Self::AnimatedVisualPlayer(_) => {}
+            Self::AnimatedIcon(_) => {}
+            Self::MediaTransportControls(_) => {}
+            Self::SystemBackdropElement(_) => {}
         }
     }
     fn dispatch_event(&self, event: EventId, payload: &EventPayload) -> Option<bool> {
@@ -14956,6 +15644,16 @@ pub enum MountedKind {
     MapControl,
     SwipeControl,
     RefreshContainer,
+    AppBarElementContainer,
+    ItemContainer,
+    ItemsRepeaterScrollHost,
+    Frame,
+    TwoPaneView,
+    RefreshVisualizer,
+    AnimatedVisualPlayer,
+    AnimatedIcon,
+    MediaTransportControls,
+    SystemBackdropElement,
 }
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum SlotId {
@@ -15007,6 +15705,8 @@ pub enum SlotId {
     ParallaxViewSource,
     ParallaxViewChild,
     SwipeControlContent,
+    TwoPaneViewPane1,
+    TwoPaneViewPane2,
 }
 pub fn slots(kind: MountedKind) -> &'static [SlotId] {
     match kind {
@@ -15121,6 +15821,16 @@ pub fn slots(kind: MountedKind) -> &'static [SlotId] {
         MountedKind::MapControl => &[],
         MountedKind::SwipeControl => &[SlotId::SwipeControlContent],
         MountedKind::RefreshContainer => &[],
+        MountedKind::AppBarElementContainer => &[],
+        MountedKind::ItemContainer => &[],
+        MountedKind::ItemsRepeaterScrollHost => &[],
+        MountedKind::Frame => &[],
+        MountedKind::TwoPaneView => &[SlotId::TwoPaneViewPane1, SlotId::TwoPaneViewPane2],
+        MountedKind::RefreshVisualizer => &[],
+        MountedKind::AnimatedVisualPlayer => &[],
+        MountedKind::AnimatedIcon => &[],
+        MountedKind::MediaTransportControls => &[],
+        MountedKind::SystemBackdropElement => &[],
     }
 }
 pub fn slot_is_collection(slot: SlotId) -> bool {
@@ -16363,15 +17073,17 @@ impl PartialEq for ItemsViewMountedProps {
 }
 #[derive(Clone, Debug)]
 pub(crate) struct MediaPlayerElementMountedProps {
-    source: Property<String>,
+    source: Property<windows_core::IUnknown>,
     are_transport_controls_enabled: Property<bool>,
     auto_play: Property<bool>,
+    stretch: Property<Stretch>,
 }
 impl PartialEq for MediaPlayerElementMountedProps {
     fn eq(&self, other: &Self) -> bool {
         true && self.source == other.source
             && self.are_transport_controls_enabled == other.are_transport_controls_enabled
             && self.auto_play == other.auto_play
+            && self.stretch == other.stretch
     }
 }
 #[derive(Clone, Debug)]
@@ -16432,6 +17144,80 @@ impl PartialEq for RefreshContainerMountedProps {
     fn eq(&self, other: &Self) -> bool {
         true && self.pull_direction == other.pull_direction
             && self.on_refresh_requested == other.on_refresh_requested
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct AppBarElementContainerMountedProps {}
+impl PartialEq for AppBarElementContainerMountedProps {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct ItemContainerMountedProps {}
+impl PartialEq for ItemContainerMountedProps {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct ItemsRepeaterScrollHostMountedProps {}
+impl PartialEq for ItemsRepeaterScrollHostMountedProps {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct FrameMountedProps {}
+impl PartialEq for FrameMountedProps {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct TwoPaneViewMountedProps {}
+impl PartialEq for TwoPaneViewMountedProps {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct RefreshVisualizerMountedProps {
+    orientation: Property<RefreshVisualizerOrientation>,
+}
+impl PartialEq for RefreshVisualizerMountedProps {
+    fn eq(&self, other: &Self) -> bool {
+        true && self.orientation == other.orientation
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct AnimatedVisualPlayerMountedProps {
+    auto_play: Property<bool>,
+}
+impl PartialEq for AnimatedVisualPlayerMountedProps {
+    fn eq(&self, other: &Self) -> bool {
+        true && self.auto_play == other.auto_play
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct AnimatedIconMountedProps {}
+impl PartialEq for AnimatedIconMountedProps {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct MediaTransportControlsMountedProps {}
+impl PartialEq for MediaTransportControlsMountedProps {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct SystemBackdropElementMountedProps {}
+impl PartialEq for SystemBackdropElementMountedProps {
+    fn eq(&self, _other: &Self) -> bool {
+        true
     }
 }
 #[derive(Clone, Debug, PartialEq)]
@@ -16526,6 +17312,16 @@ pub enum MountedProps {
     MapControl(std::rc::Rc<MapControlMountedProps>),
     SwipeControl(std::rc::Rc<SwipeControlMountedProps>),
     RefreshContainer(std::rc::Rc<RefreshContainerMountedProps>),
+    AppBarElementContainer(std::rc::Rc<AppBarElementContainerMountedProps>),
+    ItemContainer(std::rc::Rc<ItemContainerMountedProps>),
+    ItemsRepeaterScrollHost(std::rc::Rc<ItemsRepeaterScrollHostMountedProps>),
+    Frame(std::rc::Rc<FrameMountedProps>),
+    TwoPaneView(std::rc::Rc<TwoPaneViewMountedProps>),
+    RefreshVisualizer(std::rc::Rc<RefreshVisualizerMountedProps>),
+    AnimatedVisualPlayer(std::rc::Rc<AnimatedVisualPlayerMountedProps>),
+    AnimatedIcon(std::rc::Rc<AnimatedIconMountedProps>),
+    MediaTransportControls(std::rc::Rc<MediaTransportControlsMountedProps>),
+    SystemBackdropElement(std::rc::Rc<SystemBackdropElementMountedProps>),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub enum ElementStructure {
@@ -16854,6 +17650,7 @@ pub enum PropertyId {
     MediaPlayerElementSource,
     MediaPlayerElementAreTransportControlsEnabled,
     MediaPlayerElementAutoPlay,
+    MediaPlayerElementStretch,
     SemanticZoomIsZoomedInViewActive,
     ParallaxViewHorizontalShift,
     AnnotatedScrollBarSmallChange,
@@ -16862,6 +17659,8 @@ pub enum PropertyId {
     MapControlMapServiceToken,
     MapControlInteractiveControlsVisible,
     RefreshContainerPullDirection,
+    RefreshVisualizerOrientation,
+    AnimatedVisualPlayerAutoPlay,
 }
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum EventId {
@@ -16968,6 +17767,7 @@ pub enum PropertyValue {
     GridLengths(std::rc::Rc<Vec<GridLength>>),
     HorizontalAlignment(HorizontalAlignment),
     I32(i32),
+    IUnknown(windows_core::IUnknown),
     InfoBarSeverity(InfoBarSeverity),
     ItemsViewLayout(ItemsViewLayout),
     ItemsViewSelectionMode(ItemsViewSelectionMode),
@@ -16979,6 +17779,7 @@ pub enum PropertyValue {
     Orientation(Orientation),
     PasswordRevealMode(PasswordRevealMode),
     RefreshPullDirection(RefreshPullDirection),
+    RefreshVisualizerOrientation(RefreshVisualizerOrientation),
     ResourceOverrides(ResourceOverrides),
     RichText(RichText),
     ScrollBarVisibility(ScrollBarVisibility),
@@ -17012,6 +17813,7 @@ impl PartialEq for PropertyValue {
             (Self::GridLengths(left), Self::GridLengths(right)) => left == right,
             (Self::HorizontalAlignment(left), Self::HorizontalAlignment(right)) => left == right,
             (Self::I32(left), Self::I32(right)) => left == right,
+            (Self::IUnknown(left), Self::IUnknown(right)) => left == right,
             (Self::InfoBarSeverity(left), Self::InfoBarSeverity(right)) => left == right,
             (Self::ItemsViewLayout(left), Self::ItemsViewLayout(right)) => left == right,
             (Self::ItemsViewSelectionMode(left), Self::ItemsViewSelectionMode(right)) => {
@@ -17037,6 +17839,10 @@ impl PartialEq for PropertyValue {
             (Self::Orientation(left), Self::Orientation(right)) => left == right,
             (Self::PasswordRevealMode(left), Self::PasswordRevealMode(right)) => left == right,
             (Self::RefreshPullDirection(left), Self::RefreshPullDirection(right)) => left == right,
+            (
+                Self::RefreshVisualizerOrientation(left),
+                Self::RefreshVisualizerOrientation(right),
+            ) => left == right,
             (Self::ResourceOverrides(left), Self::ResourceOverrides(right)) => left == right,
             (Self::RichText(left), Self::RichText(right)) => left == right,
             (Self::ScrollBarVisibility(left), Self::ScrollBarVisibility(right)) => left == right,
@@ -17079,6 +17885,7 @@ pub enum PropertyValueRef<'a> {
     GridLengths(&'a std::rc::Rc<Vec<GridLength>>),
     HorizontalAlignment(HorizontalAlignment),
     I32(i32),
+    IUnknown(&'a windows_core::IUnknown),
     InfoBarSeverity(InfoBarSeverity),
     ItemsViewLayout(ItemsViewLayout),
     ItemsViewSelectionMode(ItemsViewSelectionMode),
@@ -17090,6 +17897,7 @@ pub enum PropertyValueRef<'a> {
     Orientation(Orientation),
     PasswordRevealMode(PasswordRevealMode),
     RefreshPullDirection(RefreshPullDirection),
+    RefreshVisualizerOrientation(RefreshVisualizerOrientation),
     ResourceOverrides(&'a ResourceOverrides),
     RichText(&'a RichText),
     ScrollBarVisibility(ScrollBarVisibility),
@@ -17125,6 +17933,7 @@ impl PropertyValueRef<'_> {
                 left == *right
             }
             (Self::I32(left), PropertyValue::I32(right)) => left == *right,
+            (Self::IUnknown(left), PropertyValue::IUnknown(right)) => left == right,
             (Self::InfoBarSeverity(left), PropertyValue::InfoBarSeverity(right)) => left == *right,
             (Self::ItemsViewLayout(left), PropertyValue::ItemsViewLayout(right)) => left == *right,
             (Self::ItemsViewSelectionMode(left), PropertyValue::ItemsViewSelectionMode(right)) => {
@@ -17154,6 +17963,10 @@ impl PropertyValueRef<'_> {
             (Self::RefreshPullDirection(left), PropertyValue::RefreshPullDirection(right)) => {
                 left == *right
             }
+            (
+                Self::RefreshVisualizerOrientation(left),
+                PropertyValue::RefreshVisualizerOrientation(right),
+            ) => left == *right,
             (Self::ResourceOverrides(left), PropertyValue::ResourceOverrides(right)) => {
                 left == right
             }
@@ -17204,6 +18017,7 @@ impl PropertyValueRef<'_> {
             Self::GridLengths(value) => PropertyValue::GridLengths(value.clone()),
             Self::HorizontalAlignment(value) => PropertyValue::HorizontalAlignment(value),
             Self::I32(value) => PropertyValue::I32(value),
+            Self::IUnknown(value) => PropertyValue::IUnknown(value.clone()),
             Self::InfoBarSeverity(value) => PropertyValue::InfoBarSeverity(value),
             Self::ItemsViewLayout(value) => PropertyValue::ItemsViewLayout(value),
             Self::ItemsViewSelectionMode(value) => PropertyValue::ItemsViewSelectionMode(value),
@@ -17219,6 +18033,9 @@ impl PropertyValueRef<'_> {
             Self::Orientation(value) => PropertyValue::Orientation(value),
             Self::PasswordRevealMode(value) => PropertyValue::PasswordRevealMode(value),
             Self::RefreshPullDirection(value) => PropertyValue::RefreshPullDirection(value),
+            Self::RefreshVisualizerOrientation(value) => {
+                PropertyValue::RefreshVisualizerOrientation(value)
+            }
             Self::ResourceOverrides(value) => PropertyValue::ResourceOverrides(value.clone()),
             Self::RichText(value) => PropertyValue::RichText(value.clone()),
             Self::ScrollBarVisibility(value) => PropertyValue::ScrollBarVisibility(value),
@@ -17305,6 +18122,11 @@ impl From<i32> for PropertyValue {
         Self::I32(value)
     }
 }
+impl From<windows_core::IUnknown> for PropertyValue {
+    fn from(value: windows_core::IUnknown) -> Self {
+        Self::IUnknown(value)
+    }
+}
 impl From<InfoBarSeverity> for PropertyValue {
     fn from(value: InfoBarSeverity) -> Self {
         Self::InfoBarSeverity(value)
@@ -17358,6 +18180,11 @@ impl From<PasswordRevealMode> for PropertyValue {
 impl From<RefreshPullDirection> for PropertyValue {
     fn from(value: RefreshPullDirection) -> Self {
         Self::RefreshPullDirection(value)
+    }
+}
+impl From<RefreshVisualizerOrientation> for PropertyValue {
+    fn from(value: RefreshVisualizerOrientation) -> Self {
+        Self::RefreshVisualizerOrientation(value)
     }
 }
 impl From<ResourceOverrides> for PropertyValue {
@@ -21687,7 +22514,7 @@ const MEDIA_PLAYER_ELEMENT_PROPERTIES: &[PropertyDescriptor] = &[
         id: PropertyId::MediaPlayerElementSource,
         name: "Source",
         field: "source",
-        value: "Str",
+        value: "IUnknown",
         interface: "Microsoft.UI.Xaml.Controls.IMediaPlayerElement",
         clearable: true,
         feedback: None,
@@ -21710,6 +22537,17 @@ const MEDIA_PLAYER_ELEMENT_PROPERTIES: &[PropertyDescriptor] = &[
         name: "AutoPlay",
         field: "auto_play",
         value: "Bool",
+        interface: "Microsoft.UI.Xaml.Controls.IMediaPlayerElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::MediaPlayerElementStretch,
+        name: "Stretch",
+        field: "stretch",
+        value: "Stretch",
         interface: "Microsoft.UI.Xaml.Controls.IMediaPlayerElement",
         clearable: true,
         feedback: None,
@@ -21864,6 +22702,71 @@ const REFRESH_CONTAINER_EVENTS: &[EventDescriptor] = &[EventDescriptor {
     interface: "Microsoft.UI.Xaml.Controls.IRefreshContainer",
 }];
 const REFRESH_CONTAINER_SLOTS: &[SlotDescriptor] = &[];
+const APP_BAR_ELEMENT_CONTAINER_PROPERTIES: &[PropertyDescriptor] = &[];
+const APP_BAR_ELEMENT_CONTAINER_EVENTS: &[EventDescriptor] = &[];
+const APP_BAR_ELEMENT_CONTAINER_SLOTS: &[SlotDescriptor] = &[];
+const ITEM_CONTAINER_PROPERTIES: &[PropertyDescriptor] = &[];
+const ITEM_CONTAINER_EVENTS: &[EventDescriptor] = &[];
+const ITEM_CONTAINER_SLOTS: &[SlotDescriptor] = &[];
+const ITEMS_REPEATER_SCROLL_HOST_PROPERTIES: &[PropertyDescriptor] = &[];
+const ITEMS_REPEATER_SCROLL_HOST_EVENTS: &[EventDescriptor] = &[];
+const ITEMS_REPEATER_SCROLL_HOST_SLOTS: &[SlotDescriptor] = &[];
+const FRAME_PROPERTIES: &[PropertyDescriptor] = &[];
+const FRAME_EVENTS: &[EventDescriptor] = &[];
+const FRAME_SLOTS: &[SlotDescriptor] = &[];
+const TWO_PANE_VIEW_PROPERTIES: &[PropertyDescriptor] = &[];
+const TWO_PANE_VIEW_EVENTS: &[EventDescriptor] = &[];
+const TWO_PANE_VIEW_SLOTS: &[SlotDescriptor] = &[
+    SlotDescriptor {
+        id: SlotId::TwoPaneViewPane1,
+        name: "Pane1",
+        interface: "Microsoft.UI.Xaml.Controls.ITwoPaneView",
+        target: "ui_element",
+        collection: false,
+    },
+    SlotDescriptor {
+        id: SlotId::TwoPaneViewPane2,
+        name: "Pane2",
+        interface: "Microsoft.UI.Xaml.Controls.ITwoPaneView",
+        target: "ui_element",
+        collection: false,
+    },
+];
+const REFRESH_VISUALIZER_PROPERTIES: &[PropertyDescriptor] = &[PropertyDescriptor {
+    id: PropertyId::RefreshVisualizerOrientation,
+    name: "Orientation",
+    field: "orientation",
+    value: "RefreshVisualizerOrientation",
+    interface: "Microsoft.UI.Xaml.Controls.IRefreshVisualizer",
+    clearable: true,
+    feedback: None,
+    feedback_contract: None,
+    observes_feedback: false,
+}];
+const REFRESH_VISUALIZER_EVENTS: &[EventDescriptor] = &[];
+const REFRESH_VISUALIZER_SLOTS: &[SlotDescriptor] = &[];
+const ANIMATED_VISUAL_PLAYER_PROPERTIES: &[PropertyDescriptor] = &[PropertyDescriptor {
+    id: PropertyId::AnimatedVisualPlayerAutoPlay,
+    name: "AutoPlay",
+    field: "auto_play",
+    value: "Bool",
+    interface: "Microsoft.UI.Xaml.Controls.IAnimatedVisualPlayer",
+    clearable: true,
+    feedback: None,
+    feedback_contract: None,
+    observes_feedback: false,
+}];
+const ANIMATED_VISUAL_PLAYER_EVENTS: &[EventDescriptor] = &[];
+const ANIMATED_VISUAL_PLAYER_SLOTS: &[SlotDescriptor] = &[];
+const ANIMATED_ICON_PROPERTIES: &[PropertyDescriptor] = &[];
+const ANIMATED_ICON_EVENTS: &[EventDescriptor] = &[];
+const ANIMATED_ICON_SLOTS: &[SlotDescriptor] = &[];
+const MEDIA_TRANSPORT_CONTROLS_PROPERTIES: &[PropertyDescriptor] = &[];
+const MEDIA_TRANSPORT_CONTROLS_EVENTS: &[EventDescriptor] = &[];
+const MEDIA_TRANSPORT_CONTROLS_SLOTS: &[SlotDescriptor] = &[];
+const SYSTEM_BACKDROP_ELEMENT_PROPERTIES: &[PropertyDescriptor] = &[];
+const SYSTEM_BACKDROP_ELEMENT_EVENTS: &[EventDescriptor] = &[];
+const SYSTEM_BACKDROP_ELEMENT_SLOTS: &[SlotDescriptor] = &[];
 pub const CONTROLS: &[ControlDescriptor] = &[
     ControlDescriptor {
         kind: MountedKind::TextBlock,
@@ -22957,7 +23860,7 @@ pub const CONTROLS: &[ControlDescriptor] = &[
         name: "MediaPlayerElement",
         type_name: "Microsoft.UI.Xaml.Controls.MediaPlayerElement",
         role: ControlRole::Leaf,
-        capabilities: &[Capability::Layout],
+        capabilities: &[Capability::Layout, Capability::Reference],
         properties: MEDIA_PLAYER_ELEMENT_PROPERTIES,
         events: MEDIA_PLAYER_ELEMENT_EVENTS,
         slots: MEDIA_PLAYER_ELEMENT_SLOTS,
@@ -23033,6 +23936,126 @@ pub const CONTROLS: &[ControlDescriptor] = &[
         properties: REFRESH_CONTAINER_PROPERTIES,
         events: REFRESH_CONTAINER_EVENTS,
         slots: REFRESH_CONTAINER_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::AppBarElementContainer,
+        name: "AppBarElementContainer",
+        type_name: "Microsoft.UI.Xaml.Controls.AppBarElementContainer",
+        role: ControlRole::Content,
+        capabilities: &[Capability::Layout, Capability::Content],
+        properties: APP_BAR_ELEMENT_CONTAINER_PROPERTIES,
+        events: APP_BAR_ELEMENT_CONTAINER_EVENTS,
+        slots: APP_BAR_ELEMENT_CONTAINER_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::ItemContainer,
+        name: "ItemContainer",
+        type_name: "Microsoft.UI.Xaml.Controls.ItemContainer",
+        role: ControlRole::Content,
+        capabilities: &[Capability::Layout, Capability::Content],
+        properties: ITEM_CONTAINER_PROPERTIES,
+        events: ITEM_CONTAINER_EVENTS,
+        slots: ITEM_CONTAINER_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::ItemsRepeaterScrollHost,
+        name: "ItemsRepeaterScrollHost",
+        type_name: "Microsoft.UI.Xaml.Controls.ItemsRepeaterScrollHost",
+        role: ControlRole::Leaf,
+        capabilities: &[Capability::Layout],
+        properties: ITEMS_REPEATER_SCROLL_HOST_PROPERTIES,
+        events: ITEMS_REPEATER_SCROLL_HOST_EVENTS,
+        slots: ITEMS_REPEATER_SCROLL_HOST_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::Frame,
+        name: "Frame",
+        type_name: "Microsoft.UI.Xaml.Controls.Frame",
+        role: ControlRole::Content,
+        capabilities: &[Capability::Layout, Capability::Content],
+        properties: FRAME_PROPERTIES,
+        events: FRAME_EVENTS,
+        slots: FRAME_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::TwoPaneView,
+        name: "TwoPaneView",
+        type_name: "Microsoft.UI.Xaml.Controls.TwoPaneView",
+        role: ControlRole::Slots,
+        capabilities: &[Capability::Layout],
+        properties: TWO_PANE_VIEW_PROPERTIES,
+        events: TWO_PANE_VIEW_EVENTS,
+        slots: TWO_PANE_VIEW_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::RefreshVisualizer,
+        name: "RefreshVisualizer",
+        type_name: "Microsoft.UI.Xaml.Controls.RefreshVisualizer",
+        role: ControlRole::Leaf,
+        capabilities: &[Capability::Layout],
+        properties: REFRESH_VISUALIZER_PROPERTIES,
+        events: REFRESH_VISUALIZER_EVENTS,
+        slots: REFRESH_VISUALIZER_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::AnimatedVisualPlayer,
+        name: "AnimatedVisualPlayer",
+        type_name: "Microsoft.UI.Xaml.Controls.AnimatedVisualPlayer",
+        role: ControlRole::Leaf,
+        capabilities: &[Capability::Layout],
+        properties: ANIMATED_VISUAL_PLAYER_PROPERTIES,
+        events: ANIMATED_VISUAL_PLAYER_EVENTS,
+        slots: ANIMATED_VISUAL_PLAYER_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::AnimatedIcon,
+        name: "AnimatedIcon",
+        type_name: "Microsoft.UI.Xaml.Controls.AnimatedIcon",
+        role: ControlRole::Leaf,
+        capabilities: &[Capability::Layout],
+        properties: ANIMATED_ICON_PROPERTIES,
+        events: ANIMATED_ICON_EVENTS,
+        slots: ANIMATED_ICON_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::MediaTransportControls,
+        name: "MediaTransportControls",
+        type_name: "Microsoft.UI.Xaml.Controls.MediaTransportControls",
+        role: ControlRole::Leaf,
+        capabilities: &[Capability::Layout],
+        properties: MEDIA_TRANSPORT_CONTROLS_PROPERTIES,
+        events: MEDIA_TRANSPORT_CONTROLS_EVENTS,
+        slots: MEDIA_TRANSPORT_CONTROLS_SLOTS,
+        selection: None,
+        controlled_collection: None,
+    },
+    ControlDescriptor {
+        kind: MountedKind::SystemBackdropElement,
+        name: "SystemBackdropElement",
+        type_name: "Microsoft.UI.Xaml.Controls.SystemBackdropElement",
+        role: ControlRole::Leaf,
+        capabilities: &[Capability::Layout],
+        properties: SYSTEM_BACKDROP_ELEMENT_PROPERTIES,
+        events: SYSTEM_BACKDROP_ELEMENT_EVENTS,
+        slots: SYSTEM_BACKDROP_ELEMENT_SLOTS,
         selection: None,
         controlled_collection: None,
     },

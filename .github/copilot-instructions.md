@@ -350,3 +350,33 @@ Automation, whose HelpText reports a status item count. The Windhawk
 `TaskListButton::UpdateBadge`, so numbers reappear whenever Windhawk is
 injected; its source comments the 16-versus-24 behaviour. Set the taskbar icon
 size back to Default to get numbers without third-party injection.
+
+### gallery: camera preview appears black on a packaged launch (2026-09)
+
+Resolved as a camera-side condition, not a rendering bug. The Camera page runs
+`MediaCapture` in shared-readonly video mode, wraps the preview frame source with
+`MediaSource::CreateFromMediaFrameSource`, and hands the result to a declarative
+`MediaPlayerElement`. The preview does update: two frames captured 2.5 seconds
+apart differ across 1.86 percent of the preview pixels, and multiplying that
+region by 7 exposes live sensor noise and scene content around a single bright
+pixel. The snapshot path agrees, writing a 1280x720 JPEG whose contents match the
+preview, and the shell renders it through `Image::source_file`.
+
+The frames are black because the device emits black frames on that host. The
+Windows Camera app shows the same black preview with the same single bright pixel
+while the gallery is closed and the device is free, and the enclosure resolves as
+`USB Camera` in the `Camera` device class with status `OK`.
+
+Two platform facts came out of the check. Build 26340 raises a per-application
+camera prompt the first time a packaged app touches the device, and the prompt
+defaults to No; answering No leaves `MediaCapture` initialized with no frames
+until the answer changes under Settings > Privacy & security > Camera. Reinstalling
+the package raises the prompt again. The taskbar badge aside, this is the second
+gallery feature whose behaviour depends on package identity.
+
+`MediaPlayerElement::source` accepts a `windows_core::IUnknown` rather than a URI
+string, so a caller passes either `MediaSource::CreateFromUri` or a camera frame
+source and the WinUI backend assigns `MediaPlayerElement.Source` directly. The
+`media_source` adapter in `winui.toml` therefore declares no filter entries of its
+own; adding `MediaSource::CreateFromUri` back to the generated filter reintroduces
+an unused-function warning, because nothing in the library calls it.

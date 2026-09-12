@@ -365,6 +365,11 @@ pub enum Command {
         source: Option<windows_core::IUnknown>,
         completion: Callback<Result<(), RuntimeError>>,
     },
+    SetMediaSource {
+        node: NodeId,
+        source: Option<windows_core::IUnknown>,
+        completion: Callback<Result<(), RuntimeError>>,
+    },
     ObserveImageScale {
         node: NodeId,
         observation: u64,
@@ -495,6 +500,9 @@ impl Command {
             }
             | Self::RequestSwapChainPanelFrame { node, completion }
             | Self::SetNativeImageSource {
+                node, completion, ..
+            }
+            | Self::SetMediaSource {
                 node, completion, ..
             }
             | Self::SetCompositionChildVisual {

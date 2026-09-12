@@ -1858,7 +1858,7 @@ adapter = "inspectable_string"
 
 [[control]]
 type = "Microsoft.UI.Xaml.Controls.MediaPlayerElement"
-capabilities = ["layout"]
+capabilities = ["layout", "reference"]
 
 [[control.property]]
 name = "Source"
@@ -1869,6 +1869,9 @@ name = "AreTransportControlsEnabled"
 
 [[control.property]]
 name = "AutoPlay"
+
+[[control.property]]
+name = "Stretch"
 
 [[control]]
 type = "Microsoft.UI.Xaml.Controls.SemanticZoom"
@@ -1941,3 +1944,55 @@ name = "RefreshRequested"
 # 事件参数带 deferral：宿主的异步刷新期间保持系统的"刷新中"指示器，
 # 拉完数据后 `RefreshDeferral::complete()` 收回。
 adapter = "refresh_deferral"
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.AppBarElementContainer"
+capabilities = ["layout", "content"]
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.ItemContainer"
+capabilities = ["layout", "content"]
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.ItemsRepeaterScrollHost"
+capabilities = ["layout"]
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.Frame"
+capabilities = ["layout", "content"]
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.TwoPaneView"
+capabilities = ["layout"]
+
+[[control.slot]]
+name = "Pane1"
+
+[[control.slot]]
+name = "Pane2"
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.RefreshVisualizer"
+capabilities = ["layout"]
+
+[[control.property]]
+name = "Orientation"
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.AnimatedVisualPlayer"
+capabilities = ["layout"]
+
+[[control.property]]
+name = "AutoPlay"
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.AnimatedIcon"
+capabilities = ["layout"]
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.MediaTransportControls"
+capabilities = ["layout"]
+
+[[control]]
+type = "Microsoft.UI.Xaml.Controls.SystemBackdropElement"
+capabilities = ["layout"]
