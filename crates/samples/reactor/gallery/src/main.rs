@@ -11,7 +11,6 @@ mod controls;
     clippy::too_many_arguments
 )]
 mod notifications_bindings;
-mod packaging;
 mod pages;
 mod registry;
 mod router;
@@ -21,14 +20,11 @@ mod shell;
 mod tests;
 
 fn main() {
-    // The badge and toast APIs on the Notifications page are the official
-    // Windows App SDK ones and require a packaged app identity. A direct
-    // executable launch therefore packs the current build into the MSIX
-    // (installed on first run, refreshed when the build changed) and
-    // relaunches through the package; an already-current install is
-    // activated without reinstalling.
-    if packaging::ensure_packaged() {
-        return;
-    }
+    // Development runs unpackaged and self-contained: the Windows App Runtime
+    // files sit beside the executable and startup does no packaging work.
+    // Toasts work for any desktop process; the badge additionally needs a
+    // packaged app identity, which `packaging/build-msix.ps1 -Install`
+    // provides on demand - the Notifications page shows a banner pointing
+    // there while the badge reports the identity error.
     windows_reactor::App::run_component::<shell::Gallery>(()).unwrap();
 }

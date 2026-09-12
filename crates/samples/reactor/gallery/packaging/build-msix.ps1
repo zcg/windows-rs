@@ -1,8 +1,10 @@
 # 从已构建的 self-contained 产物生成 ReactorWinUIGallery.msix。
-# 用法：pwsh -File build-msix.ps1 [-TargetDir <repo>\target\debug]
+# 用法：powershell -File build-msix.ps1 [-Install]
+#   -Install 打包签名之后卸旧装新，一条命令完成整套打包安装流程。
 param(
     [string]$TargetDir = '',
-    [string]$OutputDir = (Join-Path $PSScriptRoot 'output')
+    [string]$OutputDir = (Join-Path $PSScriptRoot 'output'),
+    [switch]$Install
 )
 $ErrorActionPreference = 'Stop'
 if (-not $TargetDir) {
@@ -15,6 +17,8 @@ if (-not $TargetDir) {
     if (-not $dir) { throw 'target\debug not found above the script directory' }
     $TargetDir = Join-Path $dir 'target\debug'
 }
+[xml]$manifestXml = Get-Content (Join-Path $PSScriptRoot 'Package.appxmanifest')
+$identityName = $manifestXml.Package.Identity.Name
 $staging = Join-Path $env:TEMP 'gallery-msix-stage'
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
 New-Item -ItemType Directory -Path (Join-Path $staging 'Assets') -Force | Out-Null
@@ -56,7 +60,7 @@ Get-ChildItem $TargetDir -Filter '*.pri' | Where-Object {
 } | Copy-Item -Destination $staging
 
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
-$out = Join-Path $OutputDir 'ReactorWinUIGallery.msix'
+$out = Join-Path $OutputDir ($identityName + '.msix')
 if (Test-Path $out) { Remove-Item $out -Force }
 
 # Pack and sign with the Windows SDK tools: MakeAppx writes the
@@ -70,6 +74,10 @@ if ($LASTEXITCODE -ne 0) { throw "MakeAppx failed with exit code $LASTEXITCODE" 
 & $signtool sign /fd SHA256 /a /n 'ReactorGalleryDev' $out
 if ($LASTEXITCODE -ne 0) { throw "Signtool failed with exit code $LASTEXITCODE" }
 
+if ($Install) {
+    Get-AppxPackage -Name $identityName | Remove-AppxPackage -ErrorAction SilentlyContinue
+    Add-AppxPackage -Path $out -ErrorAction Stop
+    Write-Output ("Installed: " + (Get-AppxPackage -Name $identityName).PackageFamilyName)
+}
+
 Write-Output ("MSIX: " + $out + " (" + [math]::Round((Get-Item $out).Length / 1MB) + " MB)")
-Write-Output "Install:"
-Write-Output "  Add-AppxPackage -Path $out"

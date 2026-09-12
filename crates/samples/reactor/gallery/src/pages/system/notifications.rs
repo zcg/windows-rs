@@ -129,6 +129,24 @@ impl Component for NotificationsPage {
             "Show toasts and update the taskbar badge.",
             [
                 KeyedView::new(
+                    "identity",
+                    sample_card(
+                        "Packaged Identity",
+                        InfoBar::new()
+                            .severity(InfoBarSeverity::Warning)
+                            .title("The badge needs the packaged install")
+                            .message(
+                                "The badge manager is a packaged-only API. Run \
+                                 `powershell -File \
+                                 crates/samples/reactor/gallery/packaging/build-msix.ps1 \
+                                 -Install`, then launch Reactor WinUI Gallery from the \
+                                 Start Menu. Toasts work without the install.",
+                            )
+                            .is_open(true),
+                        "BadgeNotificationManager requires a package identity",
+                    ),
+                ),
+                KeyedView::new(
                     "toast",
                     sample_card(
                         "Toast Notification",
@@ -177,13 +195,13 @@ impl Component for NotificationsPage {
                                 )),
                             TextBlock::new()
                                 .text(
-                                    "Official Windows App SDK badge manager; requires the \
-                                     packaged install that `cargo run` sets up.",
+                                    "Official Windows App SDK badge manager; needs the \
+                                     packaged install from the banner above.",
                                 )
                                 .opacity(0.6),
                             TextBlock::new().text(self.status.clone()).opacity(0.6),
                         )),
-                        "BadgeUpdateManager::CreateBadgeUpdaterForApplication()?.Update(&badge)",
+                        "BadgeNotificationManager::Current()?.SetBadgeAsCount(5)?",
                     ),
                 ),
             ],

@@ -1,36 +1,39 @@
 # Packaging Reactor WinUI Gallery (MSIX)
 
-The gallery runs packaged: `cargo run -p reactor-gallery` packs the build
-output into this MSIX, installs it (first run only - an installed package with
-the current build is activated as-is) and relaunches through
-`shell:AppsFolder\<PFN>!App` so the process carries a package identity. When
-the executable is newer than the packed MSIX (any code change), the package is
-built and installed again; a plain `cargo build` without changes keeps the
-fast activate-only path.
+Development runs unpackaged: `cargo run -p reactor-gallery` starts
+self-contained (Windows App Runtime files beside the executable) and the
+startup does no packaging work. The MSIX flow is a separate, manual step for
+when the packaged identity features are being tested.
 
 ## Taskbar badge and toasts
 
 The Notifications page uses the official Windows App SDK APIs - the badge
 through `Microsoft.Windows.BadgeNotifications.BadgeNotificationManager` and
 toasts through `AppNotificationManager` - the same ones the official WinUI
-Gallery uses. Both require the packaged identity that the flow above
-provides; there is no self-drawn fallback.
+Gallery uses. Toasts work for any desktop process. The badge manager is a
+packaged-only API: without the install it reports an error, and the page
+shows a banner pointing at the flow below.
 
-The MSIX is framework-dependent: `build-msix.ps1` stages no Windows App
-Runtime files, and the manifest declares the `Microsoft.WindowsAppRuntime.2`
-dependency. Shipping self-contained runtime files in a packaged process
-fail-fasts in CoreMessagingXP.
+## Test the packaged flow
 
-The manifest `Publisher` must match a trusted code-signing cert on the machine.
-Create one once and trust it (`CN=ReactorGalleryDev` is the default):
+One command packs the current build, signs it, replaces any previous
+registration, and installs:
 
 ```powershell
-$cert = New-SelfSignedCertificate -Type Custom -Subject 'CN=ReactorGalleryDev' `
-    -KeyUsage DigitalSignature -KeyAlgorithm RSA -KeyLength 2048 `
-    -CertStoreLocation 'Cert:\CurrentUser\My' -NotAfter (Get-Date).AddYears(10)
-$store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', 'CurrentUser')
-$store.Open('ReadWrite'); $store.Add($cert); $store.Close()
+powershell -ExecutionPolicy Bypass -File `
+    crates/samples/reactor/gallery/packaging/build-msix.ps1 -Install
 ```
+
+The script signs with the `CN=ReactorGalleryDev` certificate, which must
+exist in the user certificate store and in Trusted Root (created once with
+`New-SelfSignedCertificate`; it already exists on the development machine).
+
+Then launch **Reactor WinUI Gallery** from the Start Menu (a direct
+executable launch stays unpackaged - only the Start Menu entry carries the
+package identity). The MSIX is framework-dependent: the script stages no
+Windows App Runtime files, and the manifest declares the
+`Microsoft.WindowsAppRuntime.2` dependency. Shipping self-contained runtime
+files in a packaged process fail-fasts in CoreMessagingXP.
 
 
 ## Why camera access needs packaging (or the desktop-app switch)
