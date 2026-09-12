@@ -30,10 +30,13 @@ exist in the user certificate store and in Trusted Root (created once with
 
 Then launch **Reactor WinUI Gallery** from the Start Menu (a direct
 executable launch stays unpackaged - only the Start Menu entry carries the
-package identity). The MSIX is framework-dependent: the script stages no
-Windows App Runtime files, and the manifest declares the
-`Microsoft.WindowsAppRuntime.2` dependency. Shipping self-contained runtime
-files in a packaged process fail-fasts in CoreMessagingXP.
+package identity). The MSIX is self-contained: the script stages every
+Windows App Runtime file the build ships, and the manifest declares no
+framework dependency, so the packaged process runs from the files inside the
+package on any system, with or without a Windows App SDK install. Do not add
+a `<PackageDependency>`: a framework in the package graph alongside the
+packaged files makes the process load two runtime copies, which fail-fasts
+in CoreMessagingXP.
 
 
 ## Why camera access needs packaging (or the desktop-app switch)

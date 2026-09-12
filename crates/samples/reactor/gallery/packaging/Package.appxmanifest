@@ -16,12 +16,11 @@
   </Properties>
   <Dependencies>
     <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
-    <!-- Framework-dependent packaging: the runtime files are NOT shipped in
-         the package (see build-msix.ps1); a packaged process loads them from
-         this framework. Shipping them beside the executable as well makes a
-         packaged process load two copies of the runtime, which fail-fasts in
-         CoreMessagingXP. -->
-    <PackageDependency Name="Microsoft.WindowsAppRuntime.2" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" MinVersion="2.4.0.0" />
+    <!-- Self-contained packaging: the runtime files ship inside the package
+         (see build-msix.ps1) and no framework is declared. A
+         <PackageDependency> on the Windows App Runtime would put the
+         framework into the package graph alongside the packaged files, and
+         loading two copies of the runtime fail-fasts in CoreMessagingXP. -->
   </Dependencies>
   <Resources>
     <Resource Language="en-US" />

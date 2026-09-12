@@ -38,26 +38,14 @@ New-Png (Join-Path $staging 'Assets\Square150x150Logo.png') 150 150
 Copy-Item (Join-Path $PSScriptRoot 'Package.appxmanifest') (Join-Path $staging 'AppxManifest.xml')
 Copy-Item (Join-Path $TargetDir 'reactor-gallery.exe') $staging
 
-# The MSIX is framework-dependent: the Windows App Runtime files listed in
-# reactor-setup's assets/runtime.txt are provided by the installed
-# Microsoft.WindowsAppRuntime.2 framework package (declared as a
-# <PackageDependency> in the manifest). Shipping them beside the executable
-# too makes a packaged process load two copies of the runtime, which
-# fail-fasts in CoreMessagingXP. Everything else (VC runtime, WebView2) is
-# carried in the package.
-$frameworkFiles = @{}
-$runtimeList = Join-Path $PSScriptRoot '..\..\..\..\libs\reactor-setup\assets\runtime.txt'
-if (Test-Path $runtimeList) {
-    Get-Content $runtimeList | ForEach-Object { $frameworkFiles[$_.Trim().ToLowerInvariant()] = $true }
-} else {
-    throw 'reactor-setup assets/runtime.txt not found'
-}
-Get-ChildItem $TargetDir -Filter '*.dll' | Where-Object {
-    -not $frameworkFiles.ContainsKey($_.Name.ToLowerInvariant())
-} | Copy-Item -Destination $staging
-Get-ChildItem $TargetDir -Filter '*.pri' | Where-Object {
-    -not $frameworkFiles.ContainsKey($_.Name.ToLowerInvariant())
-} | Copy-Item -Destination $staging
+# The MSIX is self-contained: every Windows App Runtime file the unpackaged
+# build ships (DLLs, .pri, VC runtime, WebView2) is staged into the package,
+# so the packaged process never depends on an installed framework. The
+# manifest declares no <PackageDependency> - a framework in the package graph
+# alongside the packaged files makes the process load two runtime copies,
+# which fail-fasts in CoreMessagingXP.
+Get-ChildItem $TargetDir -Filter '*.dll' | Copy-Item -Destination $staging
+Get-ChildItem $TargetDir -Filter '*.pri' | Copy-Item -Destination $staging
 
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 $out = Join-Path $OutputDir ($identityName + '.msix')
