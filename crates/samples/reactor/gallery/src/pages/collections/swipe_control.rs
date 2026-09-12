@@ -80,23 +80,17 @@ impl Component for SwipeControlPage {
                 sample_card(
                     "Inbox",
                     StackPanel::new().spacing(8.0).children((
-                        ListView::new().collection_slot(
-                            ListViewSlot::Items,
-                            MESSAGES.iter().map(|message| {
-                                let (sender, _) = *message;
-                                KeyedView::new(
-                                    sender,
-                                    ListViewItem::new().content(
-                                        SwipeControl::new()
-                                            .slots([SlotView::new(
-                                                SwipeControlSlot::Content,
-                                                row(message),
-                                            )])
-                                            .swipe_items(swipes()),
-                                    ),
-                                )
-                            }),
-                        ),
+                        ListView::new().items(MESSAGES.iter().map(|message| {
+                            let (sender, _) = *message;
+                            KeyedView::new(
+                                sender,
+                                ListViewItem::new().content(
+                                    SwipeControl::new()
+                                        .content(row(message))
+                                        .swipe_items(swipes()),
+                                ),
+                            )
+                        })),
                         TextBlock::new().text(self.status.clone()).opacity(0.6),
                     )),
                     "SwipeControl::new().swipe_items(SwipeItems::new(left, right, handler))",

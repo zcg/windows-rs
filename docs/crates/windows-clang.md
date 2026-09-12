@@ -49,7 +49,7 @@ emitted as declarations owned by the input header. List each owning header expli
 
 | Builder input | Purpose |
 | --- | --- |
-| `input`, `inputs` | Header files or directories containing `.h` files. |
+| `input`, `inputs` | `.h`, `.hpp`, `.hxx`, or `.hh` files, or directories containing them. |
 | `arg`, `args`, `target` | libclang language, include, define, extension, and target options. |
 | `reference*` | Existing metadata used for type resolution and duplicate suppression. |
 | `resolution*` | Metadata used only to classify `ABI::Windows::*` projection declarations. |
@@ -152,12 +152,21 @@ The scraper preserves:
 - `uuid`, `noreturn`, alignment, `dllimport`, and deprecation attributes;
 - calling conventions, packing, unions, scoped enums, bit fields, and typedefs;
 - explicit constant casts and C integer literal types;
+- GUID values from `DEFINE_GUID`, `DEFINE_OLEGUID`, and `DEFINE_KNOWN_FOLDER`;
 - `DEFINE_ENUM_FLAG_OPERATORS` as a flags-enum signal;
 - symbol-to-DLL mappings recovered from import libraries.
 
+Namespaced scrapes follow referenced record definitions from included headers. Available layouts
+are emitted for both by-value and pointer dependencies; they are not replaced with opaque records.
+Per-header scrapes discover the same definitions globally and retain them in their owning header
+partition.
+
 Some C portability spellings are canonicalized for metadata consumers. Examples include fixed-width
-integer typedefs, pointer-sized integer typedefs, Windows string wrappers, pointer aliases in
-parameters, GUID aliases, and Direct2D compatibility aliases. These rules live in `canon.rs`.
+integer typedefs, pointer-sized integer typedefs, Windows string wrappers, COM interface aliases,
+GUID aliases, and Direct2D compatibility aliases. These rules live in `canon.rs`.
+`HRESULT` always maps to the `Windows.Foundation.HResult` metadata system type rather than a local
+integer typedef. `BOOLEAN`, `LARGE_INTEGER`, and `ULARGE_INTEGER` always map to `bool`, `i64`, and
+`u64` in both namespaced and per-header scrapes.
 Parameter SAL can change pointer constness because it expresses the function's read/write contract.
 Direction is also checked against COM interface pointer shape. A direct `IFoo*` is an input
 interface reference even if a local SDK declaration incorrectly marks it `[out]`; a returned

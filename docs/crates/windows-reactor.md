@@ -83,9 +83,7 @@ impl Component for Counter {
     }
 
     fn view(&self, _input: &(), context: &mut ViewContext<Self>) -> View {
-        context.window_title("Counter");
-
-        StackPanel::new().spacing(8.0).children((
+        let content = StackPanel::new().spacing(8.0).children((
             format!("Count: {}", self.count),
             Button::new()
                 .on_click(context.message(Message::Increment))
@@ -93,7 +91,8 @@ impl Component for Counter {
             Button::new()
                 .on_click(context.message(Message::Reset))
                 .content("Reset"),
-        ))
+        ));
+        context.window_frame("Counter", content)
     }
 }
 
@@ -118,6 +117,25 @@ not mutate the component directly.
 `App::run_component` creates the WinUI application and first window, mounts `Counter`, and runs the
 UI loop.
 
+## Window title bars
+
+`window_frame` gives a Reactor window an integrated WinUI title bar. It creates the required
+two-row layout, uses the same text for the native and visible window titles, and places the
+component's content below the title bar:
+
+```rust,ignore
+context.window_visuals(WindowVisuals::new().backdrop(WindowBackdrop::Acrylic));
+context.window_frame("Canvas keyboard input", content)
+```
+
+Call `window_frame` from the component that supplies the window's native root so the frame fills
+the window. The title-bar container is not a tab stop.
+
+`window_title` and `window_visuals` remain available for windows that use the system title bar.
+They declare native window state without adding title-bar content to the view. Material backdrops
+do not extend through the system title bar, so use `window_frame` when Mica or Acrylic should cover
+the complete window.
+
 ## Build views from controls
 
 WinUI controls use typed builders. Start with `Control::new()`, set properties, connect events, and
@@ -139,8 +157,29 @@ Border::new()
 
 Use `content` for a control with one child, such as a button or border. Use `children` for a
 container with an ordered set of children. Tuples are convenient because the children may have
-different control types. Put `content` or `children` last in a builder chain because it finishes
-the control and returns a `View`.
+different control types. For these ordinary content and container controls, put `content` or
+`children` last in a builder chain because it finishes the control and returns a `View`.
+
+Controls with several named content areas expose one builder method for each area. The method
+signature distinguishes a single view from a keyed collection:
+
+```rust,ignore
+NavigationView::new()
+    .menu_items([
+        ("home", NavigationViewItem::new().content("Home")),
+        ("files", NavigationViewItem::new().content("Files")),
+    ])
+    .footer_menu_items([(
+        "settings",
+        NavigationViewItem::new().content("Settings"),
+    )])
+    .content("Page content")
+    .into()
+```
+
+These named methods remain part of the control builder, so properties and other named areas can be
+chained after them. The compiler rejects passing one view to a collection area or a collection to
+a single-view area. Assigning the same named area more than once replaces its earlier value.
 
 Values that implement `Into<View>` can be used directly with these methods. In particular, use a
 `&str` or `String` for ordinary text and reach for `TextBlock` only to set font, layout,
@@ -217,6 +256,45 @@ above, `context.forward()` is the shortest form.
 
 Keep event-driven state changes in `update`, and keep `view` focused on turning the current state
 into controls. That makes the direction of data flow easy to follow.
+
+## Handle keyboard input on custom surfaces
+
+`Border` can act as a focusable interaction surface around Canvas, Composition, or another custom
+view. Enable tab focus and native post-event pointer focus, then use routed callbacks for input
+events whose WinUI `Handled` value must be set before the native callback returns:
+
+```rust,ignore
+Border::new()
+    .is_tab_stop(true)
+    .focus_on_pointer_release(true)
+    .on_preview_key_down(context.routed_callback(|info: KeyEventInfo| {
+        match info.key {
+            VirtualKey::LEFT => RoutedMessage::handled(Message::MoveLeft),
+            VirtualKey::RIGHT => RoutedMessage::handled(Message::MoveRight),
+            _ => RoutedMessage::bubble_without_message(),
+        }
+    }))
+    .on_character_received(context.routed_callback(|info: CharacterEventInfo| {
+        RoutedMessage::handled(Message::Character(info.character))
+    }))
+    .on_got_focus(context.callback(Message::Focused))
+    .on_lost_focus(context.callback(Message::Blurred))
+    .content(custom_surface)
+```
+
+The routed callback inspects an owned payload and decides whether the native event is handled.
+Its optional component message still enters the normal queue, so `Component::update` and
+reconciliation never run inside the WinUI callback. Return `bubble_without_message` for keys such
+as Tab that should retain their normal XAML behavior. Input bubbles when the component queue is
+already full. Once handled, its deferred message retains its native FIFO position and waits for
+component queue capacity.
+
+`KeyEventInfo` includes the mapped and original virtual key, physical-key status, and modifier
+state. `CharacterEventInfo::character` is one UTF-16 code unit so surrogate pairs are preserved
+without lossy conversion. `focus_on_pointer_release(true)` queues a native
+`FocusState::Pointer` request from the routed pointer event. The request runs after the native
+callback returns. It works when a child such as Canvas is the direct hit-test source.
+`ElementRef<Border>` supports other programmatic focus cases.
 
 ## Split the UI into understandable pieces
 
@@ -364,6 +442,49 @@ The background closure must only capture `Send` data and must not touch controls
 state. Put expected failures in the returned message, usually as `Result<T, E>`, and display the
 result after `update` stores it.
 
+## Run modal work with the owning window
+
+Use `run_window` for a native operation that must run on the owning UI thread with the window's
+HWND. For example, a Win32 message box can return its selection as a component message:
+
+```rust,ignore
+Message::Confirm => {
+    let accepted = context.run_window(|window| {
+        let answer = unsafe {
+            MessageBoxW(
+                window.as_raw(),
+                w!("Continue with this operation?"),
+                w!("Confirm"),
+                (MB_YESNO | MB_ICONQUESTION) as u32,
+            )
+        };
+        Message::Answered(answer)
+    });
+    if !accepted {
+        self.status = "Another window operation is pending".to_string();
+    }
+}
+Message::Answered(IDYES) => {
+    self.status = "You chose Yes".to_string();
+}
+```
+
+Reactor runs the closure in the next host dispatch after the current publication commits and
+queues its returned message. It discards the work if publication fails, the requesting component
+retires, or the window starts closing. A `true` return means that the work was staged, not that it
+is guaranteed to run. The `WindowHandle` is scoped to the closure. Each Reactor window accepts one
+pending operation at a time, so a second request returns `false` until the first operation runs or
+is discarded.
+
+Component dispatch for the owning window is suspended until the closure returns. A native modal
+loop can continue drawing and processing its own input, and other Reactor windows remain
+independent. Keep slow non-UI work in `spawn_background`; `run_window` is for native calls such as
+modal dialogs that must remain on the UI thread.
+
+The [`message-box`](../../crates/samples/reactor/message-box) sample contains the complete
+component. `windows-pickers` builds on the same mechanism and provides `request` methods that map
+picker results into component messages.
+
 ## Reach for the other APIs when you need them
 
 The component/message/view loop covers most application code. These APIs solve more specific
@@ -376,6 +497,7 @@ problems:
 | `Context<T>` | Sharing app-wide data such as a theme with distant descendants |
 | `ElementRef<T>` | Focus, scroll-offset observation, or another operation that cannot be expressed as state |
 | `open_window` | Opening an independent secondary window |
+| `run_window` | Running a native modal operation with the owning HWND |
 | `ItemsRepeater` | Virtualizing a large collection |
 | `SwipeItems` | Left/right swipe actions on content, with the invoked text routed back |
 | `VirtualSource` | Building `ItemsRepeater` rows lazily by index |
@@ -431,27 +553,34 @@ package the app.
 
 ## What to read next
 
-The focused examples in
-[`samples/examples`](../../crates/samples/reactor/samples/examples) are the easiest way to learn
-one concept at a time:
+Use the [`gallery`](../../crates/samples/reactor/gallery) to explore individual WinUI controls. The
+standalone samples under [`crates/samples/reactor`](../../crates/samples/reactor) show Reactor
+concepts and behaviors:
 
 | Example | What it shows |
 | --- | --- |
-| `counter` | Components, state, messages, and events |
-| `function_component` | Child components and input |
-| `text_box` | Controlled input |
-| `stack` and `grid` | Layout |
-| `auto_suggest_box` | Ordinary Rust conditionals and collections |
-| `keyed_list_reorder` | Stable identity in changing lists |
-| `async_state` | Background work |
-| `use_effect` and `context` | Lifecycle work and shared data |
+| [`function-component`](../../crates/samples/reactor/function-component) | Child components and input |
+| [`component-input`](../../crates/samples/reactor/component-input) | Controlled component input |
+| [`keyed-list-reorder`](../../crates/samples/reactor/keyed-list-reorder) | Stable identity in changing lists |
+| [`async-state`](../../crates/samples/reactor/async-state) | Background work |
+| [`message-box`](../../crates/samples/reactor/message-box) | Modal native window work |
+| [`use-effect`](../../crates/samples/reactor/use-effect) and [`context`](../../crates/samples/reactor/context) | Lifecycle work and shared data |
+| [`pointer-tracking`](../../crates/samples/reactor/pointer-tracking) | Pointer capture and movement |
+| [`exit-transition`](../../crates/samples/reactor/exit-transition) | Transition-driven removal |
+| [`secondary-window`](../../crates/samples/reactor/secondary-window) | Multiple Reactor windows |
+| [`calculator`](../../crates/samples/reactor/calculator) | A larger component with derived state |
 
-The [`gallery`](../../crates/samples/reactor/gallery) is a control catalog. The
+The [`counter`](../../crates/samples/reactor/counter) demonstrates components, state, messages, and
+events. The [`gallery`](../../crates/samples/reactor/gallery) is a control catalog. The
 [`navigation`](../../crates/samples/reactor/navigation) and
-[`apps`](../../crates/samples/reactor/apps) samples show how these same ideas fit together in a
-larger application. See the [`composition`](../../crates/samples/reactor/composition),
-[`webview`](../../crates/samples/reactor/webview), and
+[`dotsweeper`](../../crates/samples/reactor/dotsweeper) samples show how these same ideas fit
+together in a larger application. See the [`composition`](../../crates/samples/composition),
+[`webview`](../../crates/samples/webview/reactor), and
 [Canvas](../../crates/samples/canvas) samples only when the app needs those integrations.
+The [`canvas-keyboard`](../../crates/samples/canvas/keyboard) sample is a focusable custom-rendered
+text surface with routed edit keys, UTF-16 character input, visible focus state, and a standard
+WinUI button that demonstrates focus transfer. It shows when custom input is useful without
+replacing `TextBox` for ordinary text editing.
 
 ---
 
@@ -465,11 +594,11 @@ need it to use Reactor.
 | Layer | Location |
 | --- | --- |
 | Public frontend | `src/core/public.rs`, `src/element.rs`, `src/generated.rs` |
-| Component lifecycle and effects | `src/core/component.rs` |
+| Component lifecycle and effects | `src/core/component/mod.rs` |
 | Reconciler | `src/core/pump` |
-| Scheduling | `src/core/engine.rs`, `src/core/scheduler.rs` |
+| Scheduling | `src/core/engine/mod.rs`, `src/core/scheduler.rs` |
 | Native runtime | `src/native/winui` |
-| Recording runtime | `src/test/recording.rs` |
+| Recording runtime | `src/test/recording/mod.rs` |
 | Typed integrations | `src/reference.rs` |
 
 Components produce the public `View` representation. The Pump plans tree and lifecycle changes,
@@ -503,9 +632,20 @@ replacement and reject late callbacks by window and node identity. Accepted one-
 complete exactly once; `IntegrationError::Native` retains the HRESULT and `Unavailable` reports a
 retired or unavailable target.
 
+Swap-chain panel metrics include a binding generation so an integration can distinguish resize
+from structural panel replacement. `request_surface_frame` schedules one normal-priority
+UI-thread callback independently of `CompositionTarget::Rendering`; Canvas uses it to keep drawing
+during interactive resize without invoking application drawing code from a layout callback.
+
 Canvas owns its devices, swap chains, image sources, resize handling, and recovery. Composition
 owns application visual trees and animations. WebView users receive the CoreWebView2 object rather
 than Reactor's XAML control.
+
+Routed keyboard callbacks are stored separately from ordinary event callbacks. WinUI key and
+character arguments are copied into owned payloads, the callback decides `Handled` synchronously,
+and any resulting component message is placed in the existing native-event FIFO. This preserves
+native event order without running `Component::update` or reconciliation across a WinRT callback.
+Callback replacements publish transactionally and do not replace the native subscription.
 
 ### Code generation
 
@@ -549,10 +689,26 @@ feature removes that allowance so the live surface build checks all generated te
 | Generated WinUI surface | `cargo run -p test-reactor-surface -- --headless` |
 | Planner benchmarks | `cargo run -p test-reactor-bench --release` |
 | Live grid benchmark | `cargo run -p test-reactor-bench --bin reactor-live-grid --release` |
+| Live input benchmark | `cargo run -p test-reactor-bench --bin reactor-live-input --release` |
+| Live Notepad benchmark | `cargo run -p test-reactor-bench --bin reactor-live-notepad --release` |
 
 The generated surface test covers projected controls, properties, events, content, collections,
 slots, attachments, virtual items, and TreeView nodes. Handwritten self-tests own imperative
 references, retirement, and other OS interactions.
+
+The live Notepad benchmark uses the same controlled `TextBox` shape as the `reactor-notepad`
+sample. It injects Unicode keyboard input and measures raw `WM_CHAR`, WinUI `TextChanged`,
+`Text()` retrieval, Reactor event and component queues, reconciliation, Rust allocations, and
+whether controlled feedback causes a native write-back. Use `--text-size` to test document-size
+scaling. Run the release build with its window in the foreground and leave the machine idle while
+collecting results. The test-only probes add instrumentation overhead, and the injected
+`KEYEVENTF_UNICODE` path does not measure physical-key translation or IME composition.
+
+Pass `--filter <name>` to run matching handwritten fixtures. For example:
+
+```text
+cargo run -p test-reactor-selftest -- --headless --filter Window_NestedOperationRearming
+```
 
 `crates/libs/reactor/public-api.txt` is the checked public API snapshot. Regenerate it with the
 repository's pinned `cargo-public-api` process after an intentional API change.

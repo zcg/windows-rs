@@ -52,11 +52,11 @@ impl Component for TransitionsPage {
                         ToggleSwitch::new()
                             .is_on(self.big)
                             .on_toggled(context.callback(Message::Big))
-                            .slot(ToggleSwitchSlot::Header, "Big"),
+                            .header("Big"),
                         ToggleSwitch::new()
                             .is_on(self.visible)
                             .on_toggled(context.callback(Message::Visible))
-                            .slot(ToggleSwitchSlot::Header, "Visible"),
+                            .header("Visible"),
                     )),
                     "Border::new().opacity(v).opacity_transition(ms).scale(s).scale_transition(ms)",
                 ),

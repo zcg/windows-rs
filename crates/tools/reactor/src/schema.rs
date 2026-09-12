@@ -110,6 +110,8 @@ pub(crate) struct Property {
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum PropertyAdapter {
+    CharacterEvent,
+    FocusEvent,
     ClockIdentifier,
     ContentDialogResult,
     ImageUri,
@@ -120,12 +122,14 @@ pub(crate) enum PropertyAdapter {
     ImplicitScale,
     ImplicitScaleTransition,
     KeyAccelerators,
+    KeyEvent,
     ItemTag,
     ItemTags,
     NavigationDisplayMode,
     NumberBoxValue,
     PathData,
     PointerCapture,
+    PointerFocus,
     PointerEvent,
     RefreshDeferral,
     DragInfo,
@@ -196,6 +200,7 @@ impl PropertyAdapter {
             | Self::KeyAccelerators
             | Self::PointerCapture
             | Self::ImageDecodeWidth
+            | Self::PointerFocus
             | Self::ResourceOverrides
             | Self::RichEditText
             | Self::RichTextBlocks => PropertyAdapterCapabilities {
@@ -208,7 +213,8 @@ impl PropertyAdapter {
                 uses_dependency_property: false,
                 uses_property_setter: true,
             },
-            Self::ClockIdentifier
+            Self::CharacterEvent
+            | Self::ClockIdentifier
             | Self::ContentDialogResult
             | Self::DragInfo
             | Self::DropData
@@ -216,6 +222,7 @@ impl PropertyAdapter {
             | Self::FontWeight
             | Self::ItemsViewLayout
             | Self::MapCenter
+            | Self::FocusEvent
             | Self::HorizontalContentAlignment
             | Self::ImageUri
             | Self::InspectableString
@@ -223,6 +230,7 @@ impl PropertyAdapter {
             | Self::ItemTag
             | Self::ItemTags
             | Self::MediaSource
+            | Self::KeyEvent
             | Self::NavigationDisplayMode
             | Self::NumberBoxValue
             | Self::PathData
@@ -386,6 +394,13 @@ impl PropertyAdapter {
                 true,
                 "pointer_capture requires Border.CapturePointerOnPress",
             ),
+            Self::PointerFocus => property(
+                OneOf(&[(BORDER, "FocusOnPointerRelease")]),
+                None,
+                "Bool",
+                true,
+                "pointer_focus requires Border.FocusOnPointerRelease",
+            ),
             Self::RatingValue => property(
                 OneOf(&[(RATING_CONTROL, "Value")]),
                 ValueType("F64", true),
@@ -478,6 +493,13 @@ impl PropertyAdapter {
             Self::RefreshDeferral => {
                 PropertyAdapterKind::EventOnly("refresh_deferral is an event-only adapter")
             }
+            Self::KeyEvent => PropertyAdapterKind::EventOnly("key_event is an event-only adapter"),
+            Self::CharacterEvent => {
+                PropertyAdapterKind::EventOnly("character_event is an event-only adapter")
+            }
+            Self::FocusEvent => {
+                PropertyAdapterKind::EventOnly("focus_event is an event-only adapter")
+            }
             Self::DragInfo | Self::DropData => {
                 PropertyAdapterKind::EventOnly("drag adapters are event-only")
             }
@@ -565,7 +587,9 @@ pub(crate) struct Event {
     #[serde(default)]
     pub(crate) adapter: Option<PropertyAdapter>,
     #[serde(default)]
-    pub(crate) active_property: Option<String>,
+    pub(crate) active_properties: Vec<String>,
+    #[serde(default)]
+    pub(crate) routed: bool,
 }
 
 #[derive(Deserialize)]
@@ -595,7 +619,7 @@ pub(crate) enum SlotTarget {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Selection {
-    pub(crate) slot: String,
+    pub(crate) slots: Vec<String>,
     pub(crate) item: String,
     pub(crate) selected_property: String,
     pub(crate) selected_item_property: String,
@@ -667,7 +691,8 @@ pub(crate) struct ResolvedEvent {
     pub(crate) source: EventPayloadSource,
     pub(crate) conversion: EventPayloadConversion,
     pub(crate) subscription: EventSubscription,
-    pub(crate) active_property: Option<String>,
+    pub(crate) active_properties: Vec<String>,
+    pub(crate) routed: bool,
 }
 
 pub(crate) struct ResolvedSlot {
@@ -681,7 +706,7 @@ pub(crate) struct ResolvedSlot {
 }
 
 pub(crate) struct ResolvedSelection {
-    pub(crate) slot: String,
+    pub(crate) slots: Vec<String>,
     pub(crate) item: String,
     pub(crate) selected_property: String,
     pub(crate) selected_item_property: String,
@@ -726,6 +751,9 @@ pub(crate) enum EventPayloadSource {
     SenderRichEditText { interface: String, property: String },
     PointerEvent,
     RefreshDeferral { interface: String },
+    KeyEvent,
+    CharacterEvent,
+    FocusEvent,
     SenderItemTags { interface: String, property: String },
 }
 
@@ -764,7 +792,10 @@ impl EventPayloadSource {
             | Self::DragInfo { .. }
             | Self::DropData { .. }
             | Self::PointerEvent
-            | Self::RefreshDeferral { .. } => None,
+            | Self::RefreshDeferral { .. }
+            | Self::KeyEvent
+            | Self::CharacterEvent
+            | Self::FocusEvent => None,
         }
     }
 
@@ -952,6 +983,7 @@ impl Schema {
                         format!("get_{}", property.name)
                     }
                     Some(PropertyAdapter::PointerCapture) => "add_PointerPressed".to_string(),
+                    Some(PropertyAdapter::PointerFocus) => "add_PointerReleased".to_string(),
                     Some(PropertyAdapter::DropPolicy) => "put_AllowDrop".to_string(),
                     Some(PropertyAdapter::ImageDecodeWidth) => "put_Source".to_string(),
                     _ => format!("put_{}", property.name),
@@ -1172,15 +1204,16 @@ impl Schema {
                         control.type_name, event.name
                     ));
                 }
-                if let Some(active_property) = event.active_property.as_deref()
-                    && !properties
+                for active_property in &event.active_properties {
+                    if !properties
                         .iter()
-                        .any(|property| property.field == active_property)
-                {
-                    return Err(format!(
-                        "{}.{} active_property `{active_property}` is not a property field",
-                        control.type_name, event.name
-                    ));
+                        .any(|property| property.field == *active_property)
+                    {
+                        return Err(format!(
+                            "{}.{} active property `{active_property}` is not a property field",
+                            control.type_name, event.name
+                        ));
+                    }
                 }
                 if event.adapter.is_some()
                     && !matches!(
@@ -1188,6 +1221,9 @@ impl Schema {
                         Some(
                             PropertyAdapter::ItemTags
                                 | PropertyAdapter::PointerEvent
+                                | PropertyAdapter::KeyEvent
+                                | PropertyAdapter::CharacterEvent
+                                | PropertyAdapter::FocusEvent
                                 | PropertyAdapter::DragInfo
                                 | PropertyAdapter::DropData
                                 | PropertyAdapter::RefreshDeferral
@@ -1334,6 +1370,20 @@ impl Schema {
                             },
                             ReadValueConversion::Identity,
                         )
+                    } else if event.adapter == Some(PropertyAdapter::FocusEvent) {
+                        if event.property.is_some()
+                            || !matches!(event.name.as_str(), "GotFocus" | "LostFocus")
+                        {
+                            return Err(format!(
+                                "{}.{} has an invalid focus_event contract",
+                                control.type_name, event.name
+                            ));
+                        }
+                        (
+                            "FocusEventInfo".to_string(),
+                            EventPayloadSource::FocusEvent,
+                            ReadValueConversion::Identity,
+                        )
                     } else if event.adapter == Some(PropertyAdapter::PointerEvent) {
                         if event.property.is_some()
                             || !matches!(
@@ -1375,6 +1425,32 @@ impl Schema {
                         (
                             "RefreshDeferral".to_string(),
                             EventPayloadSource::RefreshDeferral { interface },
+                            ReadValueConversion::Identity,
+                        )
+                    } else if event.adapter == Some(PropertyAdapter::KeyEvent) {
+                        if event.property.is_some()
+                            || !matches!(event.name.as_str(), "PreviewKeyDown" | "KeyUp")
+                        {
+                            return Err(format!(
+                                "{}.{} has an invalid key_event contract",
+                                control.type_name, event.name
+                            ));
+                        }
+                        (
+                            "KeyEventInfo".to_string(),
+                            EventPayloadSource::KeyEvent,
+                            ReadValueConversion::Identity,
+                        )
+                    } else if event.adapter == Some(PropertyAdapter::CharacterEvent) {
+                        if event.property.is_some() || event.name != "CharacterReceived" {
+                            return Err(format!(
+                                "{}.{} has an invalid character_event contract",
+                                control.type_name, event.name
+                            ));
+                        }
+                        (
+                            "CharacterEventInfo".to_string(),
+                            EventPayloadSource::CharacterEvent,
                             ReadValueConversion::Identity,
                         )
                     } else if matches!(
@@ -1666,6 +1742,19 @@ impl Schema {
                     payload = format!("Optional{payload}");
                 }
 
+                if event.routed
+                    != matches!(
+                        source,
+                        EventPayloadSource::KeyEvent | EventPayloadSource::CharacterEvent
+                    )
+                {
+                    return Err(format!(
+                        "{}.{} routed must be true exactly when using a key_event or \
+                         character_event adapter",
+                        control.type_name, event.name
+                    ));
+                }
+
                 events.push(ResolvedEvent {
                     field: event
                         .field
@@ -1676,7 +1765,8 @@ impl Schema {
                     source,
                     conversion,
                     subscription,
-                    active_property: event.active_property,
+                    active_properties: event.active_properties,
+                    routed: event.routed,
                 });
             }
 
@@ -1879,7 +1969,7 @@ impl Schema {
                         &format!("get_{}", selection.payload_property),
                     );
                     Ok(ResolvedSelection {
-                        slot: selection.slot,
+                        slots: selection.slots,
                         item: selection.item,
                         selected_property: selection.selected_property,
                         selected_item_property: selection.selected_item_property,
@@ -1968,21 +2058,36 @@ fn validate_selections(controls: &[ResolvedControl]) -> Result<(), String> {
         let Some(selection) = control.selection.as_ref() else {
             continue;
         };
-        let slot = control
-            .slots
-            .iter()
-            .find(|slot| slot.name == selection.slot)
-            .ok_or_else(|| {
-                format!(
-                    "{} selection names missing slot {}",
-                    control.type_name, selection.slot
-                )
-            })?;
-        if !matches!(&slot.shape, SlotShape::Collection(_)) {
+        if selection.slots.is_empty() {
             return Err(format!(
-                "{} selection slot {} is not a collection",
-                control.type_name, selection.slot
+                "{} selection must name at least one slot",
+                control.type_name
             ));
+        }
+        let mut unique_slots = HashSet::new();
+        for selection_slot in &selection.slots {
+            if !unique_slots.insert(selection_slot) {
+                return Err(format!(
+                    "{} selection names duplicate slot {}",
+                    control.type_name, selection_slot
+                ));
+            }
+            let slot = control
+                .slots
+                .iter()
+                .find(|slot| slot.name == *selection_slot)
+                .ok_or_else(|| {
+                    format!(
+                        "{} selection names missing slot {}",
+                        control.type_name, selection_slot
+                    )
+                })?;
+            if !matches!(&slot.shape, SlotShape::Collection(_)) {
+                return Err(format!(
+                    "{} selection slot {} is not a collection",
+                    control.type_name, selection_slot
+                ));
+            }
         }
         let event = control
             .events
@@ -2198,14 +2303,24 @@ mod tests {
         let metadata = MetadataResolver::load(&workspace_path("crates/tools/reactor/winmd"));
         let cases = [
             (
-                "slot = \"MenuItems\"",
-                "slot = \"Missing\"",
+                "slots = [\"MenuItems\", \"FooterMenuItems\"]",
+                "slots = [\"Missing\"]",
                 "selection names missing slot Missing",
             ),
             (
-                "slot = \"MenuItems\"",
-                "slot = \"Content\"",
+                "slots = [\"MenuItems\", \"FooterMenuItems\"]",
+                "slots = [\"Content\"]",
                 "selection slot Content is not a collection",
+            ),
+            (
+                "slots = [\"MenuItems\", \"FooterMenuItems\"]",
+                "slots = []",
+                "selection must name at least one slot",
+            ),
+            (
+                "slots = [\"MenuItems\", \"FooterMenuItems\"]",
+                "slots = [\"MenuItems\", \"MenuItems\"]",
+                "selection names duplicate slot MenuItems",
             ),
             (
                 "item = \"NavigationViewItem\"",

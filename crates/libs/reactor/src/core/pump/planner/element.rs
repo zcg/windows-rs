@@ -1,7 +1,7 @@
 //! Planning for plain [`Element`] trees: native/virtual reconciliation and
 //! mounting, independent of [`View`]/component structure.
 
-use super::super::*;
+use super::*;
 
 impl<R: NativeRuntime> Pump<R> {
     fn visit_element_properties(
@@ -316,7 +316,7 @@ impl<R: NativeRuntime> Pump<R> {
                     .collect::<Result<Vec<_>, _>>()?;
                 tree.set_children(node, order);
                 let new_native = Self::native_children(tree, node)?;
-                if super::is_dense_keyed_update(&operations) && old_native != new_native {
+                if is_dense_keyed_update(&operations) && old_native != new_native {
                     plan.synchronize_children(node, None, new_native);
                 } else {
                     Self::replay_keyed_child_list(
@@ -460,14 +460,25 @@ impl<R: NativeRuntime> Pump<R> {
             desired_events.push((event, active));
         });
         for (event, active) in desired_events {
+            let current_callback = native.desired.routed_callback(event);
+            let desired_callback = desired.routed_callback(event);
+            let callback_changed = current_callback != desired_callback;
             let state = native.events.entry(event).or_insert(EventState {
                 revision: 0,
                 active: false,
             });
+            let becoming_active = !state.active && active;
             if state.active != active {
                 state.revision = state.revision.checked_add(1).unwrap();
                 state.active = active;
                 if active {
+                    if callback_changed {
+                        plan.push(Command::SetRoutedCallback {
+                            node,
+                            event,
+                            callback: desired_callback.clone(),
+                        });
+                    }
                     plan.push(Command::SubscribeEvent {
                         node,
                         event,
@@ -476,6 +487,13 @@ impl<R: NativeRuntime> Pump<R> {
                 } else {
                     plan.push(Command::UnsubscribeEvent { node, event });
                 }
+            }
+            if callback_changed && !becoming_active {
+                plan.post_publish_commands.push(Command::SetRoutedCallback {
+                    node,
+                    event,
+                    callback: desired_callback,
+                });
             }
         }
         Ok(())
@@ -598,6 +616,13 @@ impl<R: NativeRuntime> Pump<R> {
         }
         for (event, state) in &tree.native(node).events {
             if state.active {
+                if let Some(callback) = props.routed_callback(*event) {
+                    plan.push(Command::SetRoutedCallback {
+                        node,
+                        event: *event,
+                        callback: Some(callback),
+                    });
+                }
                 plan.push(Command::SubscribeEvent {
                     node,
                     event: *event,

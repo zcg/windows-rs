@@ -1,12 +1,11 @@
-use super::super::*;
+use super::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 fn swiped(content: &str) -> View {
-    SwipeControl::new().slots([SlotView::new(
-        SwipeControlSlot::Content,
-        TextBlock::new().text(content),
-    )])
+    SwipeControl::new()
+        .content(TextBlock::new().text(content))
+        .into()
 }
 
 fn swipes(on_invoked: impl IntoPayloadCallback<String>) -> SwipeItems {

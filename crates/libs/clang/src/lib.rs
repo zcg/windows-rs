@@ -80,7 +80,9 @@ pub(crate) struct Parser<'a> {
     pub enum_merge: &'a HashMap<String, &'static str>,
     pub tu: &'a TranslationUnit,
     pub pending_typedefs: Vec<Cursor>,
+    pub pending_records: Vec<Cursor>,
     pub pending_macros: Vec<String>,
+    processing_dependency: bool,
     /// Per-header mode: incomplete pointer-only records emitted as opaque structs.
     pub pending_opaque: Vec<(String, String)>,
     /// Enum names for which `DEFINE_ENUM_FLAG_OPERATORS(X)` was seen.
@@ -133,7 +135,9 @@ impl<'a> Parser<'a> {
             enum_merge,
             tu,
             pending_typedefs: vec![],
+            pending_records: vec![],
             pending_macros: vec![],
+            processing_dependency: false,
             pending_opaque: vec![],
             flag_enums: HashSet::new(),
             iid_vars: HashMap::new(),
@@ -160,9 +164,8 @@ impl<'a> Parser<'a> {
         collector: &mut Collector,
         extern_c: bool,
     ) -> Result<(), Error> {
-        // Allowlist mode emits only named functions as roots. Bare tag dependencies are
-        // not scheduled here; a missing one fails later as an unresolved reference.
-        if !self.symbols.is_empty() {
+        // Allowlist mode emits only named functions as roots. Queued dependencies bypass it.
+        if !self.processing_dependency && !self.symbols.is_empty() {
             match child.kind() {
                 CXCursor_FunctionDecl
                     if !child.is_definition()
@@ -193,6 +196,10 @@ impl<'a> Parser<'a> {
                 } else {
                     self.tag_rename.get(&tag_name).cloned().unwrap_or(tag_name)
                 };
+                // Scalar records collapse to primitives; skip before lifting nested records.
+                if semantic_scalar_definition(&name, child.kind()).is_some() {
+                    return Ok(());
+                }
                 // Numerics aliases collapse to shared value types; skip before lifting overlays.
                 if numerics_alias(&name).is_some() {
                     return Ok(());
@@ -224,6 +231,9 @@ impl<'a> Parser<'a> {
                 let tag_name = child.name();
                 if !is_anonymous_name(&tag_name) && !tag_name.ends_with("__") {
                     let name = self.tag_rename.get(&tag_name).cloned().unwrap_or(tag_name);
+                    if semantic_scalar_definition(&name, child.kind()).is_some() {
+                        return Ok(());
+                    }
                     // Do not clobber a real definition aliased by another tag.
                     if !self.ref_map.contains_key(&name) && !collector.contains_key(&name) {
                         collector.insert(Item::Struct(Struct::opaque(&name)));
@@ -241,7 +251,7 @@ impl<'a> Parser<'a> {
                     self.tag_rename.get(&tag_name).cloned().unwrap_or(tag_name)
                 };
                 // Scalar overlay unions collapse to scalars; skip before lifting overlays.
-                if semantic_scalar(&name).is_some() {
+                if semantic_scalar_definition(&name, child.kind()).is_some() {
                     return Ok(());
                 }
                 // Lift nested records first so field type references resolve.
@@ -395,7 +405,10 @@ impl<'a> Parser<'a> {
             }
             // GUID macro values live in the arguments unless `INITGUID` is defined.
             CXCursor_MacroExpansion
-                if matches!(child.name().as_str(), "DEFINE_GUID" | "DEFINE_OLEGUID") =>
+                if matches!(
+                    child.name().as_str(),
+                    "DEFINE_GUID" | "DEFINE_OLEGUID" | "DEFINE_KNOWN_FOLDER"
+                ) =>
             {
                 let ole = child.name() == "DEFINE_OLEGUID";
                 let tokens = self.tu.tokenize(child.extent());
@@ -544,7 +557,7 @@ impl Clang {
         Self::default()
     }
 
-    /// Adds an input header (`.h`) file or directory.
+    /// Adds an input header (`.h`, `.hpp`, `.hxx`, or `.hh`) file or directory.
     pub fn input(&mut self, input: impl AsRef<Path>) -> &mut Self {
         self.input.push(input.as_ref().to_path_buf());
         self
@@ -883,7 +896,7 @@ impl Clang {
 
     /// Parses inputs once and returns the libclang state that keeps the TUs valid.
     fn parse_inputs(&self) -> Result<ParsedInputs, Error> {
-        let h_paths = expand_input_files(&self.input, "h")?;
+        let h_paths = expand_header_inputs(&self.input)?;
         let library = Library::new()?;
         let index = Index::new()?;
 
@@ -1487,24 +1500,41 @@ impl Clang {
             parser.process_cursor(child, collector, false)?;
         }
 
-        // Drain referenced typedef dependencies; parsing them can enqueue more.
-        let mut seen: HashSet<String> = HashSet::new();
-        let mut i = 0;
-        while i < parser.pending_typedefs.len() {
-            let cursor = parser.pending_typedefs[i];
-            i += 1;
-            let name = cursor.name();
-            // Skip anything already resolved.
-            if !seen.insert(name.clone())
-                || collector.contains_key(&name)
-                || parser.ref_map.contains_key(&name)
-            {
-                continue;
+        // Drain referenced type dependencies; parsing one definition can enqueue more.
+        let mut seen_typedefs: HashSet<String> = HashSet::new();
+        let mut seen_records: HashSet<String> = HashSet::new();
+        let mut typedef_index = 0;
+        let mut record_index = 0;
+        while typedef_index < parser.pending_typedefs.len()
+            || record_index < parser.pending_records.len()
+        {
+            while typedef_index < parser.pending_typedefs.len() {
+                let cursor = parser.pending_typedefs[typedef_index];
+                typedef_index += 1;
+                let name = cursor.name();
+                // Skip anything already resolved.
+                if !seen_typedefs.insert(name.clone())
+                    || collector.contains_key(&name)
+                    || parser.ref_map.contains_key(&name)
+                {
+                    continue;
+                }
+                if let Some(cb) = Callback::parse(cursor, &mut parser)? {
+                    collector.insert(Item::Callback(cb));
+                } else if let Some(td) = Typedef::parse(cursor, &mut parser)? {
+                    collector.insert(Item::Typedef(td));
+                }
             }
-            if let Some(cb) = Callback::parse(cursor, &mut parser)? {
-                collector.insert(Item::Callback(cb));
-            } else if let Some(td) = Typedef::parse(cursor, &mut parser)? {
-                collector.insert(Item::Typedef(td));
+
+            while record_index < parser.pending_records.len() {
+                let cursor = parser.pending_records[record_index];
+                record_index += 1;
+                if seen_records.insert(cursor.usr()) {
+                    parser.processing_dependency = true;
+                    let result = parser.process_cursor(cursor, collector, false);
+                    parser.processing_dependency = false;
+                    result?;
+                }
             }
         }
 
@@ -1522,6 +1552,62 @@ struct ParsedInputs {
     str_tus: Vec<(String, TranslationUnit)>,
     index: Index,
     _library: Library,
+}
+
+const HEADER_EXTENSIONS: [&str; 4] = ["h", "hpp", "hxx", "hh"];
+
+fn expand_header_inputs<P: AsRef<Path>>(inputs: &[P]) -> Result<Vec<PathBuf>, Error> {
+    let mut paths = vec![];
+
+    for input in inputs {
+        let path = input.as_ref();
+        let display = path.to_string_lossy();
+
+        if path.is_dir() {
+            let previous_len = paths.len();
+
+            for entry_path in path
+                .read_dir()
+                .map_err(|_| Error::new("failed to read directory", &display, 0, 0))?
+                .flatten()
+                .map(|entry| entry.path())
+            {
+                if entry_path.is_file()
+                    && entry_path.extension().is_some_and(|extension| {
+                        HEADER_EXTENSIONS
+                            .iter()
+                            .any(|expected| extension.eq_ignore_ascii_case(expected))
+                    })
+                {
+                    paths.push(entry_path);
+                }
+            }
+
+            if paths.len() == previous_len {
+                return Err(Error::new(
+                    "failed to find .h, .hpp, .hxx, or .hh files in directory",
+                    &display,
+                    0,
+                    0,
+                ));
+            }
+        } else if path.extension().is_some_and(|extension| {
+            HEADER_EXTENSIONS
+                .iter()
+                .any(|expected| extension.eq_ignore_ascii_case(expected))
+        }) {
+            paths.push(path.to_path_buf());
+        } else {
+            return Err(Error::new(
+                "expected .h, .hpp, .hxx, or .hh file",
+                &display,
+                0,
+                0,
+            ));
+        }
+    }
+
+    Ok(paths)
 }
 
 /// Keep one stable definition when separate headers repeat an equivalent typedef.

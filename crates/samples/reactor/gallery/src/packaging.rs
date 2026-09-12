@@ -91,7 +91,9 @@ fn register_in_place() -> std::io::Result<(String, String)> {
                 .to_string(),
         ));
     }
-    let family = String::from_utf8_lossy(&output_result.stdout).trim().to_string();
+    let family = String::from_utf8_lossy(&output_result.stdout)
+        .trim()
+        .to_string();
     if family.is_empty() {
         return Err(std::io::Error::other(
             "registration succeeded but the package family name is empty",
@@ -129,9 +131,7 @@ fn attribute(text: &str, element: &str, key: &str) -> std::io::Result<String> {
     let key_start = rest.find(key).ok_or_else(|| missing(key))?;
     let after = &rest[key_start + key.len()..];
     let quote_start = after.find('"').ok_or_else(|| missing(key))? + 1;
-    let quote_end = after[quote_start..]
-        .find('"')
-        .ok_or_else(|| missing(key))?;
+    let quote_end = after[quote_start..].find('"').ok_or_else(|| missing(key))?;
     Ok(after[quote_start..quote_start + quote_end].to_string())
 }
 
@@ -205,7 +205,10 @@ mod tests {
         let root = workspace_root();
         let manifest = root.join(MANIFEST);
         let text = std::fs::read_to_string(manifest).expect("read manifest");
-        assert_eq!(attribute(&text, "<Identity", "Name=").unwrap(), "ReactorWinUIGallery");
+        assert_eq!(
+            attribute(&text, "<Identity", "Name=").unwrap(),
+            "ReactorWinUIGallery"
+        );
         assert_eq!(attribute(&text, "<Application", "Id=").unwrap(), "App");
     }
 }

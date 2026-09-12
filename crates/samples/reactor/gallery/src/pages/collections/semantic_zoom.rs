@@ -27,28 +27,27 @@ impl Component for SemanticZoomPage {
     }
 
     fn view(&self, _: &(), context: &mut ViewContext<Self>) -> View {
-        let zoomed_in = ListView::new().height(240.0).collection_slot(
-            ListViewSlot::Items,
-            ["Apple", "Broccoli", "Rice"].into_iter().map(|item| {
-                KeyedView::new(
-                    item,
-                    ListViewItem::new()
-                        .tag(item)
-                        .content(TextBlock::new().text(item)),
-                )
-            }),
-        );
-        let zoomed_out = ListView::new().height(240.0).collection_slot(
-            ListViewSlot::Items,
-            GROUPS.into_iter().map(|group| {
+        let zoomed_in =
+            ListView::new()
+                .height(240.0)
+                .items(["Apple", "Broccoli", "Rice"].into_iter().map(|item| {
+                    KeyedView::new(
+                        item,
+                        ListViewItem::new()
+                            .tag(item)
+                            .content(TextBlock::new().text(item)),
+                    )
+                }));
+        let zoomed_out = ListView::new()
+            .height(240.0)
+            .items(GROUPS.into_iter().map(|group| {
                 KeyedView::new(
                     group,
                     ListViewItem::new()
                         .tag(group)
                         .content(TextBlock::new().text(group)),
                 )
-            }),
-        );
+            }));
         page_content(
             "SemanticZoom",
             "Pairs a detailed zoomed-in view with a compact zoomed-out overview.",
@@ -59,10 +58,8 @@ impl Component for SemanticZoomPage {
                     StackPanel::new().spacing(8.0).children((
                         SemanticZoom::new()
                             .is_zoomed_in_view_active(self.zoomed_in)
-                            .slots([
-                                SlotView::new(SemanticZoomSlot::ZoomedInView, zoomed_in),
-                                SlotView::new(SemanticZoomSlot::ZoomedOutView, zoomed_out),
-                            ]),
+                            .zoomed_in_view(zoomed_in)
+                            .zoomed_out_view(zoomed_out),
                         StackPanel::new()
                             .orientation(Orientation::Horizontal)
                             .spacing(8.0)

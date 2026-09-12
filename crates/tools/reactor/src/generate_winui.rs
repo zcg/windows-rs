@@ -85,7 +85,8 @@ pub(crate) fn generate_control_bindings_filter(schema: &ResolvedSchema) -> Strin
                             .to_string(),
                     );
                 }
-                Some(PropertyAdapter::ClockIdentifier)
+                Some(PropertyAdapter::CharacterEvent)
+                | Some(PropertyAdapter::ClockIdentifier)
                 | Some(PropertyAdapter::ContentDialogResult)
                 | Some(PropertyAdapter::FontWeight)
                 | Some(PropertyAdapter::HorizontalContentAlignment)
@@ -94,16 +95,19 @@ pub(crate) fn generate_control_bindings_filter(schema: &ResolvedSchema) -> Strin
                 | Some(PropertyAdapter::InspectableStringList)
                 | Some(PropertyAdapter::ItemTag)
                 | Some(PropertyAdapter::ItemTags)
+                | Some(PropertyAdapter::KeyEvent)
                 | Some(PropertyAdapter::NavigationDisplayMode)
                 | Some(PropertyAdapter::NumberBoxValue)
                 | Some(PropertyAdapter::PathData)
                 | Some(PropertyAdapter::PointerCapture)
+                | Some(PropertyAdapter::PointerFocus)
                 | Some(PropertyAdapter::PointerEvent)
                 | Some(PropertyAdapter::RatingValue)
                 | Some(PropertyAdapter::RefreshDeferral)
                 | Some(PropertyAdapter::DragInfo)
                 | Some(PropertyAdapter::DropData)
                 | Some(PropertyAdapter::DropPolicy)
+                | Some(PropertyAdapter::FocusEvent)
                 | Some(PropertyAdapter::ResourceOverrides)
                 | Some(PropertyAdapter::ResourceStyle)
                 | Some(PropertyAdapter::RichEditText)
@@ -566,7 +570,7 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
     let selected_items = schema.controls.iter().filter_map(|control| {
         let selection = control.selection.as_ref()?;
         let control_name = ident(&control.name);
-        let slot = ident(&format!("{}{}", control.name, selection.slot));
+        let event = ident(&format!("{}{}", control.name, selection.event));
         let interface = path_ident(&selection.owner_interface);
         let getter = ident(&selection.selected_item_property);
         let get = if is_default_interface(control, &selection.owner_interface) {
@@ -580,7 +584,7 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
             quote! { Ok(Some(selected)) }
         };
         Some(quote! {
-            (Handle::#control_name(value), SlotId::#slot) => {
+            (Handle::#control_name(value), EventId::#event) => {
                 match #get {
                     Ok(selected) => #selected,
                     Err(error) if error.code().is_ok() => Ok(None),
@@ -592,7 +596,7 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
     let set_selected_items = schema.controls.iter().filter_map(|control| {
         let selection = control.selection.as_ref()?;
         let control_name = ident(&control.name);
-        let slot = ident(&format!("{}{}", control.name, selection.slot));
+        let event = ident(&format!("{}{}", control.name, selection.event));
         let interface = path_ident(&selection.owner_interface);
         let setter = ident(&format!("Set{}", selection.selected_item_property));
         let set = if let Some(item) = selection.selected_item.as_deref() {
@@ -621,7 +625,7 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
             }
         };
         Some(quote! {
-            (Handle::#control_name(value), SlotId::#slot) => #set.map_err(native_error),
+            (Handle::#control_name(value), EventId::#event) => #set.map_err(native_error),
         })
     });
     let selection_item_states = schema.controls.iter().filter_map(|control| {
@@ -820,7 +824,7 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
             handle: &Handle,
             selection: SelectionDescriptor,
         ) -> Result<Option<windows_core::IInspectable>, RuntimeError> {
-            match (handle, selection.slot) {
+            match (handle, selection.event) {
                 #(#selected_items,)*
                 _ => Ok(None),
             }
@@ -831,7 +835,7 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
             selection: SelectionDescriptor,
             selected: &windows_core::IInspectable,
         ) -> Result<(), RuntimeError> {
-            match (handle, selection.slot) {
+            match (handle, selection.event) {
                 #(#set_selected_items)*
                 _ => Ok(()),
             }
@@ -1145,9 +1149,9 @@ fn generate_event_arm(control: &ResolvedControl, event: &ResolvedEvent) -> Token
     let interface = path_ident(&event.interface);
     let method = ident(&event.name);
     let payload = ident(&event.payload);
-    let pointer_capture = (event.name == "PointerPressed").then(|| {
+    let pointer_press_policy = (event.name == "PointerPressed").then(|| {
         quote! {
-            info.capture_succeeded = match sink.capture_pointer_on_press(node, &element, args) {
+            info.capture_succeeded = match sink.apply_pointer_press_policy(node, &element, args) {
                 Ok(value) => value,
                 Err(error) => {
                     sink.error(node, EventId::#event_id, revision, error);
@@ -1158,7 +1162,13 @@ fn generate_event_arm(control: &ResolvedControl, event: &ResolvedEvent) -> Token
     });
     let pointer_release = (event.name == "PointerReleased").then(|| {
         quote! {
-            if let Err(error) = sink.release_pointer_after_event(node, &element, args) {
+            if let Err(error) = sink.apply_pointer_release_policy(
+                node,
+                EventId::#event_id,
+                revision,
+                &element,
+                args,
+            ) {
                 sink.error(node, EventId::#event_id, revision, error);
                 return;
             }
@@ -1247,6 +1257,13 @@ fn generate_event_arm(control: &ResolvedControl, event: &ResolvedEvent) -> Token
             &event.source,
             EventPayloadSource::SenderProperty { interface, .. } if interface == &event.interface
         );
+    let text_input_probe = control.name == "TextBox" && event.name == "TextChanged";
+    let got_focus = event.name == "GotFocus";
+    let pending_focus_state = if got_focus {
+        quote! { sink.take_pending_focus_state(node) }
+    } else {
+        quote! { None }
+    };
     let callback = match &event.source {
         EventPayloadSource::Unit => quote! {
             move |_, _| {
@@ -1455,13 +1472,23 @@ fn generate_event_arm(control: &ResolvedControl, event: &ResolvedEvent) -> Token
                         }
                     }
                 }
-            } else {
+            } else if text_input_probe {
                 quote! {
                     {
                         #event_source
                         move |_, _| {
+                            #[cfg(feature = "test")]
+                            test::record_live_input_probe_stage(
+                                test::LiveInputProbeStage::NativeTextChanged,
+                            );
                             match event_source.#property() {
-                                Ok(value) => #enqueue_payload,
+                                Ok(value) => {
+                                    #[cfg(feature = "test")]
+                                    test::record_live_input_probe_stage(
+                                        test::LiveInputProbeStage::NativeTextReady,
+                                    );
+                                    #enqueue_payload;
+                                }
                                 #nullable_error
                                 Err(error) => sink.error(
                                     node,
@@ -1470,6 +1497,22 @@ fn generate_event_arm(control: &ResolvedControl, event: &ResolvedEvent) -> Token
                                     native_error(error),
                                 ),
                             }
+                        }
+                    }
+                }
+            } else {
+                quote! {
+                    {
+                        #event_source
+                        move |_, _| match event_source.#property() {
+                            Ok(value) => #enqueue_payload,
+                            #nullable_error
+                            Err(error) => sink.error(
+                                node,
+                                EventId::#event_id,
+                                revision,
+                                native_error(error),
+                            ),
                         }
                     }
                 }
@@ -1614,7 +1657,7 @@ fn generate_event_arm(control: &ResolvedControl, event: &ResolvedEvent) -> Token
                             info.window_y = f64::from(position.y);
                         }
                     }
-                    #pointer_capture
+                    #pointer_press_policy
                     #pointer_release
                     sink.enqueue(
                         node,
@@ -1656,6 +1699,104 @@ fn generate_event_arm(control: &ResolvedControl, event: &ResolvedEvent) -> Token
                 }
             }
         }
+        EventPayloadSource::KeyEvent => quote! {
+            move |_, args| {
+                let result = args
+                    .as_ref()
+                    .ok_or_else(windows_core::Error::empty)
+                    .and_then(key_event_info);
+                match result {
+                    Ok(info) => {
+                        let handled =
+                            sink.route_key(node, EventId::#event_id, revision, info);
+                        if let Some(args) = args.as_ref()
+                            && let Err(error) = args.SetHandled(handled)
+                        {
+                            sink.error(
+                                node,
+                                EventId::#event_id,
+                                revision,
+                                native_error(error),
+                            );
+                        }
+                    }
+                    Err(error) => {
+                        sink.error(
+                            node,
+                            EventId::#event_id,
+                            revision,
+                            native_error(error),
+                        );
+                    }
+                }
+            }
+        },
+        EventPayloadSource::CharacterEvent => quote! {
+            move |_, args| {
+                let result = args
+                    .as_ref()
+                    .ok_or_else(windows_core::Error::empty)
+                    .and_then(character_event_info);
+                match result {
+                    Ok(info) => {
+                        let handled =
+                            sink.route_character(node, EventId::#event_id, revision, info);
+                        if let Some(args) = args.as_ref()
+                            && let Err(error) = args.SetHandled(handled)
+                        {
+                            sink.error(
+                                node,
+                                EventId::#event_id,
+                                revision,
+                                native_error(error),
+                            );
+                        }
+                    }
+                    Err(error) => {
+                        sink.error(
+                            node,
+                            EventId::#event_id,
+                            revision,
+                            native_error(error),
+                        );
+                    }
+                }
+            }
+        },
+        EventPayloadSource::FocusEvent => quote! {
+            {
+                let element = value.cast::<UIElement>().map_err(native_error)?;
+                move |_, args| {
+                    let result = args
+                        .as_ref()
+                        .ok_or_else(windows_core::Error::empty)
+                        .and_then(|args| {
+                            focus_event_info(
+                                &element,
+                                args,
+                                #pending_focus_state,
+                                #got_focus,
+                            )
+                        });
+                    match result {
+                        Ok(info) => sink.enqueue(
+                            node,
+                            EventId::#event_id,
+                            revision,
+                            EventPayload::FocusEventInfo(info),
+                        ),
+                        Err(error) => {
+                            sink.error(
+                                node,
+                                EventId::#event_id,
+                                revision,
+                                native_error(error),
+                            );
+                        }
+                    }
+                }
+            }
+        },
         EventPayloadSource::EventArgsItemTag {
             interface: _,
             property,
@@ -2035,7 +2176,10 @@ fn generate_set_property(control: &ResolvedControl, property: &ResolvedProperty)
             ) => set_rich_edit_text(control, value)
         };
     }
-    if property.adapter == Some(PropertyAdapter::PointerCapture) {
+    if matches!(
+        property.adapter,
+        Some(PropertyAdapter::PointerCapture | PropertyAdapter::PointerFocus)
+    ) {
         return quote! {
             (Handle::#control_name(_), PropertyId::#property_id, PropertyValue::Bool(_)) => {
                 Err(RuntimeError::UnsupportedKind)
@@ -2425,7 +2569,10 @@ fn generate_clear_property(control: &ResolvedControl, property: &ResolvedPropert
             }
         };
     }
-    if property.adapter == Some(PropertyAdapter::PointerCapture) {
+    if matches!(
+        property.adapter,
+        Some(PropertyAdapter::PointerCapture | PropertyAdapter::PointerFocus)
+    ) {
         return quote! {
             (Handle::#control_name(_), PropertyId::#property_id) => {
                 Err(RuntimeError::UnsupportedKind)

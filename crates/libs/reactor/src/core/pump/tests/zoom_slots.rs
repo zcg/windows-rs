@@ -1,18 +1,15 @@
-use super::super::*;
+use super::*;
 
 #[test]
 fn semantic_zoom_views_mount_with_framework_sizes() {
     let mut pump = Pump::new(RecordingRuntime::default());
-    pump.mount_view(SemanticZoom::new().is_zoomed_in_view_active(true).slots([
-        SlotView::new(
-            SemanticZoomSlot::ZoomedInView,
-            ListView::new().height(240.0),
-        ),
-        SlotView::new(
-            SemanticZoomSlot::ZoomedOutView,
-            ListView::new().height(120.0),
-        ),
-    ]))
+    pump.mount_view(
+        SemanticZoom::new()
+            .is_zoomed_in_view_active(true)
+            .zoomed_in_view(ListView::new().height(240.0))
+            .zoomed_out_view(ListView::new().height(120.0))
+            .into(),
+    )
     .unwrap();
 
     let batches = pump.runtime().commands();

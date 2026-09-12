@@ -45,7 +45,7 @@ impl Component for TextBlockPage {
                         ToggleSwitch::new()
                             .is_on(self.large)
                             .on_toggled(context.callback(Message::Large))
-                            .slot(ToggleSwitchSlot::Header, "Large"),
+                            .header("Large"),
                     )),
                     "TextBlock::new().text(t).font_family(\"Segoe UI\").font_weight(FontWeight::SEMI_BOLD)",
                 ),

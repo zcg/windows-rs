@@ -33,30 +33,20 @@ impl Component for AppBarButtonPage {
                 sample_card(
                     "Basic AppBarButton",
                     StackPanel::new().spacing(8.0).children((
-                        CommandBar::new().slots([
-                            SlotView::collection(
-                                CommandBarSlot::PrimaryCommands,
-                                [KeyedView::new(
-                                    "save",
-                                    AppBarButton::new()
-                                        .label("Save")
-                                        .on_click(context.message(Message::Clicked))
-                                        .slots([SlotView::new(
-                                            AppBarButtonSlot::Icon,
-                                            SymbolIcon::new().symbol(Symbol::Save),
-                                        )]),
-                                )],
-                            ),
-                            SlotView::collection(
-                                CommandBarSlot::SecondaryCommands,
-                                [KeyedView::new(
-                                    "delete",
-                                    AppBarButton::new()
-                                        .label("Delete")
-                                        .on_click(context.message(Message::Clicked)),
-                                )],
-                            ),
-                        ]),
+                        CommandBar::new()
+                            .primary_commands([KeyedView::new(
+                                "save",
+                                AppBarButton::new()
+                                    .label("Save")
+                                    .on_click(context.message(Message::Clicked))
+                                    .icon(SymbolIcon::new().symbol(Symbol::Save)),
+                            )])
+                            .secondary_commands([KeyedView::new(
+                                "delete",
+                                AppBarButton::new()
+                                    .label("Delete")
+                                    .on_click(context.message(Message::Clicked)),
+                            )]),
                         TextBlock::new()
                             .text(format!("Clicked {} times", self.clicks))
                             .opacity(0.6),

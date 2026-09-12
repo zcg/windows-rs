@@ -33,6 +33,10 @@ impl Typedef {
             return Ok(None);
         }
 
+        if canonical_hresult(&name).is_some() {
+            return Ok(None);
+        }
+
         // GUID synonyms collapse to `GUID` at reference sites.
         if guid_alias(&name) {
             return Ok(None);
@@ -65,8 +69,8 @@ impl Typedef {
             return Ok(None);
         }
 
-        // Semantic scalar aliases such as `BOOLEAN` collapse to primitives.
-        if parser.header_root.is_some() && semantic_scalar(&name).is_some() {
+        // Semantic scalar typedefs such as `BOOLEAN` collapse to primitives in every mode.
+        if semantic_scalar_definition(&name, CXCursor_TypedefDecl).is_some() {
             return Ok(None);
         }
 
@@ -75,8 +79,8 @@ impl Typedef {
             return Ok(None);
         }
 
-        // Flat Win32 scrapes collapse COM interface pointer aliases to the interface type.
-        if parser.header_root.is_some() && is_interface_alias(&underlying) {
+        // COM interfaces already carry their native pointer in metadata.
+        if is_interface_alias(&underlying) {
             return Ok(None);
         }
 
@@ -94,16 +98,18 @@ impl Typedef {
                 underlying
             };
             let tag = inner.ty().name();
-            if parser.header_root.is_none() || is_anonymous_name(&tag) {
-                // Legacy mode or an anonymous tag already emitted under this typedef name.
-                return Ok(None);
-            }
             let public = parser
                 .tag_rename
                 .get(&tag)
                 .cloned()
                 .unwrap_or_else(|| tag.clone());
-            if name == public
+            if parser.header_root.is_none() && inner_kind == CXType_Record {
+                // Pull the backing definition into namespaced output before deciding whether this
+                // typedef is the public name or a secondary alias.
+                inner.to_type(parser);
+            }
+            if is_anonymous_name(&tag)
+                || name == public
                 || (name == tag
                     && inner_kind == CXType_Enum
                     && parser.enum_merge.contains_key(&public))

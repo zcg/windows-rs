@@ -33,19 +33,13 @@ impl Component for AppBarToggleButtonPage {
                 sample_card(
                     "Basic AppBarToggleButton",
                     StackPanel::new().spacing(8.0).children((
-                        CommandBar::new().slots([SlotView::collection(
-                            CommandBarSlot::PrimaryCommands,
-                            [KeyedView::new(
-                                "shuffle",
-                                AppBarToggleButton::new()
-                                    .label("Shuffle")
-                                    .is_checked(self.checked)
-                                    .on_click(context.message(Message::Clicked))
-                                    .slots([SlotView::new(
-                                        AppBarToggleButtonSlot::Icon,
-                                        SymbolIcon::new().symbol(Symbol::Shuffle),
-                                    )]),
-                            )],
+                        CommandBar::new().primary_commands([KeyedView::new(
+                            "shuffle",
+                            AppBarToggleButton::new()
+                                .label("Shuffle")
+                                .is_checked(self.checked)
+                                .on_click(context.message(Message::Clicked))
+                                .icon(SymbolIcon::new().symbol(Symbol::Shuffle)),
                         )]),
                         TextBlock::new()
                             .text(if self.checked {

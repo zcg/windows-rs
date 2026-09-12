@@ -25,20 +25,17 @@ impl Component for RefreshContainerPage {
     }
 
     fn view(&self, _: &(), context: &mut ViewContext<Self>) -> View {
-        let list = ListView::new().height(280.0).collection_slot(
-            ListViewSlot::Items,
-            (0..20).map(|index| {
-                let label = format!("Item {index} - pull down to refresh");
-                KeyedView::new(
-                    label.clone(),
-                    ListViewItem::new().tag(label.clone()).content(
-                        Border::new()
-                            .padding(8.0)
-                            .content(TextBlock::new().text(label)),
-                    ),
-                )
-            }),
-        );
+        let list = ListView::new().height(280.0).items((0..20).map(|index| {
+            let label = format!("Item {index} - pull down to refresh");
+            KeyedView::new(
+                label.clone(),
+                ListViewItem::new().tag(label.clone()).content(
+                    Border::new()
+                        .padding(8.0)
+                        .content(TextBlock::new().text(label)),
+                ),
+            )
+        }));
         page_content(
             "RefreshContainer",
             "Pull down to refresh scrollable content.",
@@ -49,7 +46,10 @@ impl Component for RefreshContainerPage {
                     StackPanel::new().spacing(8.0).children((
                         RefreshContainer::new()
                             .pull_direction(RefreshPullDirection::TopToBottom)
-                            .on_refresh_requested(context.message(Message::Refreshed))
+                            .on_refresh_requested(context.callback(|deferral: RefreshDeferral| {
+                                deferral.complete();
+                                Message::Refreshed
+                            }))
                             .content(ScrollViewer::new().height(300.0).content(list)),
                         TextBlock::new()
                             .text(format!("Refreshed {} times", self.refreshes))

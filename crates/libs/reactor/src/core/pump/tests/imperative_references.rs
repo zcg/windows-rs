@@ -1,4 +1,4 @@
-use super::super::*;
+use super::*;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
@@ -89,6 +89,31 @@ fn swap_chain_panel_observation_uses_the_typed_imperative_path() {
             .iter()
             .flatten()
             .any(|command| matches!(command, Command::ObserveSwapChainPanel { .. }))
+    );
+}
+
+#[test]
+fn swap_chain_panel_frame_request_uses_the_typed_imperative_path() {
+    let result = Rc::new(RefCell::new(None));
+    let reference = ElementRef::<SwapChainPanel>::new();
+    assert!(!reference.request_surface_frame(|_| {}));
+
+    let mut pump = Pump::new(RecordingRuntime::default());
+    pump.mount(SwapChainPanel::new().element_ref(&reference).into())
+        .unwrap();
+    let callback_result = Rc::clone(&result);
+    assert!(reference.request_surface_frame(move |value| {
+        *callback_result.borrow_mut() = Some(value);
+    }));
+
+    assert_eq!(pump.process_imperatives(), Ok(1));
+    assert_eq!(*result.borrow(), Some(Ok(())));
+    assert!(
+        pump.runtime()
+            .commands()
+            .iter()
+            .flatten()
+            .any(|command| matches!(command, Command::RequestSwapChainPanelFrame { .. }))
     );
 }
 
@@ -216,6 +241,11 @@ fn accepted_one_shot_requests_complete_when_targets_are_removed() {
         log.borrow_mut().push("surface");
     }));
     let log = Rc::clone(&completed);
+    assert!(surface.request_surface_frame(move |result| {
+        assert_eq!(result, Err(SwapChainPanelError::Unavailable));
+        log.borrow_mut().push("surface-frame");
+    }));
+    let log = Rc::clone(&completed);
     assert!(image.request_set_native_source(None, move |result| {
         assert_eq!(result, Err(ImageSourceError::Unavailable));
         log.borrow_mut().push("image");
@@ -230,10 +260,17 @@ fn accepted_one_shot_requests_complete_when_targets_are_removed() {
     assert_eq!(pump.process_imperatives(), Ok(0));
     assert_eq!(
         &*completed.borrow(),
-        &["focus", "webview", "surface", "image", "composition"]
+        &[
+            "focus",
+            "webview",
+            "surface",
+            "surface-frame",
+            "image",
+            "composition"
+        ]
     );
     assert_eq!(pump.process_imperatives(), Ok(0));
-    assert_eq!(completed.borrow().len(), 5);
+    assert_eq!(completed.borrow().len(), 6);
 }
 
 #[test]
@@ -459,15 +496,18 @@ fn swap_chain_panel_observation_follows_structural_recreation() {
         .unwrap();
     assert!(reference.request_clear_swap_chain(|_| {}));
     assert_eq!(pump.process_imperatives(), Ok(2));
-    let (old_node, old_callback) = pump
+    let (old_node, old_binding, old_callback) = pump
         .runtime()
         .commands()
         .iter()
         .flatten()
         .find_map(|command| match command {
-            Command::ObserveSwapChainPanel { node, callback, .. } => {
-                Some((*node, callback.clone()))
-            }
+            Command::ObserveSwapChainPanel {
+                node,
+                binding,
+                callback,
+                ..
+            } => Some((*node, *binding, callback.clone())),
             _ => None,
         })
         .unwrap();
@@ -477,20 +517,24 @@ fn swap_chain_panel_observation_follows_structural_recreation() {
     assert!(!old_callback.call(SwapChainPanelEvent::Rendering));
     assert_eq!(observed.get(), 0);
     assert_eq!(pump.process_imperatives(), Ok(2));
-    let (new_node, new_callback) = pump
+    let (new_node, new_binding, new_callback) = pump
         .runtime()
         .commands()
         .iter()
         .flatten()
         .rev()
         .find_map(|command| match command {
-            Command::ObserveSwapChainPanel { node, callback, .. } => {
-                Some((*node, callback.clone()))
-            }
+            Command::ObserveSwapChainPanel {
+                node,
+                binding,
+                callback,
+                ..
+            } => Some((*node, *binding, callback.clone())),
             _ => None,
         })
         .unwrap();
     assert_ne!(new_node, old_node);
+    assert_ne!(new_binding, old_binding);
     assert!(new_callback.call(SwapChainPanelEvent::Rendering));
     assert_eq!(observed.get(), 1);
     assert_eq!(

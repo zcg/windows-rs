@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::*;
-use crate::core::{ComponentToken, ComponentView, ContextProvision};
+use crate::core::{ComponentToken, ComponentView, ContextProvision, DeferredMessage};
 
 pub(crate) fn validate_image_uri(value: &str) -> windows_core::Result<()> {
     native::validate_native_image_uri(value)
@@ -338,10 +338,6 @@ pub(crate) mod sealed {
                 content: Box::new(content.into_kind()),
             })
         }
-    }
-
-    pub(crate) trait SlotIndex<S> {
-        fn slot_index(slot: S) -> u8;
     }
 
     pub trait StaticViews {
@@ -791,10 +787,7 @@ impl CommandBarCommand {
                         let _ = callback.call(clicked.clone());
                     });
                 let view = match icon {
-                    Some(icon) => button.slots([SlotView::new(
-                        AppBarButtonSlot::Icon,
-                        SymbolIcon::new().symbol(icon),
-                    )]),
+                    Some(icon) => button.icon(SymbolIcon::new().symbol(icon)).into(),
                     None => button.into(),
                 };
                 KeyedView { key, view }
@@ -815,20 +808,17 @@ impl CommandBar {
         on_click: impl IntoPayloadCallback<String>,
     ) -> View {
         let on_click = on_click.into_payload_callback();
-        self.slots([
-            SlotView::collection(
-                CommandBarSlot::PrimaryCommands,
-                primary
-                    .into_iter()
-                    .map(|command| command.into_keyed_view(&on_click)),
-            ),
-            SlotView::collection(
-                CommandBarSlot::SecondaryCommands,
-                secondary
-                    .into_iter()
-                    .map(|command| command.into_keyed_view(&on_click)),
-            ),
-        ])
+        self.primary_commands(
+            primary
+                .into_iter()
+                .map(|command| command.into_keyed_view(&on_click)),
+        )
+        .secondary_commands(
+            secondary
+                .into_iter()
+                .map(|command| command.into_keyed_view(&on_click)),
+        )
+        .into()
     }
 }
 
@@ -1118,46 +1108,16 @@ impl View {
         })
     }
 
+    pub(crate) fn slotted(control: Element, slots: Rc<Vec<SlottedView>>) -> Self {
+        Self(ViewKind::Slots { control, slots })
+    }
+
     pub(crate) fn as_kind(&self) -> &ViewKind {
         &self.0
     }
 
     pub(crate) fn into_kind(self) -> ViewKind {
         self.0
-    }
-}
-
-/// Content assigned to one typed control slot.
-#[derive(Clone, Debug, PartialEq)]
-pub struct SlotView<S> {
-    slot: S,
-    content: SlotContent,
-}
-
-impl<S> SlotView<S> {
-    /// Creates a slot containing one view.
-    pub fn new(slot: S, view: impl Into<View>) -> Self {
-        Self {
-            slot,
-            content: SlotContent::Single(view.into()),
-        }
-    }
-
-    /// Creates a collection slot whose children are reconciled by key.
-    pub fn collection<T>(slot: S, children: impl IntoIterator<Item = T>) -> Self
-    where
-        T: Into<KeyedView>,
-    {
-        Self {
-            slot,
-            content: SlotContent::Collection(Rc::new(
-                children.into_iter().map(Into::into).collect(),
-            )),
-        }
-    }
-
-    fn into_parts(self) -> (S, SlotContent) {
-        (self.slot, self.content)
     }
 }
 
@@ -1171,6 +1131,19 @@ pub(crate) enum SlotContent {
 pub(crate) struct SlottedView {
     pub(crate) slot: SlotId,
     pub(crate) content: SlotContent,
+}
+
+pub(crate) fn set_control_slot(
+    slots: &mut Option<Rc<Vec<SlottedView>>>,
+    slot: SlotId,
+    content: SlotContent,
+) {
+    let slots = Rc::make_mut(slots.get_or_insert_with(|| Rc::new(Vec::new())));
+    if let Some(existing) = slots.iter_mut().find(|existing| existing.slot == slot) {
+        existing.content = content;
+    } else {
+        slots.push(SlottedView { slot, content });
+    }
 }
 
 impl From<Element> for View {
@@ -2320,6 +2293,285 @@ impl<T> PartialEq for Callback<T> {
     }
 }
 
+/// A component message and synchronous routed-event handling decision.
+pub struct RoutedMessage<M> {
+    message: Option<M>,
+    handled: bool,
+}
+
+impl<M> RoutedMessage<M> {
+    /// Handles the native event and queues `message`.
+    pub fn handled(message: M) -> Self {
+        Self {
+            message: Some(message),
+            handled: true,
+        }
+    }
+
+    /// Leaves the native event unhandled and queues `message`.
+    pub fn bubble(message: M) -> Self {
+        Self {
+            message: Some(message),
+            handled: false,
+        }
+    }
+
+    /// Handles the native event without queuing a component message.
+    pub fn handled_without_message() -> Self {
+        Self {
+            message: None,
+            handled: true,
+        }
+    }
+
+    /// Leaves the native event unhandled without queuing a component message.
+    pub fn bubble_without_message() -> Self {
+        Self {
+            message: None,
+            handled: false,
+        }
+    }
+}
+
+pub(crate) struct RoutedDispatch {
+    pub(crate) message: Option<DeferredMessage>,
+    pub(crate) handled: bool,
+}
+
+impl RoutedDispatch {
+    pub(crate) fn from_message<M: 'static>(
+        value: RoutedMessage<M>,
+        sender: &LocalSender<M>,
+    ) -> Self {
+        let Some(message) = value.message else {
+            return Self {
+                message: None,
+                handled: value.handled,
+            };
+        };
+        match sender.defer(message) {
+            Some(message) => Self {
+                message: Some(message),
+                handled: value.handled,
+            },
+            None => Self {
+                message: None,
+                handled: false,
+            },
+        }
+    }
+}
+
+/// A synchronous routed-input decision created by [`ViewContext::routed_callback`].
+pub struct RoutedCallback<T> {
+    callback: Rc<dyn Fn(T) -> RoutedDispatch>,
+    identity: Option<Rc<dyn ErasedCallbackIdentity>>,
+}
+
+impl<T> RoutedCallback<T> {
+    pub(crate) fn new(callback: impl Fn(T) -> RoutedDispatch + 'static) -> Self {
+        Self {
+            callback: Rc::new(callback),
+            identity: None,
+        }
+    }
+
+    pub(crate) fn new_identified<K>(
+        source: CallbackSource,
+        key: K,
+        callback: impl Fn(T) -> RoutedDispatch + 'static,
+    ) -> Self
+    where
+        K: PartialEq + 'static,
+    {
+        Self {
+            callback: Rc::new(callback),
+            identity: Some(Rc::new(TypedCallbackIdentity { key, source })),
+        }
+    }
+
+    pub(crate) fn call(&self, value: T) -> RoutedDispatch {
+        (self.callback)(value)
+    }
+}
+
+impl<T> Clone for RoutedCallback<T> {
+    fn clone(&self) -> Self {
+        Self {
+            callback: Rc::clone(&self.callback),
+            identity: self.identity.clone(),
+        }
+    }
+}
+
+impl<T> fmt::Debug for RoutedCallback<T> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_tuple("RoutedCallback")
+            .field(&Rc::as_ptr(&self.callback))
+            .finish()
+    }
+}
+
+impl<T> PartialEq for RoutedCallback<T> {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.callback, &other.callback)
+            || self
+                .identity
+                .as_deref()
+                .zip(other.identity.as_deref())
+                .is_some_and(|(left, right)| left.equals(right))
+    }
+}
+
+/// A Windows virtual-key value.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct VirtualKey(pub u32);
+
+impl VirtualKey {
+    pub const BACK: Self = Self(0x08);
+    pub const TAB: Self = Self(0x09);
+    pub const ENTER: Self = Self(0x0d);
+    pub const SHIFT: Self = Self(0x10);
+    pub const CONTROL: Self = Self(0x11);
+    pub const MENU: Self = Self(0x12);
+    pub const ESCAPE: Self = Self(0x1b);
+    pub const SPACE: Self = Self(0x20);
+    pub const PAGE_UP: Self = Self(0x21);
+    pub const PAGE_DOWN: Self = Self(0x22);
+    pub const END: Self = Self(0x23);
+    pub const HOME: Self = Self(0x24);
+    pub const LEFT: Self = Self(0x25);
+    pub const UP: Self = Self(0x26);
+    pub const RIGHT: Self = Self(0x27);
+    pub const DOWN: Self = Self(0x28);
+    pub const INSERT: Self = Self(0x2d);
+    pub const DELETE: Self = Self(0x2e);
+    pub const A: Self = Self(0x41);
+    pub const B: Self = Self(0x42);
+    pub const C: Self = Self(0x43);
+    pub const D: Self = Self(0x44);
+    pub const E: Self = Self(0x45);
+    pub const F: Self = Self(0x46);
+    pub const G: Self = Self(0x47);
+    pub const H: Self = Self(0x48);
+    pub const I: Self = Self(0x49);
+    pub const J: Self = Self(0x4a);
+    pub const K: Self = Self(0x4b);
+    pub const L: Self = Self(0x4c);
+    pub const M: Self = Self(0x4d);
+    pub const N: Self = Self(0x4e);
+    pub const O: Self = Self(0x4f);
+    pub const P: Self = Self(0x50);
+    pub const Q: Self = Self(0x51);
+    pub const R: Self = Self(0x52);
+    pub const S: Self = Self(0x53);
+    pub const T: Self = Self(0x54);
+    pub const U: Self = Self(0x55);
+    pub const V: Self = Self(0x56);
+    pub const W: Self = Self(0x57);
+    pub const X: Self = Self(0x58);
+    pub const Y: Self = Self(0x59);
+    pub const Z: Self = Self(0x5a);
+}
+
+/// Modifier keys pressed when an input event was raised.
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+pub struct InputModifiers(u8);
+
+impl InputModifiers {
+    pub const NONE: Self = Self(0);
+    pub const SHIFT: Self = Self(1 << 0);
+    pub const CONTROL: Self = Self(1 << 1);
+    pub const ALT: Self = Self(1 << 2);
+    pub const WINDOWS: Self = Self(1 << 3);
+
+    pub const fn contains(self, value: Self) -> bool {
+        self.0 & value.0 == value.0
+    }
+}
+
+impl std::ops::BitOr for InputModifiers {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for InputModifiers {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
+/// Physical status attached to a keyboard or character event.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct PhysicalKeyStatus {
+    pub repeat_count: u32,
+    pub scan_code: u32,
+    pub is_extended: bool,
+    pub is_menu_down: bool,
+    pub was_down: bool,
+    pub is_released: bool,
+}
+
+/// Owned data captured from a WinUI key event.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct KeyEventInfo {
+    pub key: VirtualKey,
+    pub original_key: VirtualKey,
+    pub status: PhysicalKeyStatus,
+    pub modifiers: InputModifiers,
+}
+
+/// Owned data captured from a WinUI character event.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CharacterEventInfo {
+    pub character: u16,
+    pub status: PhysicalKeyStatus,
+    pub modifiers: InputModifiers,
+}
+
+/// How an element received keyboard focus.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ElementFocusState {
+    Unfocused,
+    Pointer,
+    Keyboard,
+    Programmatic,
+}
+
+/// Owned data captured from a WinUI focus event.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct FocusEventInfo {
+    pub state: ElementFocusState,
+    pub is_direct: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[doc(hidden)]
+pub enum RoutedEventCallback {
+    KeyEventInfo(RoutedCallback<KeyEventInfo>),
+    CharacterEventInfo(RoutedCallback<CharacterEventInfo>),
+}
+
+impl RoutedEventCallback {
+    pub(crate) fn key(&self, value: KeyEventInfo) -> Option<RoutedDispatch> {
+        match self {
+            Self::KeyEventInfo(callback) => Some(callback.call(value)),
+            Self::CharacterEventInfo(_) => None,
+        }
+    }
+
+    pub(crate) fn character(&self, value: CharacterEventInfo) -> Option<RoutedDispatch> {
+        match self {
+            Self::CharacterEventInfo(callback) => Some(callback.call(value)),
+            Self::KeyEventInfo(_) => None,
+        }
+    }
+}
+
 /// Converts a payload handler or typed message callback into an event callback.
 pub trait IntoPayloadCallback<T> {
     fn into_payload_callback(self) -> Callback<T>;
@@ -2700,46 +2952,6 @@ pub trait ChildrenControl: sealed::NativeControl + Sized {
         View(ViewKind::Children {
             control: sealed::NativeControl::into_element(self),
             children: Rc::new(children.into_iter().map(Into::into).collect()),
-        })
-    }
-}
-
-/// Assigns single views or keyed collections to a control's typed slots.
-#[allow(private_bounds)]
-pub trait SlotsControl: sealed::NativeControl + sealed::SlotIndex<Self::Slot> + Sized {
-    type Slot: Copy;
-
-    fn slot(self, slot: Self::Slot, view: impl Into<View>) -> View {
-        self.slots([SlotView::new(slot, view)])
-    }
-
-    fn collection_slot<T>(self, slot: Self::Slot, children: impl IntoIterator<Item = T>) -> View
-    where
-        T: Into<KeyedView>,
-    {
-        self.slots([SlotView::collection(slot, children)])
-    }
-
-    fn slots(self, slots: impl IntoIterator<Item = SlotView<Self::Slot>>) -> View {
-        let control = sealed::NativeControl::into_element(self);
-        let kind = control.kind();
-        let slots = slots
-            .into_iter()
-            .map(|slot| {
-                let (slot, content) = slot.into_parts();
-                SlottedView {
-                    slot: slot_id(
-                        kind,
-                        <Self as sealed::SlotIndex<Self::Slot>>::slot_index(slot),
-                    )
-                    .unwrap(),
-                    content,
-                }
-            })
-            .collect();
-        View(ViewKind::Slots {
-            control,
-            slots: Rc::new(slots),
         })
     }
 }

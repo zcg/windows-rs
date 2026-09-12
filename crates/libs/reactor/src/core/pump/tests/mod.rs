@@ -26,6 +26,7 @@ mod pointer_events;
 mod properties_native_failure;
 mod resource_overrides;
 mod rich_text;
+mod routed_input;
 mod scrolling_properties;
 mod slots;
 mod swipes;
@@ -39,3 +40,8 @@ mod window_title_bars;
 mod window_titles;
 mod window_visuals;
 mod zoom_slots;
+
+use super::*;
+use crate::native::*;
+use crate::test::*;
+use support::*;

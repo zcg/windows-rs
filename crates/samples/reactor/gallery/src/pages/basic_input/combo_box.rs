@@ -72,7 +72,7 @@ impl Component for ComboBoxPage {
                                 .selected_index(self.selected)
                                 .placeholder_text("Pick a color")
                                 .on_selection_changed(context.callback(Message::Selected))
-                                .slot(ComboBoxSlot::Header, "Color"),
+                                .header("Color"),
                             TextBlock::new()
                                 .text(format!("Selected: {label}"))
                                 .opacity(0.6),
@@ -88,7 +88,7 @@ impl Component for ComboBoxPage {
                             .items_source(["Cat", "Dog", "Fox"])
                             .placeholder_text("Type or pick")
                             .is_editable(true)
-                            .slot(ComboBoxSlot::Header, "Animal"),
+                            .header("Animal"),
                         "ComboBox::new().items_source(items).is_editable(true)",
                     ),
                 ),
@@ -101,7 +101,7 @@ impl Component for ComboBoxPage {
                                 .items_source(items)
                                 .placeholder_text("Open and scroll")
                                 .element_ref(&self.list)
-                                .slot(ComboBoxSlot::Header, "Items"),
+                                .header("Items"),
                             TextBlock::new().text(offsets).opacity(0.6),
                         )),
                         "list.observe_scroll_offsets(handler)",

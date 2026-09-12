@@ -19,14 +19,11 @@ impl Component for AppBarSeparatorPage {
                 "basic",
                 sample_card(
                     "AppBar Separators",
-                    CommandBar::new().slots([SlotView::collection(
-                        CommandBarSlot::PrimaryCommands,
-                        [
-                            KeyedView::new("new", AppBarButton::new().label("New")),
-                            KeyedView::new("sep", AppBarSeparator::new()),
-                            KeyedView::new("open", AppBarButton::new().label("Open")),
-                        ],
-                    )]),
+                    CommandBar::new().primary_commands([
+                        KeyedView::new("new", AppBarButton::new().label("New")),
+                        KeyedView::new("sep", AppBarSeparator::new()),
+                        KeyedView::new("open", AppBarButton::new().label("Open")),
+                    ]),
                     "AppBarSeparator::new()",
                 ),
             )],

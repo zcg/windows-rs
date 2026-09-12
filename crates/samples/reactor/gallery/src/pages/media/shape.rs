@@ -66,7 +66,7 @@ impl Component for ShapePage {
                         ToggleSwitch::new()
                             .is_on(self.filled)
                             .on_toggled(context.callback(Message::Filled))
-                            .slot(ToggleSwitchSlot::Header, "Filled"),
+                            .header("Filled"),
                     )),
                     "Rectangle::new().fill(brush).stroke(brush)",
                 ),

@@ -144,11 +144,21 @@ impl Config<'_> {
         // of a name survives. `flatten_types` yields a deterministic order, and
         // because a `TypeName` orders by namespace before name, the `Microsoft`
         // projection wins over the `Windows` one it was pulled in alongside.
-        let mut emitted = HashSet::new();
+        // Win32 metadata repeats one `(namespace, name)` pair once per supported
+        // architecture, and each such row emits the same output name behind its
+        // own `target_arch` gate, so rows matching an already-emitted identity
+        // are written rather than dropped.
+        let mut emitted: HashMap<&'static str, (&'static str, &'static str)> = HashMap::new();
 
         for ty in tree.flatten_types() {
-            if !emitted.insert(ty.output_name()) {
-                continue;
+            let type_name = ty.type_name();
+            let identity = (type_name.namespace(), type_name.name());
+            if let Some(existing) = emitted.get(ty.output_name()) {
+                if *existing != identity {
+                    continue;
+                }
+            } else {
+                emitted.insert(ty.output_name(), identity);
             }
             tokens.combine(ty.write(self));
         }

@@ -192,7 +192,13 @@ impl MetadataResolver {
                         })
                         .or_insert(Some(owner));
                 }
-                Self::collect_methods_for_class(&index, name, &typedef, &mut lookup, &mut class_methods);
+                Self::collect_methods_for_class(
+                    &index,
+                    name,
+                    &typedef,
+                    &mut lookup,
+                    &mut class_methods,
+                );
             }
         }
 
@@ -607,8 +613,7 @@ impl MetadataResolver {
         method: &str,
     ) -> Option<&InterfaceRef> {
         let args_class = self.event_args_class(class_name, add_event)?;
-        self.class_methods
-            .get(&(args_class, method.to_string()))
+        self.class_methods.get(&(args_class, method.to_string()))
     }
 
     fn resolve_event_args_getter(
@@ -754,7 +759,11 @@ impl MetadataResolver {
     /// field's own metadata type selects the payload: an `f32` becomes `F64` through an
     /// `as f64` cast (there is no `f32` payload), and any other primitive keeps its natural
     /// payload with a plain field projection.
-    fn read_value_for_field(&self, ty: &Type, field: &str) -> Option<(String, ReadValueConversion)> {
+    fn read_value_for_field(
+        &self,
+        ty: &Type,
+        field: &str,
+    ) -> Option<(String, ReadValueConversion)> {
         let Type::ValueName(type_name) = ty else {
             return None;
         };

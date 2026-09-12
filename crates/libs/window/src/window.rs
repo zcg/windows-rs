@@ -1,4 +1,6 @@
 use crate::bindings::*;
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::OnceLock;
 use windows_core::*;
 
@@ -10,16 +12,32 @@ type MessageHandler = Box<dyn FnMut(*mut core::ffi::c_void, u32, usize, isize) -
 /// Resize handler: receives the new client-area width and height in pixels.
 type ResizeHandler = Box<dyn FnMut(i32, i32)>;
 
+/// Move handler: runs when the parent window position changes.
+type MoveHandler = Box<dyn FnMut()>;
+
+/// Close handler: runs before the native window is destroyed.
+type CloseHandler = Box<dyn FnMut()>;
+
 struct State {
+    live: Rc<Cell<bool>>,
     message: Option<MessageHandler>,
     resize: Option<ResizeHandler>,
+    moved: Option<MoveHandler>,
+    close: Option<CloseHandler>,
+    quit_on_close: bool,
+    closing: bool,
+    dispatching: bool,
+    deferred_close: bool,
 }
 
 /// A top-level window.
 ///
 /// The window lives until it is dropped or closed by the user. Its raw `HWND`
 /// is available via [`Window::hwnd`] for interop with other Windows APIs.
-pub struct Window(HWND);
+pub struct Window {
+    hwnd: HWND,
+    live: Rc<Cell<bool>>,
+}
 
 impl Window {
     /// Begins configuring a new window with the given title.
@@ -32,26 +50,44 @@ impl Window {
             client_size: false,
             style: WS_OVERLAPPEDWINDOW as u32,
             ex_style: 0,
-            state: State {
-                message: None,
-                resize: None,
-            },
+            message: None,
+            resize: None,
+            moved: None,
+            close: None,
+            quit_on_close: true,
         }
     }
 
-    /// Returns the raw window handle for interop with other Windows APIs.
+    /// Returns the raw window handle for interop with other Windows APIs, or null after the native
+    /// window is destroyed.
     pub fn hwnd(&self) -> *mut core::ffi::c_void {
-        self.0
+        if self.live.get() {
+            self.hwnd
+        } else {
+            core::ptr::null_mut()
+        }
     }
 
     /// Returns the current client-area size in pixels as `(width, height)`.
     pub fn client_size(&self) -> (i32, i32) {
+        if !self.live.get() {
+            return (0, 0);
+        }
         let mut rect = RECT::default();
         unsafe {
-            if GetClientRect(self.0, &mut rect).as_bool() {
+            if GetClientRect(self.hwnd, &mut rect).as_bool() {
                 (rect.right - rect.left, rect.bottom - rect.top)
             } else {
                 (0, 0)
+            }
+        }
+    }
+
+    /// Requests normal window close processing.
+    pub fn close(&self) {
+        if self.live.get() {
+            unsafe {
+                SendMessageW(self.hwnd, WM_CLOSE as u32, 0, 0);
             }
         }
     }
@@ -59,9 +95,9 @@ impl Window {
 
 impl Drop for Window {
     fn drop(&mut self) {
-        unsafe {
-            if IsWindow(self.0).as_bool() {
-                _ = DestroyWindow(self.0);
+        if self.live.get() {
+            unsafe {
+                _ = DestroyWindow(self.hwnd);
             }
         }
     }
@@ -75,7 +111,11 @@ pub struct WindowBuilder {
     client_size: bool,
     style: u32,
     ex_style: u32,
-    state: State,
+    message: Option<MessageHandler>,
+    resize: Option<ResizeHandler>,
+    moved: Option<MoveHandler>,
+    close: Option<CloseHandler>,
+    quit_on_close: bool,
 }
 
 impl WindowBuilder {
@@ -119,7 +159,7 @@ impl WindowBuilder {
     where
         F: FnMut(*mut core::ffi::c_void, u32, usize, isize) -> Option<isize> + 'static,
     {
-        self.state.message = Some(Box::new(handler));
+        self.message = Some(Box::new(handler));
         self
     }
 
@@ -129,7 +169,38 @@ impl WindowBuilder {
     where
         F: FnMut(i32, i32) + 'static,
     {
-        self.state.resize = Some(Box::new(handler));
+        self.resize = Some(Box::new(handler));
+        self
+    }
+
+    /// Sets a handler called when the window position changes.
+    pub fn on_move<F>(mut self, handler: F) -> Self
+    where
+        F: FnMut() + 'static,
+    {
+        self.moved = Some(Box::new(handler));
+        self
+    }
+
+    /// Sets a handler called before the window is destroyed in response to `WM_CLOSE`.
+    ///
+    /// Use this to release hosted resources that require a live parent window. The window
+    /// continues through default close processing after the handler returns.
+    pub fn on_close<F>(mut self, handler: F) -> Self
+    where
+        F: FnMut() + 'static,
+    {
+        self.close = Some(Box::new(handler));
+        self
+    }
+
+    /// Controls whether closing this window posts `WM_QUIT`.
+    ///
+    /// The default is `true`, which ends this thread's message loop when the window closes. Set
+    /// this to `false` for multi-window, tray, or background applications whose lifetime is
+    /// controlled separately, then call [`quit`] when the application should exit.
+    pub fn quit_on_close(mut self, value: bool) -> Self {
+        self.quit_on_close = value;
         self
     }
 
@@ -185,11 +256,22 @@ impl WindowBuilder {
                 return Err(Error::from_thread());
             }
 
-            let state = Box::new(self.state);
+            let live = Rc::new(Cell::new(true));
+            let state = Box::new(State {
+                live: Rc::clone(&live),
+                message: self.message,
+                resize: self.resize,
+                moved: self.moved,
+                close: self.close,
+                quit_on_close: self.quit_on_close,
+                closing: false,
+                dispatching: false,
+                deferred_close: false,
+            });
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, Box::into_raw(state) as _);
 
             _ = ShowWindow(hwnd, SW_SHOWNORMAL);
-            Ok(Window(hwnd))
+            Ok(Window { hwnd, live })
         }
     }
 }
@@ -296,16 +378,38 @@ unsafe extern "system" fn wndproc(
     lparam: LPARAM,
 ) -> LRESULT {
     unsafe {
-        let state = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut State;
+        let mut state = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut State;
         let mut handled = None;
+        let mut replay_close = false;
 
         if !state.is_null() {
-            // Detach the handlers before invoking them so that any reentrant
-            // dispatch (e.g. a handler that calls SetWindowPos) sees empty slots
-            // and falls through to default processing rather than aliasing a
-            // handler that is already running.
+            if (*state).dispatching {
+                return match message as i32 {
+                    WM_CLOSE => {
+                        (*state).deferred_close = true;
+                        0
+                    }
+                    WM_DESTROY => {
+                        if (*state).quit_on_close && (*state).closing {
+                            PostQuitMessage(0);
+                        }
+                        0
+                    }
+                    WM_NCDESTROY => {
+                        (*state).live.set(false);
+                        SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+                        drop(Box::from_raw(state));
+                        DefWindowProcW(hwnd, message, wparam, lparam)
+                    }
+                    _ => DefWindowProcW(hwnd, message, wparam, lparam),
+                };
+            }
+
             let mut message_handler = (*state).message.take();
             let mut resize_handler = (*state).resize.take();
+            let mut move_handler = (*state).moved.take();
+            let mut close_handler = (*state).close.take();
+            (*state).dispatching = true;
 
             // Handlers are invoked directly, without catch_unwind: a panic that
             // escapes one unwinds to this extern "system" boundary and aborts the
@@ -313,6 +417,15 @@ unsafe extern "system" fn wndproc(
             // This is intentional.
             if let Some(handler) = message_handler.as_mut() {
                 handled = handler(hwnd, message, wparam, lparam);
+            }
+
+            state = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut State;
+            if state.is_null() {
+                return handled.unwrap_or(0);
+            }
+
+            if handled.is_none() && message == WM_CLOSE as u32 {
+                (*state).closing = true;
             }
 
             if handled.is_none()
@@ -325,37 +438,64 @@ unsafe extern "system" fn wndproc(
                 handled = Some(0);
             }
 
-            // Invoking a handler can synchronously destroy the window (for
-            // example by calling DestroyWindow, or by letting DefWindowProc
-            // handle WM_CLOSE), in which case a reentrant WM_NCDESTROY has
-            // already freed the state below. Re-read the pointer to detect that
-            // and avoid restoring the handlers into freed memory; the taken
-            // handlers then drop here, which is correct.
-            let state = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut State;
-            if !state.is_null() {
-                (*state).message = message_handler;
-                (*state).resize = resize_handler;
+            if handled.is_none()
+                && message == WM_MOVE as u32
+                && let Some(handler) = move_handler.as_mut()
+            {
+                handler();
             }
+
+            if handled.is_none()
+                && message == WM_CLOSE as u32
+                && let Some(handler) = close_handler.as_mut()
+            {
+                handler();
+            }
+
+            // A handler may synchronously destroy the window. Re-read the state
+            // before restoring callbacks or replaying a nested close request.
+            state = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut State;
+            if state.is_null() {
+                return handled.unwrap_or(0);
+            }
+
+            (*state).dispatching = false;
+            replay_close =
+                std::mem::take(&mut (*state).deferred_close) && message != WM_CLOSE as u32;
+            (*state).message = message_handler;
+            (*state).resize = resize_handler;
+            (*state).moved = move_handler;
+            (*state).close = close_handler;
         }
 
         if message == WM_NCDESTROY as u32 {
             let state = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut State;
             if !state.is_null() {
+                (*state).live.set(false);
                 SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
                 drop(Box::from_raw(state));
             }
         }
 
-        if let Some(result) = handled {
-            return result;
+        let result = if let Some(result) = handled {
+            result
+        } else {
+            match message as i32 {
+                WM_DESTROY => {
+                    let state = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut State;
+                    if !state.is_null() && (*state).quit_on_close && (*state).closing {
+                        PostQuitMessage(0);
+                    }
+                    0
+                }
+                _ => DefWindowProcW(hwnd, message, wparam, lparam),
+            }
+        };
+
+        if replay_close && GetWindowLongPtrW(hwnd, GWLP_USERDATA) != 0 {
+            SendMessageW(hwnd, WM_CLOSE as u32, 0, 0);
         }
 
-        match message as i32 {
-            WM_DESTROY => {
-                PostQuitMessage(0);
-                0
-            }
-            _ => DefWindowProcW(hwnd, message, wparam, lparam),
-        }
+        result
     }
 }

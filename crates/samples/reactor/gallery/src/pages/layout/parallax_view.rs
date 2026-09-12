@@ -16,20 +16,17 @@ impl Component for ParallaxViewPage {
             .background(ThemeBrush::Accent)
             .height(200.0)
             .content(TextBlock::new().text("Parallax background").font_size(32.0));
-        let foreground = ListView::new().height(300.0).collection_slot(
-            ListViewSlot::Items,
-            (0..30).map(|index| {
-                let label = format!("Row {index}");
-                KeyedView::new(
-                    label.clone(),
-                    ListViewItem::new().tag(label.clone()).content(
-                        Border::new()
-                            .padding(8.0)
-                            .content(TextBlock::new().text(label)),
-                    ),
-                )
-            }),
-        );
+        let foreground = ListView::new().height(300.0).items((0..30).map(|index| {
+            let label = format!("Row {index}");
+            KeyedView::new(
+                label.clone(),
+                ListViewItem::new().tag(label.clone()).content(
+                    Border::new()
+                        .padding(8.0)
+                        .content(TextBlock::new().text(label)),
+                ),
+            )
+        }));
         page_content(
             "ParallaxView",
             "Links a background element to a scrolling source.",
@@ -37,11 +34,11 @@ impl Component for ParallaxViewPage {
                 "basic",
                 sample_card(
                     "Basic ParallaxView",
-                    ParallaxView::new().horizontal_shift(100.0).slots([
-                        SlotView::new(ParallaxViewSlot::Child, backdrop),
-                        SlotView::new(ParallaxViewSlot::Source, foreground),
-                    ]),
-                    "ParallaxView::new().slots([Source, Child])",
+                    ParallaxView::new()
+                        .horizontal_shift(100.0)
+                        .child(backdrop)
+                        .source(foreground),
+                    "ParallaxView::new().child(backdrop).source(list)",
                 ),
             )],
         )
