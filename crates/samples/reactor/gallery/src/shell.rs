@@ -287,76 +287,30 @@ impl Component for Gallery {
             .menu_items(menu_items)
             .content(content);
 
-        let title_bar: View = if packaged() {
-            // The WinAppSDK `TitleBar` control (Microsoft.UI.Xaml.Controls.dll) fails
-            // its measure pass inside a packaged process (CLASS_E_NOAGGREGATION,
-            // stowed-exception crash; see packaging/README). A plain
-            // framework-controls header row stands in until that is resolved.
-            Border::new()
-                .grid_row(0)
-                .padding(Thickness::new(16.0, 10.0, 16.0, 10.0))
-                .background(ThemeBrush::SolidBackground)
-                .content(
-                    StackPanel::new()
-                        .orientation(Orientation::Horizontal)
-                        .spacing(12.0)
-                        .children((
-                            TextBlock::new()
-                                .text("Reactor gallery")
-                                .font_size(16.0)
-                                .font_weight(FontWeight::SEMI_BOLD),
-                            TextBlock::new()
-                                .text(destination_title(&self.selected_tag))
-                                .opacity(0.6),
-                            Button::new()
-                                .on_click(context.message(Message::CycleTheme))
-                                .content(format!("Theme: {}", theme_name(self.theme))),
-                        )),
-                )
-        } else {
-            TitleBar::new()
-                .preferred_height(WindowTitleBarHeight::Tall)
-                .title("Reactor gallery")
-                .subtitle(destination_title(&self.selected_tag))
-                .is_back_button_visible(true)
-                .is_back_button_enabled(!self.history.is_empty())
-                .is_pane_toggle_button_visible(true)
-                .on_back_requested(context.message(Message::Back))
-                .on_pane_toggle_requested(context.message(Message::TogglePane))
-                .grid_row(0)
-                .content(
-                    TextBox::new()
-                        .text(self.search.clone())
-                        .placeholder_text("Search controls and samples...")
-                        .on_text_changed(context.callback(Message::SearchChanged)),
-                )
-                .right_header(
-                    Button::new()
-                        .on_click(context.message(Message::CycleTheme))
-                        .content(format!("Theme: {}", theme_name(self.theme))),
-                )
-                .into()
-        };
+        let title_bar = TitleBar::new()
+            .preferred_height(WindowTitleBarHeight::Tall)
+            .title("Reactor gallery")
+            .subtitle(destination_title(&self.selected_tag))
+            .is_back_button_visible(true)
+            .is_back_button_enabled(!self.history.is_empty())
+            .is_pane_toggle_button_visible(true)
+            .on_back_requested(context.message(Message::Back))
+            .on_pane_toggle_requested(context.message(Message::TogglePane))
+            .grid_row(0)
+            .content(
+                TextBox::new()
+                    .text(self.search.clone())
+                    .placeholder_text("Search controls and samples...")
+                    .on_text_changed(context.callback(Message::SearchChanged)),
+            )
+            .right_header(
+                Button::new()
+                    .on_click(context.message(Message::CycleTheme))
+                    .content(format!("Theme: {}", theme_name(self.theme))),
+            );
 
         Grid::new()
             .rows([GridLength::Auto, GridLength::Star(1.0)])
             .children((title_bar, navigation))
-    }
-}
-
-/// Whether this process carries a package identity: true for the Start Menu
-/// entry, false for a direct `cargo run` launch.
-fn packaged() -> bool {
-    #[link(name = "kernel32")]
-    unsafe extern "system" {
-        fn GetCurrentPackageFullName(
-            package_name_length: *mut u32,
-            package_full_name: *mut u16,
-        ) -> i32;
-    }
-    const APPMODEL_ERROR_NO_PACKAGE: i32 = 15700;
-    let mut length = 0u32;
-    unsafe {
-        GetCurrentPackageFullName(&mut length, std::ptr::null_mut()) != APPMODEL_ERROR_NO_PACKAGE
     }
 }
