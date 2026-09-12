@@ -13,6 +13,7 @@ windows-webview = { workspace = true, features = ["reactor"] }
 [dependencies.windows]
 workspace = true
 features = [
+    "ApplicationModel",
     "ApplicationModel_DataTransfer",
     "Data_Xml_Dom",
     "Foundation",

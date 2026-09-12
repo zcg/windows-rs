@@ -304,22 +304,49 @@ changes (the `gen` workflow enforces this).
 
 ### gallery: packaged launch renders a black window on Insider builds (2026-09)
 
-On a Windows Insider build 26340 host, every packaged launch of the gallery
-shows a black window and dies, while the identical unpackaged executable runs
-the whole gallery fine. Provisioning (staged over multiple attempts: Windhawk
-DLL injection removed, `Main.2`/`DDLM.2` satellite packages added, official
-2.4 runtime installer re-run elevated) changed the failure from an instant
-`CoreMessagingXP` fail-fast (`0xC0000602`) to a XAML stowed exception during
-the first layout pass: `NavigationView::MeasureOverride` -
-`CLASS_E_NOAGGREGATION` (`80040111`) raised from Microsoft.UI.Xaml internals
-(`0xC000027B`), observed with both framework-dependent and self-contained
-packaging. Application packages cannot carry the framework's
-`windows.activatableClass` declarations either (schema rejects them at
-application level; mirroring them at package level routes classic-COM
-activation and fails with the same `NOAGGREGATION`). The gallery therefore
-runs unpackaged by default with everything working, and the Notifications
-page shows a banner for the packaged-only badge. The in-repo packaging
-assets were removed at the maintainer's request; when packaged testing is
-needed again, write the appx manifest fresh (framework-dependent,
-`PackageDependency` on `Microsoft.WindowsAppRuntime.2` 2.4.0, exe +
-non-runtime files staged) and pack with MakeAppx.
+Resolved. On a Windows Insider build 26340 host, a packaged gallery launch
+showed a black window and died while the identical unpackaged executable ran
+the whole gallery. Provisioning changes (removing the Windhawk DLL injection,
+adding the `Main.2`/`DDLM.2` satellite packages, re-running the official 2.4
+runtime installer elevated) moved the failure from an instant `CoreMessagingXP`
+fail-fast (`0xC0000602`, caused by shipping a second copy of the runtime beside
+a framework-dependent executable) to a XAML stowed exception at the first
+layout pass (`0xC000027B`, `FailFastWithStowedExceptions`, source
+`dxaml/xcp/components/base/ErrorContext.cpp`).
+
+The remaining cause was an incomplete package payload, not activation
+registration. Two gaps mattered: `resources.pri` copied from the runtime package
+carries the resource map name `Microsoft.WindowsAppRuntime.2` instead of the
+application package name, and the language directories holding
+`Microsoft.ui.xaml.dll.mui` were not staged at all. A packaged process resolves
+localized resources against the application package, so either gap ends in
+`ERROR_MUI_FILE_NOT_LOADED` (`0x80073B01`), a stowed exception, and a fail-fast.
+The earlier `CLASS_E_NOAGGREGATION` reading came from the framework-dependent
+layout, where both the module path and the error context pointed at the
+application package; it was not a missing `windows.activatableClass`
+declaration.
+
+Packaging the full self-contained layout works: every runtime DLL, every `*.pri`,
+all language directories, and `Microsoft.UI.Xaml\` beside the executable.
+Verified on build 26340 with a package that launches from the Start menu,
+renders, navigates, sends a toast, and sets a taskbar badge.
+`crates/samples/reactor/gallery/packaging/` holds the manifest, `build-msix.ps1`
+(which refuses to pack an incomplete layout), and a README recording the failure
+signatures. Removing the language or resource directories from that payload
+reproduces the crash, which is the regression check for this fix.
+
+Two platform facts recorded while verifying. A packaged app needs
+`windows.toastNotificationActivation` plus a `windows.comServer` declaration
+before `AppNotificationManager::Register()` succeeds; without them registration
+fails with "No COM servers are registered for this app" (`0x80004005`).
+
+A taskbar badge looks like a dot rather than a number when the taskbar icon size
+is set to Small. Windows sizes the badge from the button's internal icon height:
+16 (Small) paints a dot for any badge value, 24 (Default or Large) paints the
+numeric badge. `SetBadgeAsCount(5)` and `SetBadgeAsGlyph(Activity)` are
+pixel-identical under Small, and the value is then only visible through UI
+Automation, whose HelpText reports a status item count. The Windhawk
+`taskbar-icon-size` mod masks this by forcing icon height 24 while it hooks
+`TaskListButton::UpdateBadge`, so numbers reappear whenever Windhawk is
+injected; its source comments the 16-versus-24 behaviour. Set the taskbar icon
+size back to Default to get numbers without third-party injection.

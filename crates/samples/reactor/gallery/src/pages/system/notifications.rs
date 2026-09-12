@@ -4,6 +4,7 @@ use windows_reactor::*;
 pub struct NotificationsPage {
     status: String,
     mode: BadgeMode,
+    packaged: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -59,11 +60,18 @@ fn send_toast(title: &str, body: &str) -> Result<(), windows_core::Error> {
     manager.Show(&notification)
 }
 
+/// Reports whether this process runs with a package identity. An unpackaged
+/// run fails with E_APPLICATION_NOT_PACKAGED. The badge manager needs the
+/// identity an MSIX install provides; toasts do not.
+fn has_package_identity() -> bool {
+    windows::ApplicationModel::Package::Current().is_ok()
+}
+
 /// Sets the taskbar badge through the official Windows App SDK badge manager
 /// (`Microsoft.Windows.BadgeNotifications.BadgeNotificationManager`), the
 /// same API the official WinUI Gallery uses. The manager requires a packaged
-/// app identity, which `main` sets up by packing and installing the build
-/// output before the window opens.
+/// app identity: install the MSIX described in `packaging/` and launch the
+/// gallery from the Start menu.
 fn set_badge(mode: BadgeMode, count: u32) -> windows::core::Result<()> {
     use crate::notifications_bindings::{BadgeNotificationGlyph, BadgeNotificationManager};
 
@@ -90,6 +98,7 @@ impl Component for NotificationsPage {
         Self {
             status: String::from("Ready."),
             mode: BadgeMode::Number,
+            packaged: has_package_identity(),
         }
     }
 
@@ -130,20 +139,38 @@ impl Component for NotificationsPage {
             [
                 KeyedView::new(
                     "identity",
-                    sample_card(
-                        "Packaged Identity",
-                        InfoBar::new()
-                            .severity(InfoBarSeverity::Warning)
-                            .title("The badge needs the packaged install")
-                            .message(
-                                "The badge manager is a packaged-only API: it needs the \
-                                 app to be installed as an MSIX with a package identity, \
-                                 then launched from the Start Menu. Toasts work without \
-                                 the install.",
-                            )
-                            .is_open(true),
-                        "BadgeNotificationManager requires a package identity",
-                    ),
+                    if self.packaged {
+                        sample_card(
+                            "Packaged Identity",
+                            InfoBar::new()
+                                .severity(InfoBarSeverity::Success)
+                                .title("Running from an MSIX install")
+                                .message(
+                                    "This instance has a package identity, so the badge \
+                                     buttons below work. Windows 11 sizes the badge from \
+                                     the taskbar icon size: with taskbar icons set to \
+                                     Small the badge degrades to a dot, at the default or \
+                                     large size the number shows.",
+                                )
+                                .is_open(true),
+                            "Package::Current()?; BadgeNotificationManager::Current()?",
+                        )
+                    } else {
+                        sample_card(
+                            "Packaged Identity",
+                            InfoBar::new()
+                                .severity(InfoBarSeverity::Warning)
+                                .title("The badge needs the packaged install")
+                                .message(
+                                    "The badge manager is a packaged-only API: it needs the \
+                                     app to be installed as an MSIX with a package identity, \
+                                     then launched from the Start Menu. Toasts work without \
+                                     the install.",
+                                )
+                                .is_open(true),
+                            "BadgeNotificationManager requires a package identity",
+                        )
+                    },
                 ),
                 KeyedView::new(
                     "toast",
@@ -194,8 +221,9 @@ impl Component for NotificationsPage {
                                 )),
                             TextBlock::new()
                                 .text(
-                                    "Official Windows App SDK badge manager; needs the \
-                                     packaged install from the banner above.",
+                                    "Official Windows App SDK badge manager. The badge \
+                                     shows its number when the taskbar icon size is \
+                                     Default or Large; Small turns it into a dot.",
                                 )
                                 .opacity(0.6),
                             TextBlock::new().text(self.status.clone()).opacity(0.6),

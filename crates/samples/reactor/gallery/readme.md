@@ -21,6 +21,17 @@ Run it with:
 cargo run -p reactor-gallery
 ```
 
+The unpackaged run reaches every control page. The taskbar badge on the Notifications page is the
+one feature that needs a package identity, so it needs the MSIX install:
+
+```powershell
+cargo build -p reactor-gallery
+powershell -File crates\samples\reactor\gallery\packaging\build-msix.ps1 -Install
+```
+
+`packaging/README.md` covers the layout requirements, the signing certificate, and the failure
+signatures a packaged launch produces when the payload is incomplete.
+
 The shell uses a generated `TitleBar` and `NavigationView`. The pane lists categories by default.
 Select a category to open its card grid, then select a card to open the control page. Search
 replaces the category links with matching control destinations. Back navigation follows the
