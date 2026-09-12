@@ -302,15 +302,24 @@ changes (the `gen` workflow enforces this).
 | webview | `process-failed`, download, and deferral paths untested. |
 | `reactor` `items_view` widget + Windows App SDK 2.3.1 | Setting `ItemsView.ItemTemplate` to any `IElementFactory` (reproduced with an official `DataTemplate`) crashes the runtime during layout (`0xC000027B`). The widget intentionally leaves `ItemTemplate` unset; the gallery demonstrates the data-driven model through `ItemsRepeater`. Revisit when the runtime is fixed or upgraded. |
 
-### gallery: packaged launch fail-fasts on Insider builds (2026-09)
+### gallery: packaged launch renders a black window on Insider builds (2026-09)
 
-Earlier packaged launches of the gallery (MSIX, in-place registration,
-self-contained or framework-dependent) fail-fasted in `CoreMessagingXP`
-10.0.27200 (`0xC0000602`) on a Windows Insider build 26340 host before any
-window appeared, while the identical unpackaged executable ran fine. After
-background DLL-injection tooling (Windhawk) was removed from the system, the
-framework-dependent MSIX launched normally, so injection was the likely
-trigger, not the packaging style. The MSIX remains framework-dependent
-(`build-msix.ps1` stages no runtime files; the manifest declares the
-`Microsoft.WindowsAppRuntime.2` 2.4.0 dependency). If packaged launches fail
-the same way again, check for injecting tools before blaming the packaging.
+On a Windows Insider build 26340 host, every packaged launch of the gallery
+shows a black window and dies, while the identical unpackaged executable runs
+the whole gallery fine. Provisioning (staged over multiple attempts: Windhawk
+DLL injection removed, `Main.2`/`DDLM.2` satellite packages added, official
+2.4 runtime installer re-run elevated) changed the failure from an instant
+`CoreMessagingXP` fail-fast (`0xC0000602`) to a XAML stowed exception during
+the first layout pass: `NavigationView::MeasureOverride` -
+`CLASS_E_NOAGGREGATION` (`80040111`) raised from Microsoft.UI.Xaml internals
+(`0xC000027B`), observed with both framework-dependent and self-contained
+packaging. Application packages cannot carry the framework's
+`windows.activatableClass` declarations either (schema rejects them at
+application level; mirroring them at package level routes classic-COM
+activation and fails with the same `NOAGGREGATION`). The gallery therefore
+runs unpackaged by default with everything working, the Notifications page
+shows a banner for the packaged-only badge, and `packaging/build-msix.ps1
+-Install` remains the manual full flow for when the OS or the Windows App SDK
+fixes packaged XAML on Insider builds. Crash dumps for the analysis live in
+`%TEMP%\gallery-msix-stage`-adjacent WER reports; enable WER LocalDumps for
+`reactor-gallery.exe` to recapture.
