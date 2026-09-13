@@ -471,6 +471,7 @@ struct WindowVisualChanges {
     backdrop_tuning: bool,
     border: bool,
     client_size: bool,
+    client_position: bool,
     constraints: bool,
     corner: bool,
     icon: bool,
@@ -485,9 +486,32 @@ fn set_resource_style(
     let Some(resource) = resource else {
         return element.SetStyle(None::<&Style>).map_err(native_error);
     };
-    element
-        .SetStyle(&lookup_resource_style(resource)?)
-        .map_err(native_error)
+    // A style is decoration: one missing resource key must not take the frame down.
+    //
+    // The distinction is not academic. Failing here surfaces as
+    // `PumpError::NativeApplyFailed`, and that path runs `publish.rs::fail_stop`: the frame is
+    // dropped and the pump is poisoned, so every control's properties in that frame go
+    // unapplied and the window stops updating altogether — not just the one control that
+    // asked for a missing style. A single wrong resource name therefore reads as "the entire
+    // window stopped updating".
+    //
+    // The keys themselves still have to be right, and they drift with the SDK. `Subtle` is
+    // the cautionary example: it maps to `"SubtleButtonStyle"`, which only exists from
+    // WindowsAppSDK 1.8 onwards (this workspace pins 2.4.0 → WinUI 2.3.6, where the key is
+    // defined at `generic.xaml` line 27717). Verifying that by hand is error-prone — note
+    // the lookup command recorded in `winui.toml`: `Select-String -SimpleMatch` leaves
+    // `MatchInfo.Matches` empty, so `... | % { $_.Matches.Count }` returns 0 for *every*
+    // file and silently "proves" that a key which is present is missing.
+    match lookup_resource_style(resource) {
+        Ok(style) => element.SetStyle(&style).map_err(native_error),
+        Err(error) => {
+            // Keep a trace — this is still something the application should fix — but do
+            // not make the frame pay for it. Falling back to "no explicit style" leaves the
+            // control on its own default template, which is a working button.
+            eprintln!("windows-reactor: style resource '{resource}' is unavailable: {error:?}");
+            element.SetStyle(None::<&Style>).map_err(native_error)
+        }
+    }
 }
 
 pub(crate) fn validate_native_image_uri(value: &str) -> windows_core::Result<()> {
@@ -776,6 +800,8 @@ fn window_visual_changes(
             .is_none_or(|previous| previous.backdrop_tuning != next.backdrop_tuning),
         border: previous.is_none_or(|previous| previous.border != next.border),
         client_size: previous.is_none_or(|previous| previous.client_size != next.client_size),
+        client_position: previous
+            .is_none_or(|previous| previous.client_position != next.client_position),
         constraints: previous.is_none_or(|previous| previous.constraints != next.constraints),
         corner: previous.is_none_or(|previous| previous.corner != next.corner),
         icon: next.icon.is_some() && previous.is_none_or(|previous| previous.icon != next.icon),
@@ -868,6 +894,7 @@ fn rebuild_window_backdrop(
         match visuals.backdrop {
             WindowBackdrop::Mica | WindowBackdrop::MicaAlt => {
                 if !MicaController::IsSupported().map_err(native_error)? {
+                    apply_backdrop_fallback(window, tuning)?;
                     return Ok(None);
                 }
                 let controller = MicaController::new().map_err(native_error)?;
@@ -907,6 +934,7 @@ fn rebuild_window_backdrop(
             }
             WindowBackdrop::Acrylic | WindowBackdrop::AcrylicThin | WindowBackdrop::Solid => {
                 if !DesktopAcrylicController::IsSupported().map_err(native_error)? {
+                    apply_backdrop_fallback(window, tuning)?;
                     return Ok(None);
                 }
                 let controller = DesktopAcrylicController::new().map_err(native_error)?;
@@ -995,6 +1023,59 @@ fn rebuild_window_backdrop(
     }))
 }
 
+/// 当前系统能否渲染指定的背景材质。
+///
+/// 应用需要它来回答一个容易漏掉的耦合问题：**内容区要不要让材质透出来**。
+/// 材质不可用时窗口底层只有 [`WindowBackdropTuning::fallback_color`] 那一层纯色
+/// （甚至什么都没有），此时把内容调成透明得到的是"整块看不见东西"，而不是"没有材质效果"。
+///
+/// 会调用系统 API，**不要在每帧渲染里调**——启动时或材质变更时各查一次即可。
+pub fn backdrop_is_supported(backdrop: WindowBackdrop) -> bool {
+    match backdrop {
+        WindowBackdrop::Mica | WindowBackdrop::MicaAlt => {
+            MicaController::IsSupported().unwrap_or(false)
+        }
+        WindowBackdrop::Acrylic | WindowBackdrop::AcrylicThin | WindowBackdrop::Solid => {
+            DesktopAcrylicController::IsSupported().unwrap_or(false)
+        }
+        // "不画材质"永远可用——它本来就不需要系统能力。
+        WindowBackdrop::None => true,
+    }
+}
+
+/// 系统渲染不了请求的材质时，用 `fallback_color` 铺一层纯色。
+///
+/// `WindowBackdropTuning::fallback_color` 的文档承诺它会在"the system cannot render
+/// the requested material"时被画出来。此前两个 `IsSupported()` 早退分支直接
+/// `return Ok(None)`，**从没画过它**——于是"系统不支持材质"的机器上连纯色一起失效：
+/// 窗口底层什么都没有，而应用侧按"用户选了材质"把内容调成透明，结果是整块空白，
+/// 而不是"材质退化成纯色"。
+///
+/// 铺在窗口内容根上（`Window.Content` 的 `Panel` 背景）：材质画在窗口最底层，
+/// 内容根的不透明背景正好遮住整块客户区，观感就是一块纯色底。
+/// 只在早退路径上写，材质可用时绝不碰应用自己的背景。
+fn apply_backdrop_fallback(
+    window: &Window,
+    tuning: WindowBackdropTuning,
+) -> Result<(), RuntimeError> {
+    let Some(color) = tuning.fallback_color else {
+        // 调用方没提供回落色 → 保持"什么都不画"，底色由应用自己负责。
+        return Ok(());
+    };
+    // 内容根不是 Panel（或窗口还没挂内容）时静默跳过：这里失败不该阻断
+    // 整个视觉应用流程。
+    let Ok(content) = window.Content() else {
+        return Ok(());
+    };
+    let Ok(panel) = content.cast::<Panel>() else {
+        return Ok(());
+    };
+    let brush = SolidColorBrush::new().map_err(native_error)?;
+    brush.SetColor(native_color(color)).map_err(native_error)?;
+    panel.SetBackground(&brush).map_err(native_error)?;
+    Ok(())
+}
+
 fn native_color(color: ReactorColor) -> bindings::Color {
     bindings::Color {
         a: color.a,
@@ -1008,6 +1089,16 @@ fn native_color(color: ReactorColor) -> bindings::Color {
 ///
 /// Both are recorded on the window itself (`DWMWINDOWATTRIBUTE` is window state,
 /// not per-frame state), so they survive until the next change.
+/// `SetWindowPos` 的 `uFlags`。只用到这三个：保留尺寸、保留层序、不激活——
+/// 一个"恢复上次窗口位置"的声明不该顺手改变尺寸、层级或焦点。
+///
+/// 定义在这里而不是 `bindings.rs`：那个文件整体由 `windows_bindgen` 重写
+/// （输入是 `crates/tools/reactor/src/bindings.txt`），手写的定义会在下次重新
+/// 生成时消失。
+const SWP_NOSIZE: u32 = 0x0001;
+const SWP_NOZORDER: u32 = 0x0004;
+const SWP_NOACTIVATE: u32 = 0x0010;
+
 fn apply_window_frame(hwnd: HWND, visuals: WindowVisuals) -> Result<(), RuntimeError> {
     let corner = match visuals.corner {
         WindowCorner::Default => None,
@@ -1088,6 +1179,7 @@ mod window_visual_tests {
                 backdrop_tuning: false,
                 border: false,
                 client_size: false,
+                client_position: false,
                 constraints: false,
                 corner: false,
                 icon: false,
@@ -1122,6 +1214,7 @@ mod window_visual_tests {
                 backdrop_tuning: false,
                 border: false,
                 client_size: true,
+                client_position: false,
                 constraints: false,
                 corner: false,
                 icon: false,
@@ -1136,6 +1229,7 @@ mod window_visual_tests {
                 backdrop_tuning: false,
                 border: false,
                 client_size: false,
+                client_position: false,
                 constraints: true,
                 corner: false,
                 icon: false,
@@ -1451,6 +1545,34 @@ impl WinUiRuntime {
                 })
                 .map_err(native_error)?;
         }
+        if changes.client_position
+            && let Some((x, y)) = visuals.client_position
+        {
+            // Position goes through Win32 `SetWindowPos` rather than `AppWindow.Move`:
+            // the bindings only generate `IAppWindow2`'s resize path
+            // (`ClientSize`/`ResizeClient`) — the position slots exist in that interface's
+            // vtable as anonymous placeholders (`MoveInZOrder*`) — and hand-rebuilding an
+            // interface layout costs far more than it buys. `SetWindowPos` is the standard
+            // entry point for window placement, and `AppWindow` reads its geometry back
+            // from the same layer, so the two cannot disagree.
+            //
+            // `SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE`: move only. Declaring "where the
+            // window was" must not resize it, restack it, or steal focus.
+            let hwnd = window_handle()?;
+            let dpi = unsafe { GetDpiForWindow(hwnd) }.max(96);
+            let pixels = |dips: f64| (dips * f64::from(dpi) / 96.0).round() as i32;
+            unsafe {
+                _ = SetWindowPos(
+                    hwnd,
+                    std::ptr::null_mut(),
+                    pixels(x),
+                    pixels(y),
+                    0,
+                    0,
+                    SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+                );
+            }
+        }
         self.window_visuals.insert(node, visuals);
         Ok(())
     }
@@ -1590,9 +1712,21 @@ impl WinUiRuntime {
                 }
             }
             xaml.push_str("</Style>");
-            let compiled = XamlReader::Load(&xaml)
-                .and_then(|value| value.cast::<Style>())
-                .map_err(native_error)?;
+            // Same reasoning as `set_resource_style`: a style is decoration, and one
+            // unresolvable `{ThemeResource …}` key must not take the whole frame down. The
+            // brush keys come from `ThemeBrush::resource_key`, so a typo — or an SDK that
+            // renamed one — would otherwise surface as "the entire window stopped updating"
+            // rather than "this control lost its theme style".
+            //
+            // Nothing is cached on failure: the next publication retries, and a transient
+            // failure must not be remembered as "this style is unavailable".
+            let Ok(compiled) = XamlReader::Load(&xaml).and_then(|value| value.cast::<Style>())
+            else {
+                eprintln!("windows-reactor: theme style could not be compiled: {xaml}");
+                return framework_element
+                    .SetStyle(None::<&Style>)
+                    .map_err(native_error);
+            };
             self.theme_styles.insert((kind, style), compiled.clone());
             compiled
         };

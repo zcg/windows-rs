@@ -615,6 +615,66 @@ impl ComponentTimer {
         })
     }
 
+    /// Same as [`start`](Self::start), but the message is **decided by the callback when the
+    /// timer fires**, not up front.
+    ///
+    /// A `None` return means "nothing happened this tick": no message is delivered, so the
+    /// component is **not marked dirty and does not re-run `view()`**. Reactor has no
+    /// "message received but state unchanged" path — `ComponentStore::drain` pushes the token
+    /// into the dirty set unconditionally — so a polling timer built on
+    /// [`start`](Self::start) costs one full render per tick even when every tick is empty.
+    /// Polling work belongs here: `None` while idle, `Some(message)` only when there is
+    /// something to show.
+    fn start_checked<M: 'static, F>(
+        delay: Duration,
+        sender: LocalSender<M>,
+        decide: F,
+    ) -> windows_core::Result<Self>
+    where
+        F: FnOnce() -> Option<M> + 'static,
+    {
+        let interval = TimeSpan::try_from(delay).map_err(|_| {
+            windows_core::Error::new(
+                windows_core::HRESULT(0x80070057_u32 as _),
+                "timer delay cannot be represented as a TimeSpan",
+            )
+        })?;
+        let timer = DispatcherQueue::GetForCurrentThread()?.CreateTimer()?;
+        timer.SetInterval(interval)?;
+        timer.SetIsRepeating(false)?;
+
+        let control = Arc::new(TaskControl::new());
+        let tick = Rc::new(RefCell::new(None));
+        let callback_tick = Rc::downgrade(&tick);
+        let callback_timer = timer.clone();
+        let callback_control = Arc::clone(&control);
+        // The callback runs on the UI thread, so it stays in a plain `RefCell` and needs no
+        // `Send`: it may read state that only the UI thread can touch.
+        let decide = RefCell::new(Some(decide));
+        *tick.borrow_mut() = Some(timer.Tick(move |_, _| {
+            _ = callback_timer.Stop();
+            if let Some(tick) = callback_tick.upgrade() {
+                tick.borrow_mut().take();
+            }
+            // Decide **before** touching the sender: `None` must leave the component
+            // untouched (no delivery, no dirty mark, no render).
+            let Some(message) = decide.borrow_mut().take().and_then(|decide| decide()) else {
+                return;
+            };
+            if callback_control.queue()
+                && !sender.send_controlled(message, Arc::clone(&callback_control))
+            {
+                callback_control.cancel();
+            }
+        })?);
+        timer.Start()?;
+        Ok(Self {
+            timer,
+            tick,
+            control,
+        })
+    }
+
     /// Cancels the timer. Calling this more than once has no effect.
     pub fn cancel(&self) {
         self.control.cancel();
@@ -996,6 +1056,28 @@ impl<C: Component> ComponentContext<C> {
         message: C::Message,
     ) -> windows_core::Result<ComponentTimer> {
         ComponentTimer::start(delay, self.sender.clone(), message)
+    }
+
+    /// Starts a one-shot timer whose callback **decides whether the component wakes up**.
+    ///
+    /// [`set_timeout`](Self::set_timeout) always delivers its message, and reactor has no
+    /// "message delivered but nothing changed" path — `ComponentStore::drain` marks the
+    /// component dirty unconditionally — so a "wake up every 120ms and look around" poll
+    /// costs a full `view()` per tick even when every tick is empty. That is exactly what
+    /// an idle application must not pay.
+    ///
+    /// This entry point hands the decision to the callback: returning `None` delivers
+    /// nothing (no dirty mark, no render), `Some(message)` delivers as usual. The callback
+    /// runs on the component's UI thread, so it may read UI-thread-only state directly.
+    pub fn set_timeout_checked<F>(
+        &self,
+        delay: Duration,
+        decide: F,
+    ) -> windows_core::Result<ComponentTimer>
+    where
+        F: FnOnce() -> Option<C::Message> + 'static,
+    {
+        ComponentTimer::start_checked(delay, self.sender.clone(), decide)
     }
 
     /// Starts scope-owned work on the Windows thread pool.

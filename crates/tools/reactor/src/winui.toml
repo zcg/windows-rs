@@ -95,6 +95,20 @@ adapter = "resource_style"
 variants = [
     { name = "Default" },
     { name = "Accent", resource = "AccentButtonStyle" },
+    # 键名对照本 workspace 钉的 WindowsAppSDK 2.4.0：它依赖 `Microsoft.WindowsAppSDK.WinUI`
+    # 2.3.6，两个键都定义在该版本 `Microsoft.WinUI/Themes/generic.xaml` 里 ——
+    # `SubtleButtonStyle` 在第 27717 行（`TargetType="Button"`），`TextBlockButtonStyle`
+    # 在第 11153 行（`TargetType="ButtonBase"`）。
+    #
+    # 两键都是 1.8 起才有的：1.5/1.6 的 `generic.xaml` 里连 `SubtleButton*` 都搜不到。
+    # 键名漂移的代价不只是"这个按钮没样式"：`resource_style` 适配器查不到资源会让属性应用
+    # 失败，`publish.rs` 的 `fail_stop` 丢弃该帧并毒化 pump，表现为"整个窗口不再更新"。
+    # 库侧已用"无显式样式"兜住装饰性缺失（见 `native/winui/mod.rs::set_resource_style`），
+    # 但键本身仍然要对。
+    #
+    # 核对命令（`Select-String -SimpleMatch` 不填 `MatchInfo.Matches`，用
+    # `... | % { $_.Matches.Count }` 统计会对每个文件都返回 0，把"键存在"误判成"缺失"）：
+    #   Select-String -Path "$env:USERPROFILE\.nuget\packages\microsoft.windowsappsdk.winui\2.3.6\lib\net6.0-windows10.0.17763.0\Microsoft.WinUI\Themes\generic.xaml" -Pattern 'x:Key="SubtleButtonStyle"'
     { name = "Subtle", resource = "SubtleButtonStyle" },
     { name = "TextLink", resource = "TextBlockButtonStyle" },
 ]

@@ -1974,6 +1974,12 @@ pub struct WindowVisuals {
     pub(crate) backdrop_tuning: WindowBackdropTuning,
     pub(crate) border: WindowBorder,
     pub(crate) client_size: Option<(f64, f64)>,
+    /// Client-area origin in DIPs, relative to the virtual screen's top-left.
+    ///
+    /// Companion to `client_size`: the two together are "the geometry the window had when
+    /// it last closed". Only ever applied when the **value changes**, so declaring the same
+    /// position every frame does not fight the user dragging the window around.
+    pub(crate) client_position: Option<(f64, f64)>,
     pub(crate) constraints: Option<WindowConstraints>,
     pub(crate) corner: WindowCorner,
     pub(crate) icon: Option<&'static str>,
@@ -2025,6 +2031,25 @@ impl WindowVisuals {
             "window client size must be finite and positive"
         );
         self.client_size = Some((width, height));
+        self
+    }
+
+    /// Sets the initial client position in DIPs, relative to the virtual screen's top-left.
+    ///
+    /// This is what "remember where the window was" is built on: an application stores the
+    /// geometry it observes on close and declares it back here at startup. Like
+    /// [`client_size`](Self::client_size) it is applied **only when the value changes**, so
+    /// re-declaring it every frame never fights the user moving the window.
+    ///
+    /// # Panics
+    ///
+    /// Panics if either coordinate is non-finite.
+    pub fn client_position(mut self, x: f64, y: f64) -> Self {
+        assert!(
+            x.is_finite() && y.is_finite(),
+            "window client position must be finite"
+        );
+        self.client_position = Some((x, y));
         self
     }
 

@@ -166,6 +166,7 @@ Windows::Win32::PackageDependencyProcessorArchitectures::PackageDependencyProces
 Windows::Win32::PostQuitMessage
 Windows::Win32::RPC_E_CHANGED_MODE
 Windows::Win32::SetProcessDpiAwarenessContext
+Windows::Win32::SetWindowPos
 Windows::Win32::ShellExecuteW
 Windows::Win32::STATEREPOSITORY_E_DEPENDENCY_NOT_RESOLVED
 Windows::Win32::SW_SHOWNORMAL
