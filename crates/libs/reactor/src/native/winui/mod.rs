@@ -810,16 +810,34 @@ fn window_visual_changes(
     }
 }
 
+/// Maps the window theme onto the material's own theme.
+///
+/// The material is a composition layer of its own: it does not inherit `RequestedTheme` from
+/// the XAML content, so a theme change has to reach it through `SystemBackdropConfiguration`
+/// as well. Skipping that leaves the translucent pane and title bar brushes showing the old
+/// material while the rest of the window repaints.
+fn backdrop_theme(theme: WindowTheme) -> SystemBackdropTheme {
+    match theme {
+        WindowTheme::Light => SystemBackdropTheme::Light,
+        WindowTheme::Dark => SystemBackdropTheme::Dark,
+        WindowTheme::System => SystemBackdropTheme::Default,
+    }
+}
+
 /// Live backdrop state for one window.
 ///
 /// The controller has to outlive the call that installs it — dropping it
-/// detaches the material — so changing any material parameter means building a
-/// fresh controller rather than mutating the installed one.
+/// detaches the material — so changing a material parameter means building a
+/// fresh controller rather than mutating the installed one. The theme is the exception: it
+/// lives on `SystemBackdropConfiguration`, which stays installed for the window's lifetime.
 struct BackdropHost {
     /// Keeps the controller object alive; releasing it tears the material out.
     controller: Option<windows_core::IUnknown>,
     targets: Option<ISystemBackdropControllerWithTargets>,
     activated: Option<windows_core::EventRevoker>,
+    /// Live material configuration. `SetTheme` on it repaints the installed material without
+    /// rebuilding the controller.
+    configuration: Option<SystemBackdropConfiguration>,
 }
 
 impl BackdropHost {
@@ -834,6 +852,7 @@ impl BackdropHost {
         if let Some(activated) = self.activated.take() {
             activated.into_token();
         }
+        self.configuration = None;
         self.targets = None;
         self.controller = None;
     }
@@ -845,6 +864,7 @@ impl Drop for BackdropHost {
         // `release`). A process on its way out has no use for accurate COM
         // reference counts, and leaking beats crashing on the way out.
         std::mem::forget(self.activated.take());
+        std::mem::forget(self.configuration.take());
         std::mem::forget(self.targets.take());
         std::mem::forget(self.controller.take());
     }
@@ -989,11 +1009,7 @@ fn rebuild_window_backdrop(
     let configuration = SystemBackdropConfiguration::new().map_err(native_error)?;
     configuration.SetIsInputActive(true).map_err(native_error)?;
     configuration
-        .SetTheme(match visuals.theme {
-            WindowTheme::Light => SystemBackdropTheme::Light,
-            WindowTheme::Dark => SystemBackdropTheme::Dark,
-            WindowTheme::System => SystemBackdropTheme::Default,
-        })
+        .SetTheme(backdrop_theme(visuals.theme))
         .map_err(native_error)?;
 
     targets
@@ -1006,12 +1022,14 @@ fn rebuild_window_backdrop(
     // An inactive window renders its material in the lost-focus appearance.
     // Nothing else updates this flag, so without the hook the material keeps
     // whichever state the window happened to be created in.
+    let activated_configuration = configuration.clone();
     let activated = window
         .Activated(move |_, args| {
             if let Some(args) = args.as_ref()
                 && let Ok(state) = args.WindowActivationState()
             {
-                let _ = configuration.SetIsInputActive(state != WindowActivationState::Deactivated);
+                let _ = activated_configuration
+                    .SetIsInputActive(state != WindowActivationState::Deactivated);
             }
         })
         .map_err(native_error)?;
@@ -1020,6 +1038,7 @@ fn rebuild_window_backdrop(
         controller: Some(controller),
         targets: Some(targets),
         activated: Some(activated),
+        configuration: Some(configuration),
     }))
 }
 
@@ -1466,6 +1485,22 @@ impl WinUiRuntime {
 
             if let Some(host) = self.window_hosts.get(&node) {
                 Self::apply_window_theme(host, visuals.theme)?;
+            }
+
+            // The material is a layer of its own and does not follow `RequestedTheme`.
+            // Without this, switching to light repaints the XAML (white pages) while the pane
+            // and the title bar keep showing the dark material through their translucent
+            // brushes.
+            if let Some(host) = self.window_backdrops.borrow().get(&node)
+                && let Some(configuration) = &host.configuration
+                && let Some(targets) = &host.targets
+            {
+                configuration
+                    .SetTheme(backdrop_theme(visuals.theme))
+                    .map_err(native_error)?;
+                targets
+                    .SetSystemBackdropConfiguration(configuration)
+                    .map_err(native_error)?;
             }
         }
 
