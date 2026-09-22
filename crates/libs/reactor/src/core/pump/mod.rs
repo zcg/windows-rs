@@ -464,11 +464,25 @@ impl<R: NativeRuntime> Pump<R> {
         &mut self.components
     }
 
-    fn commit_tree_properties(tree: &mut Tree, commits: &[PropertyCommit]) {
-        for commit in commits {
-            tree.native_mut(commit.node)
-                .properties
-                .insert(commit.property, commit.value.clone());
+    fn commit_tree_properties(tree: &mut Tree, commands: Vec<Command>) {
+        for command in commands {
+            match command {
+                Command::SetProperty {
+                    node,
+                    property,
+                    value,
+                } => {
+                    if let Some(native) = tree.try_native_mut(node) {
+                        native.properties.insert(property, value);
+                    }
+                }
+                Command::ClearProperty { node, property } => {
+                    if let Some(native) = tree.try_native_mut(node) {
+                        native.properties.remove(&property);
+                    }
+                }
+                _ => {}
+            }
         }
     }
 
@@ -483,17 +497,31 @@ impl<R: NativeRuntime> Pump<R> {
     fn commit_candidate_properties(
         &mut self,
         candidate: &mut CandidateState,
-        commits: &[PropertyCommit],
+        commands: Vec<Command>,
     ) {
         match candidate {
-            CandidateState::Tree { tree, .. } => Self::commit_tree_properties(tree, commits),
+            CandidateState::Tree { tree, .. } => Self::commit_tree_properties(tree, commands),
             CandidateState::Native { node, .. } => {
                 let native = self.tree.native_mut(*node);
-                for commit in commits {
-                    assert_eq!(commit.node, *node);
-                    native
-                        .properties
-                        .insert(commit.property, commit.value.clone());
+                for command in commands {
+                    match command {
+                        Command::SetProperty {
+                            node: command_node,
+                            property,
+                            value,
+                        } => {
+                            assert_eq!(command_node, *node);
+                            native.properties.insert(property, value);
+                        }
+                        Command::ClearProperty {
+                            node: command_node,
+                            property,
+                        } => {
+                            assert_eq!(command_node, *node);
+                            native.properties.remove(&property);
+                        }
+                        _ => {}
+                    }
                 }
             }
         }
@@ -711,9 +739,11 @@ impl<R: NativeRuntime> Pump<R> {
     }
 
     fn plan_host_requests(window: NodeId, requests: &mut Vec<HostRequest>, plan: &mut UpdatePlan) {
+        let mut activate = false;
         let mut close = false;
         for request in requests.drain(..) {
             match request {
+                HostRequest::Activate { identity } if identity == plan.identity => activate = true,
                 HostRequest::Close { identity } if identity == plan.identity => close = true,
                 HostRequest::Open { identity, root } if identity == plan.identity => {
                     plan.post_publish_windows.push(root);
@@ -725,13 +755,19 @@ impl<R: NativeRuntime> Pump<R> {
                     assert!(plan.post_publish_window_operation.is_none());
                     plan.post_publish_window_operation = Some((window, operation));
                 }
-                HostRequest::Close { .. } | HostRequest::Open { .. } | HostRequest::Run { .. } => {}
+                HostRequest::Activate { .. }
+                | HostRequest::Close { .. }
+                | HostRequest::Open { .. }
+                | HostRequest::Run { .. } => {}
             }
         }
         if close {
             plan.post_publish_window_operation = None;
             plan.post_publish_commands
                 .push(Command::CloseWindow { node: window });
+        } else if activate {
+            plan.post_publish_commands
+                .push(Command::RequestWindowActivation { node: window });
         }
     }
 

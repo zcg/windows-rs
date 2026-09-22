@@ -10,6 +10,7 @@
 - [Self-contained deployment](windows-reactor-setup.md)
 - [Canvas integration](windows-canvas.md)
 - [Composition integration](windows-composition.md)
+- [Notification icon integration](windows-notifyicon.md)
 
 ## When to use it
 
@@ -116,6 +117,48 @@ not mutate the component directly.
 
 `App::run_component` creates the WinUI application and first window, mounts `Counter`, and runs the
 UI loop.
+
+## Application lifetime
+
+`App::run`, `App::run_windows`, and `App::run_component` exit after the last Reactor window closes.
+This is convenient when windows define the complete application lifetime.
+
+Use `App::run_with` when notification icons, services, or other process resources are peers of the
+Reactor windows:
+
+```rust,ignore
+App::run_with(|app| {
+    let exit = app.proxy();
+    let icon = NotifyIcon::new("app.ico")
+        .on_event(move |event| {
+            if matches!(event, NotifyIconEvent::ContextMenu { .. }) {
+                _ = exit.exit();
+            }
+        })
+        .build()?;
+
+    Ok(icon)
+})
+```
+
+The startup closure runs on the UI thread. It may call `AppContext::open_window` immediately or
+later from work posted through `AppProxy::dispatch`. Its return value remains owned by the
+application until explicit exit, so the example keeps the notification icon alive even while no
+Reactor window exists.
+
+`AppContext` is UI-thread-bound and may be cloned into callbacks on that thread. `AppProxy` is
+`Send + Sync` and may be cloned into worker threads. Closing the last Reactor window in this mode
+does not exit the process; call `AppContext::exit` on the UI thread or `AppProxy::exit` from
+another thread.
+
+The [`reactor-notifyicon`](../../crates/samples/reactor/notifyicon) sample demonstrates this
+lifetime model. It uses `AppContext::show_menu_at` to show a WinUI `MenuFlyout` at the physical
+screen coordinates supplied by the notification icon. Reactor creates the required WinUI host
+lazily, keeps it outside the Reactor window count, and hides it when the menu closes. Only one
+application menu may be open at a time.
+
+Use `WindowRef::request_activate` when an external resource needs to restore and foreground an
+existing Reactor window.
 
 ## Window title bars
 
@@ -242,8 +285,11 @@ spacing, while children say where they belong:
 
 ```rust,ignore
 Grid::new()
-    .rows([GridLength::Auto, GridLength::Star(1.0)])
-    .columns([GridLength::Auto, GridLength::Star(1.0)])
+    .rows([GridLength::Auto, GridLength::STAR])
+    .columns([
+        GridLength::Auto,
+        GridLength::STAR.min(120.0).max(320.0),
+    ])
     .children((
         TextBlock::new().text("Name").grid_row(0).grid_column(0),
         TextBox::new().grid_row(0).grid_column(1),
@@ -253,6 +299,9 @@ Grid::new()
             .grid_column_span(2),
     ))
 ```
+
+Use `min` and `max` to constrain any auto, pixel, or star-sized row or column. Values are measured
+in device-independent pixels (DIPs).
 
 The builders expose native WinUI concepts with Rust types, so invalid property values and callback
 payloads are usually caught by the compiler.
@@ -434,6 +483,10 @@ The key should identify the logical item, such as a record ID. Do not use the cu
 when items can move. Stable keys let Reactor keep the right child component state attached as items
 are inserted, removed, or reordered.
 
+Native collections that require a specific item type use the same `Keyed::new` constructor. For
+example, `SelectorBar::items` accepts `SelectorBarItem`, while command-bar collections accept
+`AppBarButton` and `AppBarSeparator`. Reactor checks these item types at compile time.
+
 For very large collections, `ItemsRepeater` and `VirtualSource` add virtualization. Start with
 `keyed_children`; move to virtualization only when the list is large enough to need it.
 
@@ -545,6 +598,7 @@ problems:
 | `ItemsRepeater` | Virtualizing a large collection |
 | `SwipeItems` | Left/right swipe actions on content, with the invoked text routed back |
 | `VirtualSource` | Building `ItemsRepeater` rows lazily by index |
+| `ThemeTransition::Reposition` | Animating an element between layout-driven positions |
 
 Prefer component input over context for normal parent-to-child data, and prefer properties and
 messages over `ElementRef`. The declarative path is usually shorter and easier to maintain.
@@ -587,6 +641,11 @@ Image::new()
     .decode_width(320);
 ```
 
+Apply `ThemeTransition::Reposition` with `LayoutControl::transitions` when an existing element
+moves because its parent performs a new layout. For example, changing a retained child's margin
+within a `Grid` animates between the old and new positions. Changes to `Canvas.Left` and
+`Canvas.Top` are absolute positioning updates and do not trigger this WinUI transition.
+
 ## Deployment
 
 Reactor detects a staged Windows App Runtime or resolves an installed framework package at
@@ -597,34 +656,13 @@ package the app.
 
 ## What to read next
 
-Use the [`gallery`](../../crates/samples/reactor/gallery) to explore individual WinUI controls. The
-standalone samples under [`crates/samples/reactor`](../../crates/samples/reactor) show Reactor
-concepts and behaviors:
-
 | Example | What it shows |
 | --- | --- |
-| [`function-component`](../../crates/samples/reactor/function-component) | Child components and input |
-| [`component-input`](../../crates/samples/reactor/component-input) | Controlled component input |
-| [`keyed-list-reorder`](../../crates/samples/reactor/keyed-list-reorder) | Stable identity in changing lists |
-| [`async-state`](../../crates/samples/reactor/async-state) | Background work |
-| [`message-box`](../../crates/samples/reactor/message-box) | Modal native window work |
-| [`use-effect`](../../crates/samples/reactor/use-effect) and [`context`](../../crates/samples/reactor/context) | Lifecycle work and shared data |
-| [`pointer-tracking`](../../crates/samples/reactor/pointer-tracking) | Pointer capture and movement |
-| [`exit-transition`](../../crates/samples/reactor/exit-transition) | Transition-driven removal |
-| [`secondary-window`](../../crates/samples/reactor/secondary-window) | Multiple Reactor windows |
-| [`calculator`](../../crates/samples/reactor/calculator) | A larger component with derived state |
+| [`gallery`](../../crates/samples/reactor/gallery) | The WinUI control catalog |
+| [`solitaire`](../../crates/samples/reactor/solitaire) | Components, state, input, keyed views, and transitions |
 
-The [`counter`](../../crates/samples/reactor/counter) demonstrates components, state, messages, and
-events. The [`gallery`](../../crates/samples/reactor/gallery) is a control catalog. The
-[`navigation`](../../crates/samples/reactor/navigation) and
-[`dotsweeper`](../../crates/samples/reactor/dotsweeper) samples show how these same ideas fit
-together in a larger application. See the [`composition`](../../crates/samples/composition),
-[`webview`](../../crates/samples/webview/reactor), and
-[Canvas](../../crates/samples/canvas) samples only when the app needs those integrations.
-The [`canvas-keyboard`](../../crates/samples/canvas/keyboard) sample is a focusable custom-rendered
-text surface with routed edit keys, UTF-16 character input, visible focus state, and a standard
-WinUI button that demonstrates focus transfer. It shows when custom input is useful without
-replacing `TextBox` for ordinary text editing.
+Browse [`crates/samples/reactor`](../../crates/samples/reactor) for focused examples of individual
+APIs.
 
 ---
 

@@ -51,7 +51,7 @@ fn main() {
 }
 ```
 
-`window_frame` creates an integrated WinUI title bar and places the application content below it:
+Applications whose resources outlive any one window can use `App::run_with`.
 
 ```rust,ignore
 context.window_visuals(WindowVisuals::new().backdrop(WindowBackdrop::Acrylic));
@@ -115,3 +115,7 @@ the component retires, or the window starts closing. Component dispatch for that
 suspended until the operation returns, so use this for native modal UI rather than slow non-UI
 work. Each window accepts one pending operation at a time. The
 [`reactor-message-box`](../../samples/reactor/message-box) sample contains the complete component.
+
+Use `ThemeTransition::Reposition` with `LayoutControl::transitions` to animate retained elements
+between layout-driven positions. The
+[`theme-transition`](../../samples/reactor/theme-transition) sample demonstrates the effect.

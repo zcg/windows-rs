@@ -6,7 +6,7 @@ use std::rc::{Rc, Weak};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::*;
-use crate::core::{ComponentToken, NativeWork, NodeId, RuntimeError, WindowToken};
+use crate::core::{Command, ComponentToken, NativeWork, NodeId, RuntimeError, WindowToken};
 
 const IMPERATIVE_QUEUE_CAPACITY: usize = 4_096;
 static NEXT_OBSERVATION_ID: AtomicU64 = AtomicU64::new(1);
@@ -14,6 +14,9 @@ static NEXT_BINDING_ID: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Debug)]
 pub(crate) enum HostRequest {
+    Activate {
+        identity: WindowToken,
+    },
     Close {
         identity: WindowToken,
     },
@@ -80,6 +83,7 @@ struct WindowRequestState {
 struct WindowRequestData {
     active: Option<ActiveWindowRequests>,
     lifecycle: WindowRequestLifecycle,
+    staged_activate: bool,
     staged_close: bool,
     staged_opens: Vec<View>,
     staged_operation: Option<WindowOperation>,
@@ -87,6 +91,7 @@ struct WindowRequestData {
 
 #[derive(Default)]
 struct ActiveWindowRequests {
+    activate: bool,
     close: bool,
     opens: Vec<View>,
     operation: Option<WindowOperation>,
@@ -115,6 +120,7 @@ impl WindowEndpoint {
                 data: RefCell::new(WindowRequestData {
                     active: None,
                     lifecycle: WindowRequestLifecycle::Open,
+                    staged_activate: false,
                     staged_close: false,
                     staged_opens: Vec::new(),
                     staged_operation: None,
@@ -138,6 +144,7 @@ impl WindowEndpoint {
             .active
             .take()
             .expect("component lifecycle invocation was not active");
+        state.staged_activate |= active.activate;
         state.staged_close |= active.close;
         state.staged_opens.extend(active.opens);
         if let Some(operation) = active.operation {
@@ -156,6 +163,12 @@ impl WindowEndpoint {
                 root,
             })
             .collect::<Vec<_>>();
+        if state.staged_activate {
+            state.staged_activate = false;
+            requests.push(HostRequest::Activate {
+                identity: self.identity,
+            });
+        }
         if state.staged_close {
             state.staged_close = false;
             state.staged_operation = None;
@@ -182,6 +195,7 @@ impl WindowEndpoint {
             }
         };
         state.active = None;
+        state.staged_activate = false;
         state.staged_close = false;
         state.staged_opens.clear();
         state.staged_operation = None;
@@ -218,6 +232,18 @@ impl WindowEndpoint {
         true
     }
 
+    fn request_activate(&self) -> bool {
+        let mut state = self.state.data.borrow_mut();
+        if state.lifecycle != WindowRequestLifecycle::Open {
+            return false;
+        }
+        let Some(active) = state.active.as_mut() else {
+            return false;
+        };
+        active.activate = true;
+        true
+    }
+
     fn request_run(&self, owner: ComponentToken, work: Box<dyn FnOnce(isize)>) -> bool {
         let mut state = self.state.data.borrow_mut();
         if state.lifecycle != WindowRequestLifecycle::Open || self.state.operation_busy.get() {
@@ -247,6 +273,12 @@ pub struct WindowRef {
 }
 
 impl WindowRef {
+    /// Requests that the owning window activate after the current component turn publishes.
+    #[must_use = "false means there is no active component publication"]
+    pub fn request_activate(&self) -> bool {
+        self.endpoint.request_activate()
+    }
+
     /// Requests that the owning window close after the current component turn publishes.
     #[must_use = "false means there is no active component publication"]
     pub fn request_close(&self) -> bool {
@@ -1138,34 +1170,117 @@ pub(crate) enum ImperativeRequest {
 }
 
 impl ImperativeRequest {
-    pub(crate) fn complete_unavailable(self) {
+    pub(crate) fn into_command(self) -> (Option<NodeId>, Command) {
         match self {
-            Self::Focus { node, completion } => {
-                _ = completion.call(Err(RuntimeError::MissingNode(node)));
-            }
+            Self::Focus { node, completion } => (Some(node), Command::Focus { node, completion }),
             Self::InitializeWebView2 { node, completion } => {
-                _ = completion.call(Err(RuntimeError::MissingNode(node)));
+                (Some(node), Command::InitializeWebView2 { node, completion })
             }
+            Self::ObserveSwapChainPanel {
+                node,
+                observation,
+                binding,
+                callback,
+            } => (
+                Some(node),
+                Command::ObserveSwapChainPanel {
+                    node,
+                    observation,
+                    binding,
+                    callback,
+                },
+            ),
+            Self::RequestSwapChainPanelFrame { node, completion } => (
+                Some(node),
+                Command::RequestSwapChainPanelFrame { node, completion },
+            ),
             Self::SetSwapChain {
-                node, completion, ..
+                node,
+                swap_chain,
+                completion,
+            } => (
+                Some(node),
+                Command::SetSwapChain {
+                    node,
+                    swap_chain,
+                    completion,
+                },
+            ),
+            Self::SetNativeImageSource {
+                node,
+                source,
+                completion,
+            } => (
+                Some(node),
+                Command::SetNativeImageSource {
+                    node,
+                    source,
+                    completion,
+                },
+            ),
+            Self::ObserveImageScale {
+                node,
+                observation,
+                callback,
+            } => (
+                Some(node),
+                Command::ObserveImageScale {
+                    node,
+                    observation,
+                    callback,
+                },
+            ),
+            Self::ObserveCompositionHost {
+                node,
+                observation,
+                callback,
+            } => (
+                Some(node),
+                Command::ObserveCompositionHost {
+                    node,
+                    observation,
+                    callback,
+                },
+            ),
+            Self::ObserveScrollOffsets {
+                node,
+                observation,
+                callback,
+            } => (
+                Some(node),
+                Command::ObserveScrollOffsets {
+                    node,
+                    observation,
+                    callback,
+                },
+            ),
+            Self::RevokeObservation { node, observation } => {
+                (None, Command::RevokeObservation { node, observation })
             }
-            | Self::RequestSwapChainPanelFrame { node, completion }
-            | Self::SetNativeImageSource {
-                node, completion, ..
-            }
-            | Self::SetMediaSource {
-                node, completion, ..
-            }
-            | Self::SetCompositionChildVisual {
-                node, completion, ..
-            } => {
-                _ = completion.call(Err(RuntimeError::MissingNode(node)));
-            }
-            Self::ObserveSwapChainPanel { .. }
-            | Self::ObserveImageScale { .. }
-            | Self::ObserveCompositionHost { .. }
-            | Self::ObserveScrollOffsets { .. }
-            | Self::RevokeObservation { .. } => {}
+            Self::SetCompositionChildVisual {
+                node,
+                visual,
+                completion,
+            } => (
+                Some(node),
+                Command::SetCompositionChildVisual {
+                    node,
+                    visual,
+                    completion,
+                },
+            ),
+            Self::SetMediaSource {
+                node,
+                source,
+                completion,
+            } => (
+                Some(node),
+                Command::SetMediaSource {
+                    node,
+                    source,
+                    completion,
+                },
+            ),
         }
     }
 }
@@ -1317,7 +1432,7 @@ impl ImperativeEndpoint {
             match request {
                 QueuedImperative::OneShot(request)
                 | QueuedImperative::Observation { request, .. } => {
-                    request.work.complete_unavailable();
+                    request.work.into_command().1.complete_unavailable();
                 }
             }
         }

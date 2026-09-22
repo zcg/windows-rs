@@ -28,10 +28,7 @@ pub(super) enum NativeAttachment {
 
 impl<R: NativeRuntime> Pump<R> {
     pub(super) fn control_has_role(kind: MountedKind, role: ControlRole) -> bool {
-        CONTROLS
-            .iter()
-            .find(|control| control.kind == kind)
-            .is_some_and(|control| control.role == role)
+        control_role(kind) == role
     }
 
     pub(in super::super) fn native_root(tree: &Tree, node: NodeId) -> Result<NodeId, PumpError> {
@@ -695,7 +692,6 @@ impl<R: NativeRuntime> Pump<R> {
             retained_nodes.extend(retained.iter().copied());
             retirements.push((node, retained, parent, slot, transition));
         }
-        plan.commits.retain(|commit| !nodes.contains(&commit.node));
         plan.reference_commits
             .retain(|commit| !nodes.contains(&commit.node));
         for node in nodes.iter().copied() {

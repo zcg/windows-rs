@@ -6,7 +6,85 @@ use std::mem::size_of;
 fn identity() -> WindowToken {
     WindowToken::new(WindowId::allocate())
 }
-use std::collections::{HashMap, HashSet};
+
+fn insert_virtual(
+    tree: &mut Tree,
+    parent: Option<NodeId>,
+    keys: impl IntoIterator<Item = Key>,
+) -> Result<NodeId, DuplicateKeyError<Key>> {
+    let parts = Element::from(ItemsRepeater::new()).into_parts();
+    let items = VirtualItems::Eager(Rc::new(
+        keys.into_iter()
+            .map(|key| KeyedView::new(key, TextBlock::new()))
+            .collect(),
+    ));
+    tree.insert_virtual_items(identity(), parent, None, parts.props, items)
+}
+
+use std::collections::{BTreeMap, HashMap, HashSet};
+
+#[test]
+fn sorted_vec_map_handles_order_sensitive_mutations() {
+    let mut map = SortedVecMap::default();
+
+    assert_eq!(map.insert(30, "thirty"), None);
+    assert_eq!(map.insert(10, "ten"), None);
+    assert_eq!(map.insert(20, "twenty"), None);
+    assert_eq!(
+        map.into_iter().copied().collect::<Vec<_>>(),
+        [(10, "ten"), (20, "twenty"), (30, "thirty")]
+    );
+
+    assert_eq!(map.insert(20, "TWENTY"), Some("twenty"));
+    assert_eq!(map.get(&20), Some(&"TWENTY"));
+    assert_eq!(map.remove(&10), Some("ten"));
+    assert_eq!(map.remove(&10), None);
+    assert_eq!(map.insert(10, "TEN"), None);
+
+    assert_eq!(map.get_or_insert(20, "ignored"), &"TWENTY");
+    assert_eq!(map.get_or_insert(25, "twenty-five"), &"twenty-five");
+    assert_eq!(
+        map.into_iter().copied().collect::<Vec<_>>(),
+        [
+            (10, "TEN"),
+            (20, "TWENTY"),
+            (25, "twenty-five"),
+            (30, "thirty"),
+        ]
+    );
+}
+
+#[test]
+fn sorted_vec_map_matches_btree_map() {
+    let mut rng = Rng(0);
+    let mut actual = SortedVecMap::default();
+    let mut expected = BTreeMap::new();
+
+    for _ in 0..10_000 {
+        let key = rng.next() % 64;
+        let value = rng.next();
+
+        match rng.next() % 3 {
+            0 => assert_eq!(actual.insert(key, value), expected.insert(key, value)),
+            1 => assert_eq!(actual.remove(&key), expected.remove(&key)),
+            _ => {
+                *actual.get_or_insert(key, value) += 1;
+                *expected.entry(key).or_insert(value) += 1;
+            }
+        }
+
+        assert_eq!(
+            actual.into_iter().copied().collect::<Vec<_>>(),
+            expected
+                .iter()
+                .map(|(&key, &value)| (key, value))
+                .collect::<Vec<_>>()
+        );
+        for key in 0..64 {
+            assert_eq!(actual.get(&key), expected.get(&key));
+        }
+    }
+}
 
 #[test]
 fn observation_slot_preserves_and_advances_revisions() {
@@ -78,7 +156,7 @@ fn retires_children_before_parent() {
     let slot = tree.insert(Some(component), NodeKind::Slot);
     let parts = Element::from(TextBlock::new()).into_parts();
     let native = tree.insert_native(Some(slot), parts.kind, None, parts.props, None);
-    let collection = tree.insert_virtual(identity(), Some(window), []).unwrap();
+    let collection = insert_virtual(&mut tree, Some(window), []).unwrap();
 
     assert_eq!(tree.parent(native), Some(slot));
     assert_eq!(tree.children(root), &[window]);
@@ -228,9 +306,7 @@ fn set_kind_preserves_kind_specific_state() {
 fn virtual_model_uses_its_arena_identity_for_leases() {
     let mut tree = Tree::new();
     let application = tree.insert(None, NodeKind::Application);
-    let collection = tree
-        .insert_virtual(identity(), Some(application), [Key::from("a")])
-        .unwrap();
+    let collection = insert_virtual(&mut tree, Some(application), [Key::from("a")]).unwrap();
 
     let lease = tree
         .virtual_model_mut(collection)
@@ -251,9 +327,7 @@ fn virtual_model_uses_its_arena_identity_for_leases() {
 fn realized_container_mapping_cannot_be_overwritten() {
     let mut tree = Tree::new();
     let application = tree.insert(None, NodeKind::Application);
-    let collection = tree
-        .insert_virtual(identity(), Some(application), [Key::from("a")])
-        .unwrap();
+    let collection = insert_virtual(&mut tree, Some(application), [Key::from("a")]).unwrap();
     let first_parts = Element::from(TextBlock::new()).into_parts();
     let first = tree.insert_native(
         Some(collection),
@@ -285,9 +359,7 @@ fn realized_container_mapping_cannot_be_overwritten() {
 #[test]
 fn detached_realized_row_remains_addressable_by_logical_root() {
     let mut tree = Tree::new();
-    let collection = tree
-        .insert_virtual(identity(), None, [Key::from("row")])
-        .unwrap();
+    let collection = insert_virtual(&mut tree, None, [Key::from("row")]).unwrap();
     let logical = tree.insert(Some(collection), NodeKind::Fragment);
     let parts = Element::from(TextBlock::new()).into_parts();
     let native = tree.insert_native(Some(logical), parts.kind, None, parts.props, None);

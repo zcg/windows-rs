@@ -75,6 +75,7 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
                     TextBlock::new()
                         .text("tooltip target")
                         .tooltip_with(Tooltip::rich(TextBlock::new().text("tooltip content")))
+                        .into()
                 }
             },
         }
@@ -252,6 +253,11 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
                     SlotShape::Single(_) => quote! {
                         #control_name::new().#slot_method(#initial_child)
                     },
+                    SlotShape::Collection(_) if slot.shape.collection_item().is_some() => quote! {
+                        #control_name::new().#slot_method(
+                            [Keyed::new("surface", #initial_child)],
+                        )
+                    },
                     SlotShape::Collection(_) => quote! {
                         #control_name::new().#slot_method(
                             [KeyedView::new("surface", #initial_child)],
@@ -261,6 +267,11 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
                 let alternate = match &slot.shape {
                     SlotShape::Single(_) => quote! {
                         #control_name::new().#slot_method(#alternate_child)
+                    },
+                    SlotShape::Collection(_) if slot.shape.collection_item().is_some() => quote! {
+                        #control_name::new().#slot_method(
+                            [Keyed::new("surface", #alternate_child)],
+                        )
                     },
                     SlotShape::Collection(_) => quote! {
                         #control_name::new().#slot_method(
@@ -527,13 +538,13 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
         fn extension_tooltip(stage: usize) -> View {
             match stage {
                 0 | 3 => TextBlock::new().text("owner").into(),
-                1 => TextBlock::new().text("owner").tooltip("surface a"),
+                1 => TextBlock::new().text("owner").tooltip("surface a").into(),
                 2 => TextBlock::new().text("owner").tooltip_with(Tooltip::rich(
                     StackPanel::new().children((
                         TextBlock::new().text("surface b"),
                         TextBlock::new().text("detail"),
                     )),
-                )),
+                )).into(),
                 _ => unreachable!(),
             }
         }
@@ -543,7 +554,8 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
                 0 | 3 => Button::new().content(TextBlock::new().text("owner")),
                 1 => Button::new()
                     .content(TextBlock::new().text("owner"))
-                    .flyout("surface a"),
+                    .flyout("surface a")
+                    .into(),
                 2 => Button::new()
                     .content(TextBlock::new().text("owner"))
                     .flyout_with(Flyout::rich(
@@ -551,7 +563,8 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
                             TextBlock::new().text("surface b"),
                             TextBlock::new().text("detail"),
                         )),
-                    )),
+                    ))
+                    .into(),
                 _ => unreachable!(),
             }
         }
@@ -567,7 +580,8 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
                             MenuItem::separator("separator"),
                         ],
                         |_| {},
-                    )),
+                    ))
+                    .into(),
                 2 => Button::new()
                     .content(TextBlock::new().text("owner"))
                     .menu(Menu::new(
@@ -577,7 +591,8 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
                             [MenuItem::item("email", "Email")],
                         )],
                         |_| {},
-                    )),
+                    ))
+                    .into(),
                 _ => unreachable!(),
             }
         }
@@ -591,14 +606,16 @@ pub(crate) fn generate(schema: &ResolvedSchema) -> String {
                         [CommandBarCommand::button("bold", "Bold")],
                         [CommandBarCommand::button("copy", "Copy")],
                         |_| {},
-                    )),
+                    ))
+                    .into(),
                 2 => Button::new()
                     .content(TextBlock::new().text("owner"))
                     .command_bar_flyout(CommandBarFlyout::new(
                         [CommandBarCommand::separator("separator")],
                         [CommandBarCommand::button("paste", "Paste")],
                         |_| {},
-                    )),
+                    ))
+                    .into(),
                 _ => unreachable!(),
             }
         }
@@ -922,10 +939,13 @@ fn capability_property_cases() -> Vec<CapabilityPropertyCase> {
             "Rows",
             quote! { Grid::new().children((TextBlock::new(),)) },
             quote! {
-                Grid::new().rows([GridLength::Pixel(20.0)]).children((TextBlock::new(),))
+                Grid::new()
+                    .rows([GridLength::Pixel(20.0).min(10.0).max(30.0)])
+                    .children((TextBlock::new(),))
             },
             quote! {
-                Grid::new().rows([GridLength::Auto, GridLength::STAR])
+                Grid::new()
+                    .rows([GridLength::Pixel(20.0).min(15.0).max(40.0)])
                     .children((TextBlock::new(),))
             },
         ),
@@ -934,10 +954,13 @@ fn capability_property_cases() -> Vec<CapabilityPropertyCase> {
             "Columns",
             quote! { Grid::new().children((TextBlock::new(),)) },
             quote! {
-                Grid::new().columns([GridLength::Pixel(20.0)]).children((TextBlock::new(),))
+                Grid::new()
+                    .columns([GridLength::Pixel(20.0).min(10.0).max(30.0)])
+                    .children((TextBlock::new(),))
             },
             quote! {
-                Grid::new().columns([GridLength::Auto, GridLength::STAR])
+                Grid::new()
+                    .columns([GridLength::Pixel(20.0).min(15.0).max(40.0)])
                     .children((TextBlock::new(),))
             },
         ),

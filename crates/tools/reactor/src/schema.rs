@@ -1,5 +1,7 @@
 use crate::helpers::to_snake_case;
-use crate::metadata::{CollectionType, MetadataResolver, ParamClass, ReadValueConversion};
+use crate::metadata::{
+    CollectionType, EventHandlerType, MetadataResolver, ParamClass, ReadValueConversion,
+};
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -155,9 +157,9 @@ pub(crate) enum PropertyAdapter {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct PropertyAdapterCapabilities {
-    pub(crate) uses_dependency_property: bool,
-    pub(crate) uses_property_setter: bool,
+struct PropertyAdapterCapabilities {
+    uses_dependency_property: bool,
+    uses_property_setter: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -183,6 +185,7 @@ struct PropertyAdapterContract {
     value: &'static str,
     copy: bool,
     requirement: &'static str,
+    capabilities: PropertyAdapterCapabilities,
 }
 
 enum PropertyAdapterKind {
@@ -191,66 +194,23 @@ enum PropertyAdapterKind {
     EventOnly(&'static str),
 }
 
-impl PropertyAdapter {
-    pub(crate) fn capabilities(self) -> PropertyAdapterCapabilities {
+impl PropertyAdapterKind {
+    fn capabilities(&self) -> PropertyAdapterCapabilities {
         match self {
+            Self::Property(contract) => contract.capabilities,
             Self::ResourceStyle => PropertyAdapterCapabilities {
                 uses_dependency_property: true,
                 uses_property_setter: false,
             },
-            Self::DropPolicy
-            | Self::KeyAccelerators
-            | Self::PointerCapture
-            | Self::ImageDecodeWidth
-            | Self::PointerFocus
-            | Self::ResourceOverrides
-            | Self::RichEditText
-            | Self::RichTextBlocks => PropertyAdapterCapabilities {
-                uses_dependency_property: false,
-                uses_property_setter: false,
-            },
-            Self::ImplicitOpacityTransition
-            | Self::ImplicitScale
-            | Self::ImplicitScaleTransition
-            | Self::ImplicitTranslation
-            | Self::ImplicitTranslationTransition => PropertyAdapterCapabilities {
-                uses_dependency_property: false,
-                uses_property_setter: true,
-            },
-            Self::CharacterEvent
-            | Self::ClockIdentifier
-            | Self::ContentDialogResult
-            | Self::DragInfo
-            | Self::DropData
-            | Self::FontFamily
-            | Self::FontWeight
-            | Self::ItemsViewLayout
-            | Self::MapCenter
-            | Self::FocusEvent
-            | Self::HorizontalContentAlignment
-            | Self::ImageUri
-            | Self::InspectableString
-            | Self::InspectableStringList
-            | Self::ItemTag
-            | Self::ItemTags
-            | Self::MediaSource
-            | Self::KeyEvent
-            | Self::NavigationDisplayMode
-            | Self::NumberBoxValue
-            | Self::PathData
-            | Self::PointerEvent
-            | Self::RatingValue
-            | Self::RefreshDeferral
-            | Self::SelectionIndex
-            | Self::TreeNodeContent
-            | Self::Uri
-            | Self::VerticalContentAlignment => PropertyAdapterCapabilities {
+            Self::EventOnly(_) => PropertyAdapterCapabilities {
                 uses_dependency_property: true,
                 uses_property_setter: true,
             },
         }
     }
+}
 
+impl PropertyAdapter {
     fn property_kind(self) -> PropertyAdapterKind {
         use PropertyAdapterMetadata::{None, Param, ParamType, SingleField, ValueType};
         use PropertyAdapterTargets::{Any, OneOf, Property};
@@ -279,14 +239,54 @@ impl PropertyAdapter {
         const TOGGLE_BUTTON: &str = "Microsoft.UI.Xaml.Controls.Primitives.ToggleButton";
         const TOGGLE_SWITCH: &str = "Microsoft.UI.Xaml.Controls.ToggleSwitch";
 
-        let property = |targets, metadata, value, copy, requirement| {
+        let property_with = |targets, metadata, value, copy, requirement, capabilities| {
             PropertyAdapterKind::Property(PropertyAdapterContract {
                 targets,
                 metadata,
                 value,
                 copy,
                 requirement,
+                capabilities,
             })
+        };
+        let property = |targets, metadata, value, copy, requirement| {
+            property_with(
+                targets,
+                metadata,
+                value,
+                copy,
+                requirement,
+                PropertyAdapterCapabilities {
+                    uses_dependency_property: true,
+                    uses_property_setter: true,
+                },
+            )
+        };
+        let synthetic_property = |targets, metadata, value, copy, requirement| {
+            property_with(
+                targets,
+                metadata,
+                value,
+                copy,
+                requirement,
+                PropertyAdapterCapabilities {
+                    uses_dependency_property: false,
+                    uses_property_setter: false,
+                },
+            )
+        };
+        let setter_property = |targets, metadata, value, copy, requirement| {
+            property_with(
+                targets,
+                metadata,
+                value,
+                copy,
+                requirement,
+                PropertyAdapterCapabilities {
+                    uses_dependency_property: false,
+                    uses_property_setter: true,
+                },
+            )
         };
         match self {
             Self::ImageUri => property(
@@ -296,7 +296,7 @@ impl PropertyAdapter {
                 false,
                 "image_uri requires Image.Source or ImageIcon.Source",
             ),
-            Self::ImageDecodeWidth => property(
+            Self::ImageDecodeWidth => synthetic_property(
                 OneOf(&[(IMAGE, "DecodeWidth")]),
                 None,
                 "I32",
@@ -324,42 +324,42 @@ impl PropertyAdapter {
                 false,
                 "inspectable_string_list requires an IInspectable property",
             ),
-            Self::ImplicitOpacityTransition => property(
+            Self::ImplicitOpacityTransition => setter_property(
                 OneOf(&[(BORDER, "OpacityTransition")]),
                 None,
                 "Duration",
                 false,
                 "implicit_opacity_transition requires Border.OpacityTransition",
             ),
-            Self::ImplicitScale => property(
+            Self::ImplicitScale => setter_property(
                 OneOf(&[(BORDER, "Scale")]),
                 None,
                 "F64",
                 true,
                 "implicit_scale requires Border.Scale",
             ),
-            Self::ImplicitScaleTransition => property(
+            Self::ImplicitScaleTransition => setter_property(
                 OneOf(&[(BORDER, "ScaleTransition")]),
                 None,
                 "Duration",
                 false,
                 "implicit_scale_transition requires Border.ScaleTransition",
             ),
-            Self::ImplicitTranslation => property(
+            Self::ImplicitTranslation => setter_property(
                 OneOf(&[(BORDER, "Translation")]),
                 None,
                 "Vector3",
                 true,
                 "implicit_translation requires Border.Translation",
             ),
-            Self::ImplicitTranslationTransition => property(
+            Self::ImplicitTranslationTransition => setter_property(
                 OneOf(&[(BORDER, "TranslationTransition")]),
                 None,
                 "Duration",
                 false,
                 "implicit_translation_transition requires Border.TranslationTransition",
             ),
-            Self::KeyAccelerators => property(
+            Self::KeyAccelerators => synthetic_property(
                 OneOf(&[
                     (BUTTON, "KeyboardAccelerators"),
                     (GRID, "KeyboardAccelerators"),
@@ -383,7 +383,7 @@ impl PropertyAdapter {
                 false,
                 "path_data requires PathIcon.Data",
             ),
-            Self::DropPolicy => property(
+            Self::DropPolicy => synthetic_property(
                 OneOf(&[(BORDER, "AllowDrop")]),
                 None,
                 "DragDropPolicy",
@@ -411,14 +411,14 @@ impl PropertyAdapter {
                 true,
                 "horizontal_content_alignment requires Button.HorizontalContentAlignment",
             ),
-            Self::PointerCapture => property(
+            Self::PointerCapture => synthetic_property(
                 OneOf(&[(BORDER, "CapturePointerOnPress")]),
                 None,
                 "Bool",
                 true,
                 "pointer_capture requires Border.CapturePointerOnPress",
             ),
-            Self::PointerFocus => property(
+            Self::PointerFocus => synthetic_property(
                 OneOf(&[(BORDER, "FocusOnPointerRelease")]),
                 None,
                 "Bool",
@@ -432,21 +432,21 @@ impl PropertyAdapter {
                 true,
                 "rating_value requires RatingControl.Value",
             ),
-            Self::RichEditText => property(
+            Self::RichEditText => synthetic_property(
                 OneOf(&[(RICH_EDIT_BOX, "Document")]),
                 None,
                 "Str",
                 false,
                 "rich_edit_text requires RichEditBox.Document",
             ),
-            Self::RichTextBlocks => property(
+            Self::RichTextBlocks => synthetic_property(
                 OneOf(&[(RICH_TEXT_BLOCK, "Blocks")]),
                 None,
                 "RichText",
                 false,
                 "rich_text_blocks requires RichTextBlock.Blocks",
             ),
-            Self::ResourceOverrides => property(
+            Self::ResourceOverrides => synthetic_property(
                 OneOf(&[
                     (BUTTON, "Resources"),
                     (CHECK_BOX, "Resources"),
@@ -591,10 +591,13 @@ pub(crate) enum ValueValidation {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
-#[serde(rename_all = "snake_case")]
 pub(crate) enum FeedbackContract {
-    SynchronousExact,
-    SynchronousNormalized,
+    #[serde(rename = "deferred_exact")]
+    DeferredExact,
+    #[serde(rename = "synchronous_exact")]
+    Exact,
+    #[serde(rename = "synchronous_normalized")]
+    Normalized,
 }
 
 #[derive(Deserialize)]
@@ -677,6 +680,7 @@ impl ResolvedControl {
 pub(crate) struct ResolvedControl {
     pub(crate) name: String,
     pub(crate) type_name: String,
+    pub(crate) icon_element: bool,
     pub(crate) role: Role,
     pub(crate) placement: ResolvedPlacement,
     pub(crate) lifecycle: Option<Lifecycle>,
@@ -699,6 +703,8 @@ pub(crate) struct ResolvedProperty {
     pub(crate) feedback_contract: Option<FeedbackContract>,
     pub(crate) clear_feedback: Option<bool>,
     pub(crate) adapter: Option<PropertyAdapter>,
+    pub(crate) uses_dependency_property: bool,
+    pub(crate) uses_property_setter: bool,
     pub(crate) nullable_bool: bool,
     pub(crate) observes_feedback: bool,
     pub(crate) enum_variants: Vec<String>,
@@ -723,6 +729,7 @@ pub(crate) struct ResolvedEvent {
     pub(crate) source: EventPayloadSource,
     pub(crate) conversion: EventPayloadConversion,
     pub(crate) subscription: EventSubscription,
+    pub(crate) handler: Option<(EventHandlerType, EventHandlerType)>,
     pub(crate) active_properties: Vec<String>,
     pub(crate) routed: bool,
 }
@@ -772,7 +779,7 @@ impl SlotShape {
 
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) enum EventPayloadSource {
-    Unit,
+    Unit(EventHandlerType, EventHandlerType),
     SenderProperty { interface: String, property: String },
     EventArgsProperty { interface: String, property: String },
     DragInfo { interface: String },
@@ -820,7 +827,7 @@ impl EventPayloadSource {
                 interface,
                 property,
             } => Some((interface, property)),
-            Self::Unit
+            Self::Unit(..)
             | Self::DragInfo { .. }
             | Self::DropData { .. }
             | Self::PointerEvent
@@ -975,10 +982,26 @@ impl Schema {
                     (None, None) => None,
                 };
                 if property.coerces.is_some()
-                    && property.feedback_contract != Some(FeedbackContract::SynchronousNormalized)
+                    && property.feedback_contract != Some(FeedbackContract::Normalized)
                 {
                     return Err(format!(
                         "{}.{} coercion needs synchronous_normalized feedback",
+                        control.type_name, property.name
+                    ));
+                }
+                if property.adapter == Some(PropertyAdapter::RichEditText)
+                    && property.feedback_contract != Some(FeedbackContract::DeferredExact)
+                {
+                    return Err(format!(
+                        "{}.{} rich_edit_text requires deferred_exact feedback",
+                        control.type_name, property.name
+                    ));
+                }
+                if property.feedback_contract == Some(FeedbackContract::DeferredExact)
+                    && property.adapter != Some(PropertyAdapter::RichEditText)
+                {
+                    return Err(format!(
+                        "{}.{} deferred_exact requires the rich_edit_text adapter",
                         control.type_name, property.name
                     ));
                 }
@@ -1128,7 +1151,7 @@ impl Schema {
                 };
                 if property.clear_feedback.is_some()
                     && (value != "Bool"
-                        || property.feedback_contract != Some(FeedbackContract::SynchronousExact))
+                        || property.feedback_contract != Some(FeedbackContract::Exact))
                 {
                     return Err(format!(
                         "{}.{} clear_feedback requires a Bool property with synchronous_exact feedback",
@@ -1136,7 +1159,7 @@ impl Schema {
                     ));
                 }
                 if value == "Bool"
-                    && property.feedback_contract == Some(FeedbackContract::SynchronousExact)
+                    && property.feedback_contract == Some(FeedbackContract::Exact)
                     && property.clear_feedback.is_none()
                 {
                     return Err(format!(
@@ -1180,6 +1203,13 @@ impl Schema {
                     &value,
                     property.validation,
                 )?;
+                let adapter_capabilities = property.adapter.map_or_else(
+                    || PropertyAdapterCapabilities {
+                        uses_dependency_property: true,
+                        uses_property_setter: true,
+                    },
+                    |adapter| adapter.property_kind().capabilities(),
+                );
 
                 properties.push(ResolvedProperty {
                     field: property
@@ -1194,6 +1224,8 @@ impl Schema {
                     feedback_contract: property.feedback_contract,
                     clear_feedback: property.clear_feedback,
                     adapter: property.adapter,
+                    uses_dependency_property: adapter_capabilities.uses_dependency_property,
+                    uses_property_setter: adapter_capabilities.uses_property_setter,
                     nullable_bool,
                     observes_feedback: property.controlled.is_some(),
                     enum_variants,
@@ -1724,9 +1756,17 @@ impl Schema {
                             )
                         }
                     } else {
+                        let (sender, args) = metadata
+                            .resolve_event_handler_types(&name, &event.name)
+                            .ok_or_else(|| {
+                                format!(
+                                    "{}.{} has unsupported event handler types",
+                                    control.type_name, event.name
+                                )
+                            })?;
                         (
                             "Unit".to_string(),
-                            EventPayloadSource::Unit,
+                            EventPayloadSource::Unit(sender, args),
                             ReadValueConversion::Identity,
                         )
                     };
@@ -1786,6 +1826,9 @@ impl Schema {
                         control.type_name, event.name
                     ));
                 }
+                let handler = matches!(subscription, EventSubscription::Metadata)
+                    .then(|| metadata.resolve_event_handler_types(&name, &event.name))
+                    .flatten();
 
                 events.push(ResolvedEvent {
                     field: event
@@ -1797,6 +1840,7 @@ impl Schema {
                     source,
                     conversion,
                     subscription,
+                    handler,
                     active_properties: event.active_properties,
                     routed: event.routed,
                 });
@@ -1917,7 +1961,7 @@ impl Schema {
             {
                 let feedback = property.feedback.as_deref().unwrap();
                 if coercing_events.contains(feedback)
-                    && property.feedback_contract != Some(FeedbackContract::SynchronousNormalized)
+                    && property.feedback_contract != Some(FeedbackContract::Normalized)
                 {
                     return Err(format!(
                         "{} feedback event {} is coercing and requires synchronous_normalized",
@@ -2015,9 +2059,12 @@ impl Schema {
                     })
                 })
                 .transpose()?;
+            let icon_element = metadata
+                .class_derives_from(&control.type_name, "Microsoft.UI.Xaml.Controls.IconElement");
             controls.push(ResolvedControl {
                 name,
                 type_name: control.type_name,
+                icon_element,
                 role,
                 placement,
                 lifecycle: control.lifecycle,
@@ -2030,8 +2077,8 @@ impl Schema {
             });
         }
 
+        resolve_slot_item_controls(&mut controls, metadata)?;
         validate_selections(&controls)?;
-        validate_slot_item_controls(&controls)?;
         Ok(ResolvedSchema { controls })
     }
 }
@@ -2069,15 +2116,42 @@ fn validate_required_property_adapters(
     Ok(())
 }
 
-fn validate_slot_item_controls(controls: &[ResolvedControl]) -> Result<(), String> {
+fn resolve_slot_item_controls(
+    controls: &mut [ResolvedControl],
+    metadata: &MetadataResolver,
+) -> Result<(), String> {
+    let projected = controls
+        .iter()
+        .map(|control| (control.name.clone(), control.type_name.clone()))
+        .collect::<Vec<_>>();
     for control in controls {
-        for slot in &control.slots {
-            for item in &slot.item_controls {
-                if !controls.iter().any(|candidate| candidate.name == *item) {
+        for slot in &mut control.slots {
+            if let Some(item) = slot.shape.collection_item() {
+                if !slot.item_controls.is_empty() {
                     return Err(format!(
-                        "{}.{} names missing item control {}",
+                        "{}.{} typed collection item_controls are inferred from metadata",
+                        control.type_name, slot.name
+                    ));
+                }
+                slot.item_controls = projected
+                    .iter()
+                    .filter(|(_, type_name)| metadata.class_is_assignable_to(type_name, item))
+                    .map(|(name, _)| name.clone())
+                    .collect();
+                if slot.item_controls.is_empty() {
+                    return Err(format!(
+                        "{}.{} collection item {} has no projected controls",
                         control.type_name, slot.name, item
                     ));
+                }
+            } else {
+                for item in &slot.item_controls {
+                    if !projected.iter().any(|(name, _)| name == item) {
+                        return Err(format!(
+                            "{}.{} names missing item control {}",
+                            control.type_name, slot.name, item
+                        ));
+                    }
                 }
             }
         }

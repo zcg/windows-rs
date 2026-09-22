@@ -1484,12 +1484,10 @@ capabilities = ["layout"]
 [[control.slot]]
 name = "PrimaryCommands"
 collection = true
-item_controls = ["AppBarButton", "AppBarSeparator"]
 
 [[control.slot]]
 name = "SecondaryCommands"
 collection = true
-item_controls = ["AppBarButton", "AppBarSeparator"]
 
 [[control]]
 type = "Microsoft.UI.Xaml.Controls.AppBarButton"
@@ -1817,7 +1815,7 @@ capabilities = ["layout", "enabled", "controlled_text", "focus"]
 name = "Document"
 field = "text"
 controlled = "TextChanged"
-feedback_contract = "synchronous_exact"
+feedback_contract = "deferred_exact"
 adapter = "rich_edit_text"
 
 [[control.property]]

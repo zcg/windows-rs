@@ -373,9 +373,13 @@ impl From<Color> for Brush {
 pub(crate) mod sealed {
     pub trait Sealed {}
 
-    pub(crate) trait NativeControl: Sealed + Sized {
-        fn into_element(self) -> super::Element;
+    pub(crate) trait NativeControl: Sealed + Sized + Into<super::Element> {
+        fn into_element(self) -> super::Element {
+            self.into()
+        }
     }
+
+    impl<T: Sealed + Into<super::Element>> NativeControl for T {}
 
     pub(crate) trait LayoutControl: NativeControl {
         fn element_state_mut(&mut self) -> &mut Option<std::rc::Rc<super::ElementState>>;
@@ -487,6 +491,57 @@ pub(crate) trait NativeChildrenTestExt: Sized {
 /// [`Key`] as items are inserted, removed, or reordered.
 #[derive(Clone, Debug, PartialEq)]
 pub struct View(ViewKind);
+
+/// A view attachment that retains the target's concrete type.
+#[derive(Clone, Debug, PartialEq)]
+pub struct AttachedView<T> {
+    view: View,
+    target: std::marker::PhantomData<T>,
+}
+
+impl<T> AttachedView<T> {
+    fn new(view: View) -> Self {
+        Self {
+            view,
+            target: std::marker::PhantomData,
+        }
+    }
+
+    pub(crate) fn into_view(self) -> View {
+        self.view
+    }
+}
+
+impl<T> From<AttachedView<T>> for View {
+    fn from(value: AttachedView<T>) -> Self {
+        value.view
+    }
+}
+
+/// A symbol or icon control accepted by native icon properties.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Icon(pub(crate) View);
+
+impl Icon {
+    pub(crate) fn into_view(self) -> View {
+        self.0
+    }
+}
+
+impl From<Symbol> for Icon {
+    fn from(value: Symbol) -> Self {
+        SymbolIcon::new().symbol(value).into()
+    }
+}
+
+impl<T> From<AttachedView<T>> for Icon
+where
+    T: Into<Self>,
+{
+    fn from(value: AttachedView<T>) -> Self {
+        Self(value.into_view())
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum ViewKind {
@@ -605,15 +660,15 @@ impl Tooltip {
 
 /// Adds a tooltip to a view.
 pub trait TooltipExt: Into<View> + Sized {
-    fn tooltip(self, value: impl Into<String>) -> View {
+    fn tooltip(self, value: impl Into<String>) -> AttachedView<Self> {
         self.tooltip_with(Tooltip::text(value))
     }
 
-    fn tooltip_with(self, tooltip: Tooltip) -> View {
-        View(ViewKind::Tooltip {
+    fn tooltip_with(self, tooltip: Tooltip) -> AttachedView<Self> {
+        AttachedView::new(View(ViewKind::Tooltip {
             target: Box::new(self.into().into_kind()),
             tooltip,
-        })
+        }))
     }
 }
 
@@ -669,19 +724,23 @@ impl Flyout {
 
 /// Adds a flyout to a view.
 pub trait FlyoutExt: Into<View> + Sized {
-    fn flyout(self, value: impl Into<String>) -> View {
+    fn flyout(self, value: impl Into<String>) -> AttachedView<Self> {
         self.flyout_with(Flyout::text(value))
     }
 
-    fn flyout_with(self, flyout: Flyout) -> View {
-        View(ViewKind::Flyout {
+    fn flyout_with(self, flyout: Flyout) -> AttachedView<Self> {
+        AttachedView::new(View(ViewKind::Flyout {
             target: Box::new(self.into().into_kind()),
             flyout,
-        })
+        }))
     }
 }
 
 impl<T> FlyoutExt for T where T: Into<View> {}
+
+pub(crate) fn canonical_rich_edit_text(value: &str) -> String {
+    value.replace("\r\n", "\n").replace('\r', "\n")
+}
 
 /// A keyed item in a context menu.
 #[derive(Clone, Debug, PartialEq)]
@@ -806,11 +865,11 @@ impl Menu {
 
 /// Adds a context menu to a view.
 pub trait MenuExt: Into<View> + Sized {
-    fn menu(self, menu: Menu) -> View {
-        View(ViewKind::Menu {
+    fn menu(self, menu: Menu) -> AttachedView<Self> {
+        AttachedView::new(View(ViewKind::Menu {
             target: Box::new(self.into().into_kind()),
             menu,
-        })
+        }))
     }
 }
 
@@ -859,7 +918,7 @@ impl CommandBarCommand {
         }
     }
 
-    fn into_keyed_view(self, on_click: &Callback<String>) -> KeyedView {
+    fn into_keyed_element(self, on_click: &Callback<String>) -> Keyed<CommandBarElement> {
         match self {
             Self::Button {
                 key,
@@ -875,16 +934,15 @@ impl CommandBarCommand {
                     .on_click(move || {
                         let _ = callback.call(clicked.clone());
                     });
-                let view = match icon {
+                let element: CommandBarElement = match icon {
                     Some(icon) => button.icon(SymbolIcon::new().symbol(icon)).into(),
                     None => button.into(),
                 };
-                KeyedView { key, view }
+                Keyed::new(key, element)
             }
-            Self::Separator { key } => KeyedView {
-                key,
-                view: AppBarSeparator::new().into(),
-            },
+            Self::Separator { key } => {
+                Keyed::new(key, CommandBarElement::from(AppBarSeparator::new()))
+            }
         }
     }
 }
@@ -900,12 +958,12 @@ impl CommandBar {
         self.primary_commands(
             primary
                 .into_iter()
-                .map(|command| command.into_keyed_view(&on_click)),
+                .map(|command| command.into_keyed_element(&on_click)),
         )
         .secondary_commands(
             secondary
                 .into_iter()
-                .map(|command| command.into_keyed_view(&on_click)),
+                .map(|command| command.into_keyed_element(&on_click)),
         )
         .into()
     }
@@ -935,11 +993,11 @@ impl CommandBarFlyout {
 
 /// Adds a command-bar flyout to a view.
 pub trait CommandBarFlyoutExt: Into<View> + Sized {
-    fn command_bar_flyout(self, flyout: CommandBarFlyout) -> View {
-        View(ViewKind::CommandBarFlyout {
+    fn command_bar_flyout(self, flyout: CommandBarFlyout) -> AttachedView<Self> {
+        AttachedView::new(View(ViewKind::CommandBarFlyout {
             target: Box::new(self.into().into_kind()),
             flyout,
-        })
+        }))
     }
 }
 
@@ -1253,19 +1311,25 @@ impl From<&str> for View {
     }
 }
 
-/// A view paired with stable reconciliation identity.
+/// A value paired with stable reconciliation identity.
+///
+/// ```compile_fail
+/// use windows_reactor::*;
+///
+/// let _ = SelectorBar::new().items([Keyed::new("invalid", TextBlock::new())]);
+/// ```
 #[derive(Clone, Debug, PartialEq)]
-pub struct KeyedView {
+pub struct Keyed<T> {
     key: Key,
-    view: View,
+    value: T,
 }
 
-impl KeyedView {
-    /// Associates `view` with `key`.
-    pub fn new(key: impl Into<Key>, view: impl Into<View>) -> Self {
+impl<T> Keyed<T> {
+    /// Associates `value` with `key`.
+    pub fn new(key: impl Into<Key>, value: impl Into<T>) -> Self {
         Self {
             key: key.into(),
-            view: view.into(),
+            value: value.into(),
         }
     }
 
@@ -1273,26 +1337,41 @@ impl KeyedView {
         &self.key
     }
 
+    pub(crate) fn into_keyed_view(self) -> KeyedView
+    where
+        T: Into<View>,
+    {
+        KeyedView {
+            key: self.key,
+            value: self.value.into(),
+        }
+    }
+}
+
+/// A view paired with stable reconciliation identity.
+pub type KeyedView = Keyed<View>;
+
+impl KeyedView {
     pub fn view(&self) -> &View {
-        &self.view
+        &self.value
     }
 
     pub(crate) fn into_parts(self) -> (Key, View) {
-        (self.key, self.view)
+        (self.key, self.value)
     }
 
     fn position(position: usize, view: View) -> Self {
         Self {
             key: Key::position(position),
-            view,
+            value: view,
         }
     }
 }
 
-impl<K, V> From<(K, V)> for KeyedView
+impl<K, V, T> From<(K, V)> for Keyed<T>
 where
     K: Into<Key>,
-    V: Into<View>,
+    V: Into<T>,
 {
     fn from((key, view): (K, V)) -> Self {
         Self::new(key, view)
@@ -2223,39 +2302,81 @@ mod visual_value_tests {
     }
 }
 
-/// A Grid row or column size.
-#[derive(Clone, Copy, Debug)]
-pub enum GridLength {
-    /// Sizes to the content.
+/// A Grid row or column size with optional constraints.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct GridLength {
+    pub(crate) size: GridLengthSize,
+    pub(crate) min: Option<f64>,
+    pub(crate) max: Option<f64>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum GridLengthSize {
     Auto,
-    /// Uses a fixed number of device-independent pixels (DIPs).
     Pixel(f64),
-    /// Uses a weighted share of the remaining space.
     Star(f64),
 }
 
+#[expect(non_snake_case, non_upper_case_globals)]
 impl GridLength {
-    /// One weighted share of the remaining space.
-    pub const STAR: Self = Self::Star(1.0);
+    /// Sizes to the content.
+    pub const Auto: Self = Self::new(GridLengthSize::Auto);
 
-    pub(crate) fn is_valid(self) -> bool {
-        match self {
-            Self::Auto => true,
-            Self::Pixel(value) | Self::Star(value) => value.is_finite() && value >= 0.0,
+    /// Uses one weighted share of the remaining space.
+    pub const STAR: Self = Self::new(GridLengthSize::Star(1.0));
+
+    const fn new(size: GridLengthSize) -> Self {
+        Self {
+            size,
+            min: None,
+            max: None,
         }
+    }
+
+    /// Uses a fixed number of device-independent pixels (DIPs).
+    pub const fn Pixel(value: f64) -> Self {
+        assert_grid_length_value(value);
+        Self::new(GridLengthSize::Pixel(value))
+    }
+
+    /// Uses a weighted share of the remaining space.
+    pub const fn Star(value: f64) -> Self {
+        assert_grid_length_value(value);
+        Self::new(GridLengthSize::Star(value))
+    }
+
+    /// Sets the minimum size in DIPs.
+    pub fn min(mut self, value: f64) -> Self {
+        assert_grid_length_value(value);
+        assert!(
+            self.max.is_none_or(|max| value <= max),
+            "Grid length minimum must not exceed its maximum",
+        );
+        self.min = Some(value);
+        self
+    }
+
+    /// Sets the maximum size in DIPs.
+    pub fn max(mut self, value: f64) -> Self {
+        assert_grid_length_value(value);
+        assert!(
+            self.min.is_none_or(|min| min <= value),
+            "Grid length maximum must not be less than its minimum",
+        );
+        self.max = Some(value);
+        self
     }
 }
 
-impl PartialEq for GridLength {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Auto, Self::Auto) => true,
-            (Self::Pixel(left), Self::Pixel(right)) | (Self::Star(left), Self::Star(right)) => {
-                f64_eq(*left, *right)
-            }
-            _ => false,
-        }
-    }
+const fn assert_grid_length_value(value: f64) {
+    assert!(
+        value.is_finite() && value >= 0.0,
+        "Grid length values must be finite and non-negative",
+    );
+}
+
+pub(crate) fn grid_lengths(values: impl IntoIterator<Item = GridLength>) -> Rc<Vec<GridLength>> {
+    Rc::new(values.into_iter().collect())
 }
 
 /// Horizontal placement within the space assigned by a parent.
@@ -2274,6 +2395,30 @@ pub enum VerticalAlignment {
     Center,
     Bottom,
     Stretch,
+}
+
+/// A native WinUI animation applied when an element changes layout.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ThemeTransition {
+    pub(crate) kind: ThemeTransitionKind,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ThemeTransitionKind {
+    Reposition,
+}
+
+#[expect(non_upper_case_globals)]
+impl ThemeTransition {
+    /// Animates an element from its previous layout position to its new position.
+    pub const Reposition: Self = Self {
+        kind: ThemeTransitionKind::Reposition,
+    };
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+struct TransitionState {
+    transitions: Property<Rc<Vec<ThemeTransition>>>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -2302,6 +2447,7 @@ pub(crate) struct ElementState {
     relative_align_vertical_center: bool,
     canvas_left: Option<f64>,
     canvas_top: Option<f64>,
+    transitions: Option<Rc<TransitionState>>,
     automation_name: Option<String>,
     automation_id: Option<String>,
     automation_heading_level: Option<AutomationHeadingLevel>,
@@ -2888,7 +3034,7 @@ impl KeyAccelerators {
     }
 }
 
-/// Applies layout, opacity, margin, and exit-transition properties to native controls.
+/// Applies layout, opacity, margin, and transition properties to native controls.
 ///
 /// Dimensions, margins, and Canvas positions use device-independent pixels (DIPs). Passing
 /// `None` to an optional property leaves it inherited or unset.
@@ -3066,6 +3212,48 @@ pub trait LayoutControl: sealed::LayoutControl {
                 .get_or_insert_with(|| Rc::new(ElementState::default())),
         )
         .margin = Property::from(value);
+        self
+    }
+
+    /// Applies native WinUI animations when this element changes layout.
+    fn transitions<T>(mut self, values: T) -> Self
+    where
+        Self: Sized,
+        T: IntoIterator<Item = ThemeTransition>,
+    {
+        Rc::make_mut(
+            Rc::make_mut(
+                sealed::LayoutControl::element_state_mut(&mut self)
+                    .get_or_insert_with(|| Rc::new(ElementState::default())),
+            )
+            .transitions
+            .get_or_insert_with(|| Rc::new(TransitionState::default())),
+        )
+        .transitions = Property::Set(Rc::new(values.into_iter().collect()));
+        self
+    }
+
+    /// Applies native WinUI animations or clears the explicit transition collection.
+    fn transitions_optional<T>(mut self, values: Option<T>) -> Self
+    where
+        Self: Sized,
+        T: IntoIterator<Item = ThemeTransition>,
+    {
+        let state = Rc::make_mut(
+            sealed::LayoutControl::element_state_mut(&mut self)
+                .get_or_insert_with(|| Rc::new(ElementState::default())),
+        );
+        match values {
+            Some(values) => {
+                Rc::make_mut(
+                    state
+                        .transitions
+                        .get_or_insert_with(|| Rc::new(TransitionState::default())),
+                )
+                .transitions = Property::Set(Rc::new(values.into_iter().collect()));
+            }
+            None => state.transitions = None,
+        }
         self
     }
 
@@ -3463,6 +3651,13 @@ pub(crate) fn visit_element_state(
         placement
             .and_then(|value| value.canvas_top)
             .map(PropertyValueRef::F64),
+    );
+    visit(
+        PropertyId::Transitions,
+        placement
+            .and_then(|value| value.transitions.as_deref())
+            .and_then(|value| value.transitions.as_set())
+            .map(PropertyValueRef::ThemeTransitions),
     );
     visit(
         PropertyId::AutomationName,

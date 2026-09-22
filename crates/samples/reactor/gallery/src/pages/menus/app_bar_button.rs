@@ -28,20 +28,20 @@ impl Component for AppBarButtonPage {
         page_content(
             "AppBarButton",
             "A button for command bars with a label and icon.",
-            [KeyedView::new(
+            [Keyed::new(
                 "basic",
                 sample_card(
                     "Basic AppBarButton",
                     StackPanel::new().spacing(8.0).children((
                         CommandBar::new()
-                            .primary_commands([KeyedView::new(
+                            .primary_commands([Keyed::new(
                                 "save",
                                 AppBarButton::new()
                                     .label("Save")
                                     .on_click(context.message(Message::Clicked))
                                     .icon(SymbolIcon::new().symbol(Symbol::Save)),
                             )])
-                            .secondary_commands([KeyedView::new(
+                            .secondary_commands([Keyed::new(
                                 "delete",
                                 AppBarButton::new()
                                     .label("Delete")

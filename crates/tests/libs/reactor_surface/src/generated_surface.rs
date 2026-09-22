@@ -250,6 +250,7 @@ fn construct_tool_tip(_stage: usize) -> View {
     TextBlock::new()
         .text("tooltip target")
         .tooltip_with(Tooltip::rich(TextBlock::new().text("tooltip content")))
+        .into()
 }
 fn construct_content_dialog(_stage: usize) -> View {
     Grid::new().children((ContentDialog::new(),))
@@ -4137,10 +4138,10 @@ fn capability_grid_definitions_rows(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((TextBlock::new(),)),
         1 => Grid::new()
-            .rows([GridLength::Pixel(20.0)])
+            .rows([GridLength::Pixel(20.0).min(10.0).max(30.0)])
             .children((TextBlock::new(),)),
         2 => Grid::new()
-            .rows([GridLength::Auto, GridLength::STAR])
+            .rows([GridLength::Pixel(20.0).min(15.0).max(40.0)])
             .children((TextBlock::new(),)),
         _ => unreachable!(),
     }
@@ -4149,10 +4150,10 @@ fn capability_grid_definitions_columns(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((TextBlock::new(),)),
         1 => Grid::new()
-            .columns([GridLength::Pixel(20.0)])
+            .columns([GridLength::Pixel(20.0).min(10.0).max(30.0)])
             .children((TextBlock::new(),)),
         2 => Grid::new()
-            .columns([GridLength::Auto, GridLength::STAR])
+            .columns([GridLength::Pixel(20.0).min(15.0).max(40.0)])
             .children((TextBlock::new(),)),
         _ => unreachable!(),
     }
@@ -4537,15 +4538,11 @@ fn structural_flip_view_slot_items(stage: usize) -> View {
 fn structural_selector_bar_slot_items(stage: usize) -> View {
     match stage {
         0 | 3 => (SelectorBar::new()).into(),
-        1 => (SelectorBar::new().items([KeyedView::new(
-            "surface",
-            SelectorBarItem::new().width(40.0),
-        )]))
+        1 => (SelectorBar::new()
+            .items([Keyed::new("surface", SelectorBarItem::new().width(40.0))]))
         .into(),
-        2 => (SelectorBar::new().items([KeyedView::new(
-            "surface",
-            SelectorBarItem::new().width(80.0),
-        )]))
+        2 => (SelectorBar::new()
+            .items([Keyed::new("surface", SelectorBarItem::new().width(80.0))]))
         .into(),
         _ => unreachable!(),
     }
@@ -4594,10 +4591,10 @@ fn structural_command_bar_slot_primary_commands(stage: usize) -> View {
     match stage {
         0 | 3 => (CommandBar::new()).into(),
         1 => (CommandBar::new()
-            .primary_commands([KeyedView::new("surface", AppBarButton::new().width(40.0))]))
+            .primary_commands([Keyed::new("surface", AppBarButton::new().width(40.0))]))
         .into(),
         2 => (CommandBar::new()
-            .primary_commands([KeyedView::new("surface", AppBarButton::new().width(80.0))]))
+            .primary_commands([Keyed::new("surface", AppBarButton::new().width(80.0))]))
         .into(),
         _ => unreachable!(),
     }
@@ -4606,10 +4603,10 @@ fn structural_command_bar_slot_secondary_commands(stage: usize) -> View {
     match stage {
         0 | 3 => (CommandBar::new()).into(),
         1 => (CommandBar::new()
-            .secondary_commands([KeyedView::new("surface", AppBarButton::new().width(40.0))]))
+            .secondary_commands([Keyed::new("surface", AppBarButton::new().width(40.0))]))
         .into(),
         2 => (CommandBar::new()
-            .secondary_commands([KeyedView::new("surface", AppBarButton::new().width(80.0))]))
+            .secondary_commands([Keyed::new("surface", AppBarButton::new().width(80.0))]))
         .into(),
         _ => unreachable!(),
     }
@@ -4633,10 +4630,8 @@ fn structural_app_bar_toggle_button_slot_icon(stage: usize) -> View {
 fn structural_menu_bar_slot_items(stage: usize) -> View {
     match stage {
         0 | 3 => (MenuBar::new()).into(),
-        1 => (MenuBar::new().items([KeyedView::new("surface", MenuBarItem::new().width(40.0))]))
-            .into(),
-        2 => (MenuBar::new().items([KeyedView::new("surface", MenuBarItem::new().width(80.0))]))
-            .into(),
+        1 => (MenuBar::new().items([Keyed::new("surface", MenuBarItem::new().width(40.0))])).into(),
+        2 => (MenuBar::new().items([Keyed::new("surface", MenuBarItem::new().width(80.0))])).into(),
         _ => unreachable!(),
     }
 }
@@ -4887,15 +4882,14 @@ fn structural_title_bar_slot_right_header(stage: usize) -> View {
 fn extension_tooltip(stage: usize) -> View {
     match stage {
         0 | 3 => TextBlock::new().text("owner").into(),
-        1 => TextBlock::new().text("owner").tooltip("surface a"),
-        2 => {
-            TextBlock::new()
-                .text("owner")
-                .tooltip_with(Tooltip::rich(StackPanel::new().children((
-                    TextBlock::new().text("surface b"),
-                    TextBlock::new().text("detail"),
-                ))))
-        }
+        1 => TextBlock::new().text("owner").tooltip("surface a").into(),
+        2 => TextBlock::new()
+            .text("owner")
+            .tooltip_with(Tooltip::rich(StackPanel::new().children((
+                TextBlock::new().text("surface b"),
+                TextBlock::new().text("detail"),
+            ))))
+            .into(),
         _ => unreachable!(),
     }
 }
@@ -4904,13 +4898,15 @@ fn extension_flyout(stage: usize) -> View {
         0 | 3 => Button::new().content(TextBlock::new().text("owner")),
         1 => Button::new()
             .content(TextBlock::new().text("owner"))
-            .flyout("surface a"),
+            .flyout("surface a")
+            .into(),
         2 => Button::new()
             .content(TextBlock::new().text("owner"))
             .flyout_with(Flyout::rich(StackPanel::new().children((
                 TextBlock::new().text("surface b"),
                 TextBlock::new().text("detail"),
-            )))),
+            ))))
+            .into(),
         _ => unreachable!(),
     }
 }
@@ -4925,7 +4921,8 @@ fn extension_menu(stage: usize) -> View {
                     MenuItem::separator("separator"),
                 ],
                 |_| {},
-            )),
+            ))
+            .into(),
         2 => Button::new()
             .content(TextBlock::new().text("owner"))
             .menu(Menu::new(
@@ -4935,7 +4932,8 @@ fn extension_menu(stage: usize) -> View {
                     [MenuItem::item("email", "Email")],
                 )],
                 |_| {},
-            )),
+            ))
+            .into(),
         _ => unreachable!(),
     }
 }
@@ -4948,14 +4946,16 @@ fn extension_command_bar_flyout(stage: usize) -> View {
                 [CommandBarCommand::button("bold", "Bold")],
                 [CommandBarCommand::button("copy", "Copy")],
                 |_| {},
-            )),
+            ))
+            .into(),
         2 => Button::new()
             .content(TextBlock::new().text("owner"))
             .command_bar_flyout(CommandBarFlyout::new(
                 [CommandBarCommand::separator("separator")],
                 [CommandBarCommand::button("paste", "Paste")],
                 |_| {},
-            )),
+            ))
+            .into(),
         _ => unreachable!(),
     }
 }

@@ -253,11 +253,11 @@ fn run_nested_message_loop(
         }
         if !status.as_bool() {
             unsafe {
-                PostQuitMessage(native.wParam.0 as i32);
+                PostQuitMessage(native.wParam as i32);
             }
             return Err("nested loop received WM_QUIT".to_string());
         }
-        if native.message == WM_TIMER as u32 && native.wParam.0 == timer {
+        if native.message == WM_TIMER as u32 && native.wParam == timer {
             unsafe {
                 _ = KillTimer(None, timer);
             }
@@ -702,10 +702,10 @@ impl Component for KeyboardInput {
             KeyboardMessage::WindowHandle(Ok(hwnd)) => {
                 context.spawn_background(move |_| {
                     unsafe {
-                        let _ = SetForegroundWindow(HWND(hwnd as *mut _));
+                        let _ = SetForegroundWindow(hwnd as HWND);
                     }
                     std::thread::sleep(Duration::from_millis(100));
-                    let result = (unsafe { GetForegroundWindow() } == HWND(hwnd as *mut _))
+                    let result = (unsafe { GetForegroundWindow() } == hwnd as HWND)
                         .then_some(hwnd)
                         .ok_or_else(|| "self-test window could not become foreground".to_string());
                     KeyboardMessage::Activated(result)
@@ -956,7 +956,7 @@ impl Component for KeyboardInput {
 }
 
 fn inject_keyboard(hwnd: isize) -> Result<(), String> {
-    if unsafe { GetForegroundWindow() } != HWND(hwnd as *mut _) {
+    if unsafe { GetForegroundWindow() } != hwnd as HWND {
         return Err("self-test window lost foreground focus".to_string());
     }
     let key = |virtual_key, scan_code, flags| INPUT {
@@ -988,7 +988,7 @@ fn inject_keyboard(hwnd: isize) -> Result<(), String> {
 }
 
 fn inject_reverse_tab(hwnd: isize) -> Result<(), String> {
-    if unsafe { GetForegroundWindow() } != HWND(hwnd as *mut _) {
+    if unsafe { GetForegroundWindow() } != hwnd as HWND {
         return Err("self-test window lost foreground focus".to_string());
     }
     let key = |virtual_key, flags| INPUT {
@@ -1025,7 +1025,7 @@ fn schedule_keyboard_click_stage(
 ) -> Result<(), String> {
     schedule_live_window_handle(move |result| {
         let result = result.and_then(|handle| {
-            let hwnd = HWND(handle as *mut _);
+            let hwnd = handle as HWND;
             if stage == PointerStage::LeftDown {
                 fit_window_to_work_area(hwnd)?;
                 let (x, y) = virtual_screen_origin();
@@ -1369,7 +1369,7 @@ fn inject_pointer_stage(
     handle: isize,
     injector: &InputInjector,
 ) -> Result<(), String> {
-    let hwnd = HWND(handle as *mut _);
+    let hwnd = handle as HWND;
     if stage == PointerStage::Move {
         fit_window_to_work_area(hwnd)?;
     }
@@ -2298,9 +2298,7 @@ impl Component for ShapeTokens {
                     "undeclared ControlCornerRadius = {control:?}, expected WinUI default {WINUI_DEFAULT_CONTROL_CORNER_RADIUS}"
                 ));
             }
-            println!(
-                "# ControlCornerRadius = {control:?}, OverlayCornerRadius = {overlay:?}"
-            );
+            println!("# ControlCornerRadius = {control:?}, OverlayCornerRadius = {overlay:?}");
             Ok(())
         })();
         if !self.complete.call(result) {
@@ -2444,8 +2442,8 @@ impl Component for WindowPlacement {
     }
 
     fn view(&self, _input: &Self::Input, context: &mut ViewContext<Self>) -> View {
-        let visuals = WindowVisuals::new()
-            .client_size(PLACEMENT_CLIENT_SIZE.0, PLACEMENT_CLIENT_SIZE.1);
+        let visuals =
+            WindowVisuals::new().client_size(PLACEMENT_CLIENT_SIZE.0, PLACEMENT_CLIENT_SIZE.1);
         // 阶段 0 声明居中；1/2/3 声明同一份坐标——阶段 3 要验证的正是"声明没变就不动窗口"。
         let visuals = if self.stage == 0 {
             visuals.centered()
@@ -2456,13 +2454,17 @@ impl Component for WindowPlacement {
 
         if self.stage < PLACEMENT_STAGES {
             let sender = context.sender();
-            context.use_effect("window-placement", (self.stage, self.generation), move || {
-                if !sender.send(PlacementMessage::Check) {
-                    eprintln!("window placement probe message was rejected");
-                    std::process::exit(1);
-                }
-                None
-            });
+            context.use_effect(
+                "window-placement",
+                (self.stage, self.generation),
+                move || {
+                    if !sender.send(PlacementMessage::Check) {
+                        eprintln!("window placement probe message was rejected");
+                        std::process::exit(1);
+                    }
+                    None
+                },
+            );
         }
         TextBlock::new().text("window placement probe").into()
     }
@@ -2474,7 +2476,7 @@ fn measure_window_placement(
     stage: usize,
     manual: Option<(i32, i32)>,
 ) -> Result<PlacementMeasurement, String> {
-    let hwnd = HWND(handle.as_raw() as *mut _);
+    let hwnd: HWND = handle.as_raw() as HWND;
     let mut outer = RECT::default();
     if !unsafe { GetWindowRect(hwnd, &mut outer) }.as_bool() {
         return Err("could not read the placement probe window rect".to_string());
@@ -2501,8 +2503,16 @@ fn measure_window_placement(
         / 2.0;
     println!(
         "# placement stage {stage}: outer = ({}, {}) {}x{}, client = {}x{}, work = ({}, {}) {}x{}, scale = {scale:.3}",
-        outer.left, outer.top, size.0, size.1, client.right, client.bottom,
-        work.left, work.top, work_size.0, work_size.1
+        outer.left,
+        outer.top,
+        size.0,
+        size.1,
+        client.right,
+        client.bottom,
+        work.left,
+        work.top,
+        work_size.0,
+        work_size.1
     );
 
     let declared_pixels = |dips: f64| (dips * scale).round() as i32;
@@ -2519,17 +2529,29 @@ fn measure_window_placement(
                 work.left + (work_size.0 - size.0) / 2,
                 work.top + (work_size.1 - size.1) / 2,
             );
-            check_window_position("centered on the work area", (outer.left, outer.top), expected)?;
+            check_window_position(
+                "centered on the work area",
+                (outer.left, outer.top),
+                expected,
+            )?;
             Ok(PlacementMeasurement { manual: None })
         }
         // 阶段 1：外框左上角 == 声明的 DIP 位置换算成物理像素。
         1 => {
-            check_window_position("declared position", (outer.left, outer.top), declared_origin)?;
+            check_window_position(
+                "declared position",
+                (outer.left, outer.top),
+                declared_origin,
+            )?;
             Ok(PlacementMeasurement { manual: None })
         }
         // 阶段 2：先确认声明生效，再手动挪开，并确认挪动真的落到了窗口上。
         2 => {
-            check_window_position("declared position", (outer.left, outer.top), declared_origin)?;
+            check_window_position(
+                "declared position",
+                (outer.left, outer.top),
+                declared_origin,
+            )?;
             let manual = (
                 outer.left + PLACEMENT_MANUAL_SHIFT.0,
                 outer.top + PLACEMENT_MANUAL_SHIFT.1,
@@ -2558,7 +2580,9 @@ fn measure_window_placement(
                 "# placement stage 2: window moved manually to ({}, {})",
                 manual.0, manual.1
             );
-            Ok(PlacementMeasurement { manual: Some(manual) })
+            Ok(PlacementMeasurement {
+                manual: Some(manual),
+            })
         }
         // 阶段 3：声明值与阶段 2 完全相同，窗口必须留在手动挪开的位置。
         3 => {
@@ -2576,10 +2600,7 @@ fn measure_window_placement(
 
 /// 位置比对：允许 [`PLACEMENT_TOLERANCE_PX`] 的取整误差。
 fn check_window_position(what: &str, actual: (i32, i32), expected: (i32, i32)) -> FixtureResult {
-    let off = (
-        (actual.0 - expected.0).abs(),
-        (actual.1 - expected.1).abs(),
-    );
+    let off = ((actual.0 - expected.0).abs(), (actual.1 - expected.1).abs());
     if off.0 > PLACEMENT_TOLERANCE_PX || off.1 > PLACEMENT_TOLERANCE_PX {
         return Err(format!(
             "{what}: window at {actual:?}, expected {expected:?} (±{PLACEMENT_TOLERANCE_PX}px)"
@@ -2600,7 +2621,8 @@ fn verify_geometry_queries(
     scale: f64,
 ) -> FixtureResult {
     // 主显示器工作区（独立读法：主显示器 = 包含虚拟屏幕原点 (0,0) 的那块）。
-    let primary = unsafe { MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY as u32) };
+    let primary =
+        unsafe { MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY as u32) };
     let mut primary_info = MONITORINFO {
         cbSize: size_of::<MONITORINFO>() as u32,
         ..Default::default()
@@ -2614,18 +2636,32 @@ fn verify_geometry_queries(
             .then(|| format!("{what}: {actual}, expected {expected}"))
     };
 
-    let area = primary_work_area()
-        .ok_or_else(|| "primary_work_area returned None".to_string())?;
-    if let Some(error) = close("primary_work_area().x", area.x, f64::from(primary_work.left))
-        .or_else(|| close("primary_work_area().y", area.y, f64::from(primary_work.top)))
-        .or_else(|| close("primary_work_area().width", area.width, f64::from(primary_work.right - primary_work.left)))
-        .or_else(|| close("primary_work_area().height", area.height, f64::from(primary_work.bottom - primary_work.top)))
-    {
+    let area = primary_work_area().ok_or_else(|| "primary_work_area returned None".to_string())?;
+    if let Some(error) = close(
+        "primary_work_area().x",
+        area.x,
+        f64::from(primary_work.left),
+    )
+    .or_else(|| close("primary_work_area().y", area.y, f64::from(primary_work.top)))
+    .or_else(|| {
+        close(
+            "primary_work_area().width",
+            area.width,
+            f64::from(primary_work.right - primary_work.left),
+        )
+    })
+    .or_else(|| {
+        close(
+            "primary_work_area().height",
+            area.height,
+            f64::from(primary_work.bottom - primary_work.top),
+        )
+    }) {
         return Err(error);
     }
 
-    let (dip_width, dip_height) = primary_work_area_dip()
-        .ok_or_else(|| "primary_work_area_dip returned None".to_string())?;
+    let (dip_width, dip_height) =
+        primary_work_area_dip().ok_or_else(|| "primary_work_area_dip returned None".to_string())?;
     if let Some(error) = close("primary_work_area_dip().0", dip_width, area.width / scale)
         .or_else(|| close("primary_work_area_dip().1", dip_height, area.height / scale))
     {
@@ -2634,10 +2670,25 @@ fn verify_geometry_queries(
 
     let window_area = work_area_for_window(handle)
         .ok_or_else(|| "work_area_for_window returned None".to_string())?;
-    if let Some(error) = close("work_area_for_window().x", window_area.x, f64::from(monitor_work.left))
-        .or_else(|| close("work_area_for_window().width", window_area.width, f64::from(monitor_work.right - monitor_work.left)))
-        .or_else(|| close("work_area_for_window().height", window_area.height, f64::from(monitor_work.bottom - monitor_work.top)))
-    {
+    if let Some(error) = close(
+        "work_area_for_window().x",
+        window_area.x,
+        f64::from(monitor_work.left),
+    )
+    .or_else(|| {
+        close(
+            "work_area_for_window().width",
+            window_area.width,
+            f64::from(monitor_work.right - monitor_work.left),
+        )
+    })
+    .or_else(|| {
+        close(
+            "work_area_for_window().height",
+            window_area.height,
+            f64::from(monitor_work.bottom - monitor_work.top),
+        )
+    }) {
         return Err(error);
     }
 

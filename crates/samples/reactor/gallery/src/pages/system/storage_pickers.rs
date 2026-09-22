@@ -16,7 +16,7 @@ pub enum Message {
 
 fn pick_single_file() -> Result<String, windows::core::Error> {
     let window = unsafe { GetActiveWindow() };
-    if window.0.is_null() {
+    if window.is_null() {
         return Ok(String::from("No active window."));
     }
     let picker = FileOpenPicker::new()?;
