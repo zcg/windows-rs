@@ -56,6 +56,17 @@ pub(crate) fn generate_control_bindings_filter(schema: &ResolvedSchema) -> Strin
                         "Microsoft::UI::Xaml::IVector3Transition::put_Duration".to_string(),
                     );
                 }
+                Some(PropertyAdapter::ImplicitTranslation) => {
+                    entries.insert("Microsoft::UI::Xaml::IUIElement::put_Translation".to_string());
+                }
+                Some(PropertyAdapter::ImplicitTranslationTransition) => {
+                    entries.insert(
+                        "Microsoft::UI::Xaml::Vector3Transition::CreateInstance".to_string(),
+                    );
+                    entries.insert(
+                        "Microsoft::UI::Xaml::IVector3Transition::put_Duration".to_string(),
+                    );
+                }
                 Some(PropertyAdapter::ImplicitScale) => {
                     entries.insert(
                         "Microsoft::UI::Xaml::IFrameworkElement::get_ActualWidth".to_string(),
@@ -153,6 +164,19 @@ pub(crate) fn generate_control_bindings_filter(schema: &ResolvedSchema) -> Strin
                 entries
                     .insert("Microsoft::UI::Xaml::Media::ISolidColorBrush::put_Color".to_string());
                 entries.insert("Windows::UI::Color".to_string());
+                // `Brush::Acrylic`（毛玻璃）走同一条 theme_style 属性路径。
+                entries
+                    .insert("Microsoft::UI::Xaml::Media::AcrylicBrush::CreateInstance".to_string());
+                entries
+                    .insert("Microsoft::UI::Xaml::Media::IAcrylicBrush::put_TintColor".to_string());
+                entries.insert(
+                    "Microsoft::UI::Xaml::Media::IAcrylicBrush::put_TintOpacity".to_string(),
+                );
+                // 亮度不透明度在 `IAcrylicBrush2` 上（`IAcrylicBrush` 只有着色两项）。
+                entries.insert(
+                    "Microsoft::UI::Xaml::Media::IAcrylicBrush2::put_TintLuminosityOpacity"
+                        .to_string(),
+                );
             }
             if property.adapter == Some(PropertyAdapter::ImageUri) {
                 entries.insert("Windows::Foundation::Uri::CreateUri".to_string());
@@ -2131,6 +2155,30 @@ fn generate_set_property(control: &ResolvedControl, property: &ResolvedProperty)
             }
         };
     }
+    if property.adapter == Some(PropertyAdapter::ImplicitTranslation) {
+        return quote! {
+            (
+                Handle::#control_name(control),
+                PropertyId::#property_id,
+                PropertyValue::Vector3(value),
+            ) => #receiver.#setter(*value).map_err(native_error)
+        };
+    }
+    if property.adapter == Some(PropertyAdapter::ImplicitTranslationTransition) {
+        return quote! {
+            (
+                Handle::#control_name(control),
+                PropertyId::#property_id,
+                PropertyValue::Duration(value),
+            ) => {
+                let duration = windows_time::TimeSpan::try_from(*value)
+                    .map_err(|_| RuntimeError::UnsupportedKind)?;
+                let transition = Vector3Transition::new().map_err(native_error)?;
+                transition.SetDuration(duration).map_err(native_error)?;
+                #receiver.#setter(&transition).map_err(native_error)
+            }
+        };
+    }
     if property.value == "Color" {
         return quote! {
             (
@@ -2479,6 +2527,36 @@ fn generate_set_property(control: &ResolvedControl, property: &ResolvedProperty)
                     .map_err(native_error)?;
                 #receiver.#setter(&brush).map_err(native_error)
             }
+            (
+                Handle::#control_name(control),
+                PropertyId::#property_id,
+                PropertyValue::#value_variant(crate::Brush::Acrylic(acrylic)),
+            ) => {
+                let brush = AcrylicBrush::new().map_err(native_error)?;
+                {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintColor(bindings::Color {
+                            a: acrylic.tint.a,
+                            r: acrylic.tint.r,
+                            g: acrylic.tint.g,
+                            b: acrylic.tint.b,
+                        })
+                        .map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                        .map_err(native_error)?;
+                    if let Some(luminosity) = acrylic.luminosity_opacity {
+                        let acrylic_brush = brush
+                            .cast::<IAcrylicBrush2>()
+                            .map_err(native_error)?;
+                        acrylic_brush
+                            .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                            .map_err(native_error)?;
+                    }
+                }
+                #receiver.#setter(&brush).map_err(native_error)
+            }
         };
     }
     let value = if property.value == "Str" {
@@ -2546,6 +2624,7 @@ fn generate_clear_property(control: &ResolvedControl, property: &ResolvedPropert
     let receiver = property_receiver(control, property);
     if property.adapter == Some(PropertyAdapter::ImplicitOpacityTransition)
         || property.adapter == Some(PropertyAdapter::ImplicitScaleTransition)
+        || property.adapter == Some(PropertyAdapter::ImplicitTranslationTransition)
     {
         let setter = ident(&format!("Set{}", property.name));
         let transition = if property.adapter == Some(PropertyAdapter::ImplicitOpacityTransition) {
@@ -2567,6 +2646,18 @@ fn generate_clear_property(control: &ResolvedControl, property: &ResolvedPropert
                         x: 1.0,
                         y: 1.0,
                         z: 1.0,
+                })
+                .map_err(native_error)
+        };
+    }
+    if property.adapter == Some(PropertyAdapter::ImplicitTranslation) {
+        let setter = ident(&format!("Set{}", property.name));
+        return quote! {
+            (Handle::#control_name(control), PropertyId::#property_id) => #receiver
+                .#setter(windows_numerics::Vector3 {
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
                 })
                 .map_err(native_error)
         };

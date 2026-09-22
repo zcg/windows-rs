@@ -60,6 +60,11 @@ context.window_frame("Canvas keyboard input", content)
 
 Use `ViewContext::window_title` directly when the window should retain the system title bar.
 
+`WindowVisuals::centered` places a new window in the middle of its display's work area (the taskbar
+is already excluded), and `WindowVisuals::client_position` declares an explicit position instead -
+for example one remembered from a previous session. Both are applied once, when the declared value
+changes.
+
 Focusable custom surfaces can make synchronous WinUI routing decisions without running component
 updates inside native callbacks:
 

@@ -1090,6 +1090,34 @@ pub fn set_property(
         }
         (
             Handle::TextBlock(control),
+            PropertyId::TextBlockForeground,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
+            control.SetForeground(&brush).map_err(native_error)
+        }
+        (
+            Handle::TextBlock(control),
             PropertyId::TextBlockIsHitTestVisible,
             PropertyValue::Bool(value),
         ) => control
@@ -1158,6 +1186,38 @@ pub fn set_property(
         }
         (
             Handle::Button(control),
+            PropertyId::ButtonBackground,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetBackground(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::Button(control),
             PropertyId::ButtonForeground,
             PropertyValue::Brush(crate::Brush::Solid(color)),
         ) => {
@@ -1170,6 +1230,38 @@ pub fn set_property(
                     b: color.b,
                 })
                 .map_err(native_error)?;
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetForeground(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::Button(control),
+            PropertyId::ButtonForeground,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
             control
                 .cast::<IControl>()
                 .map_err(native_error)?
@@ -1344,6 +1436,34 @@ pub fn set_property(
         }
         (
             Handle::Border(control),
+            PropertyId::BorderBackground,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
+            control.SetBackground(&brush).map_err(native_error)
+        }
+        (
+            Handle::Border(control),
             PropertyId::BorderBorderBrush,
             PropertyValue::Brush(crate::Brush::Solid(color)),
         ) => {
@@ -1356,6 +1476,34 @@ pub fn set_property(
                     b: color.b,
                 })
                 .map_err(native_error)?;
+            control.SetBorderBrush(&brush).map_err(native_error)
+        }
+        (
+            Handle::Border(control),
+            PropertyId::BorderBorderBrush,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
             control.SetBorderBrush(&brush).map_err(native_error)
         }
         (
@@ -1375,17 +1523,13 @@ pub fn set_property(
         }
         (Handle::Border(control), PropertyId::BorderScale, PropertyValue::F64(value)) => {
             let control = control.cast::<IUIElement>().map_err(native_error)?;
-            let element = control.cast::<IFrameworkElement>().map_err(native_error)?;
-            let width = element.ActualWidth().map_err(native_error)? as f32;
-            let height = element.ActualHeight().map_err(native_error)? as f32;
-            control
-                .SetCenterPoint(windows_numerics::Vector3 {
-                    x: width / 2.0,
-                    y: height / 2.0,
-                    z: 0.0,
-                })
-                .map_err(native_error)?;
             let value = *value as f32;
+            // 缩放原点（`CenterPoint`）**不在这里**按 `ActualWidth/Height` 反算：
+            // 挂载首帧元素尚未测量（读到 0），反算出来就是 (0,0)（左上角）——以
+            // "已激活"状态挂载的元素会把整个缩放偏到右下；而且只在本次下发时算一次，
+            // 元素之后随窗口/列宽改变尺寸时原点仍是旧值。
+            // 原点改由运行时在**真实测量尺寸**上维持（`WinUiRuntime::sync_scale_center`：
+            // 下发时立即设一次 + `SizeChanged` 跟随后续尺寸变化）。
             control
                 .SetScale(windows_numerics::Vector3 {
                     x: value,
@@ -1407,6 +1551,28 @@ pub fn set_property(
                 .cast::<IUIElement>()
                 .map_err(native_error)?
                 .SetScaleTransition(&transition)
+                .map_err(native_error)
+        }
+        (Handle::Border(control), PropertyId::BorderTranslation, PropertyValue::Vector3(value)) => {
+            control
+                .cast::<IUIElement>()
+                .map_err(native_error)?
+                .SetTranslation(*value)
+                .map_err(native_error)
+        }
+        (
+            Handle::Border(control),
+            PropertyId::BorderTranslationTransition,
+            PropertyValue::Duration(value),
+        ) => {
+            let duration = windows_time::TimeSpan::try_from(*value)
+                .map_err(|_| RuntimeError::UnsupportedKind)?;
+            let transition = Vector3Transition::new().map_err(native_error)?;
+            transition.SetDuration(duration).map_err(native_error)?;
+            control
+                .cast::<IUIElement>()
+                .map_err(native_error)?
+                .SetTranslationTransition(&transition)
                 .map_err(native_error)
         }
         (Handle::Border(_), PropertyId::BorderCapturePointerOnPress, PropertyValue::Bool(_)) => {
@@ -1534,6 +1700,38 @@ pub fn set_property(
                 .SetBackground(&brush)
                 .map_err(native_error)
         }
+        (
+            Handle::Grid(control),
+            PropertyId::GridBackground,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
+            control
+                .cast::<IPanel>()
+                .map_err(native_error)?
+                .SetBackground(&brush)
+                .map_err(native_error)
+        }
         (Handle::Grid(control), PropertyId::GridIsHitTestVisible, PropertyValue::Bool(value)) => {
             control
                 .cast::<IUIElement>()
@@ -1616,6 +1814,38 @@ pub fn set_property(
         }
         (
             Handle::TextBox(control),
+            PropertyId::TextBoxBackground,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetBackground(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::TextBox(control),
             PropertyId::TextBoxBorderBrush,
             PropertyValue::Brush(crate::Brush::Solid(color)),
         ) => {
@@ -1628,6 +1858,38 @@ pub fn set_property(
                     b: color.b,
                 })
                 .map_err(native_error)?;
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetBorderBrush(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::TextBox(control),
+            PropertyId::TextBoxBorderBrush,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
             control
                 .cast::<IControl>()
                 .map_err(native_error)?
@@ -1651,6 +1913,9 @@ pub fn set_property(
                 }
             })
             .map_err(native_error),
+        (Handle::TextBox(_), PropertyId::TextBoxResources, PropertyValue::ResourceOverrides(_)) => {
+            Err(RuntimeError::UnsupportedKind)
+        }
         (
             Handle::AutoSuggestBox(control),
             PropertyId::AutoSuggestBoxText,
@@ -1738,6 +2003,11 @@ pub fn set_property(
             .map_err(native_error)?
             .SetIsEnabled(*value)
             .map_err(native_error),
+        (
+            Handle::NumberBox(_),
+            PropertyId::NumberBoxResources,
+            PropertyValue::ResourceOverrides(_),
+        ) => Err(RuntimeError::UnsupportedKind),
         (Handle::Slider(control), PropertyId::SliderMinimum, PropertyValue::F64(value)) => control
             .cast::<IRangeBase>()
             .map_err(native_error)?
@@ -1779,6 +2049,26 @@ pub fn set_property(
             PropertyValue::Bool(value),
         ) => control
             .SetIsThumbToolTipEnabled(*value)
+            .map_err(native_error),
+        (Handle::Slider(_), PropertyId::SliderResources, PropertyValue::ResourceOverrides(_)) => {
+            Err(RuntimeError::UnsupportedKind)
+        }
+        (
+            Handle::Slider(control),
+            PropertyId::SliderCornerRadius,
+            PropertyValue::CornerRadius(value),
+        ) => control
+            .cast::<IControl>()
+            .map_err(native_error)?
+            .SetCornerRadius({
+                let [top_left, top_right, bottom_right, bottom_left] = value.values();
+                bindings::CornerRadius {
+                    top_left,
+                    top_right,
+                    bottom_right,
+                    bottom_left,
+                }
+            })
             .map_err(native_error),
         (Handle::TitleBar(control), PropertyId::TitleBarTitle, PropertyValue::Str(value)) => {
             control.SetTitle(value).map_err(native_error)
@@ -2050,12 +2340,66 @@ pub fn set_property(
         }
         (
             Handle::ProgressBar(control),
+            PropertyId::ProgressBarForeground,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetForeground(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::ProgressBar(control),
             PropertyId::ProgressBarIsHitTestVisible,
             PropertyValue::Bool(value),
         ) => control
             .cast::<IUIElement>()
             .map_err(native_error)?
             .SetIsHitTestVisible(*value)
+            .map_err(native_error),
+        (
+            Handle::ProgressBar(_),
+            PropertyId::ProgressBarResources,
+            PropertyValue::ResourceOverrides(_),
+        ) => Err(RuntimeError::UnsupportedKind),
+        (
+            Handle::ProgressBar(control),
+            PropertyId::ProgressBarCornerRadius,
+            PropertyValue::CornerRadius(value),
+        ) => control
+            .cast::<IControl>()
+            .map_err(native_error)?
+            .SetCornerRadius({
+                let [top_left, top_right, bottom_right, bottom_left] = value.values();
+                bindings::CornerRadius {
+                    top_left,
+                    top_right,
+                    bottom_right,
+                    bottom_left,
+                }
+            })
             .map_err(native_error),
         (
             Handle::ToggleSwitch(control),
@@ -2071,6 +2415,28 @@ pub fn set_property(
             .map_err(native_error)?
             .SetIsEnabled(*value)
             .map_err(native_error),
+        (
+            Handle::ToggleSwitch(_),
+            PropertyId::ToggleSwitchResources,
+            PropertyValue::ResourceOverrides(_),
+        ) => Err(RuntimeError::UnsupportedKind),
+        (
+            Handle::ToggleSwitch(control),
+            PropertyId::ToggleSwitchCornerRadius,
+            PropertyValue::CornerRadius(value),
+        ) => control
+            .cast::<IControl>()
+            .map_err(native_error)?
+            .SetCornerRadius({
+                let [top_left, top_right, bottom_right, bottom_left] = value.values();
+                bindings::CornerRadius {
+                    top_left,
+                    top_right,
+                    bottom_right,
+                    bottom_left,
+                }
+            })
+            .map_err(native_error),
         (Handle::CheckBox(control), PropertyId::CheckBoxIsChecked, PropertyValue::Bool(value)) => {
             control
                 .cast::<IToggleButton>()
@@ -2085,6 +2451,11 @@ pub fn set_property(
                 .SetIsEnabled(*value)
                 .map_err(native_error)
         }
+        (
+            Handle::CheckBox(_),
+            PropertyId::CheckBoxResources,
+            PropertyValue::ResourceOverrides(_),
+        ) => Err(RuntimeError::UnsupportedKind),
         (
             Handle::ToggleButton(control),
             PropertyId::ToggleButtonIsChecked,
@@ -2354,6 +2725,38 @@ pub fn set_property(
         }
         (
             Handle::ProgressRing(control),
+            PropertyId::ProgressRingForeground,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
+            control
+                .cast::<IControl>()
+                .map_err(native_error)?
+                .SetForeground(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::ProgressRing(control),
             PropertyId::ProgressRingIsHitTestVisible,
             PropertyValue::Bool(value),
         ) => control
@@ -2390,6 +2793,38 @@ pub fn set_property(
         }
         (
             Handle::Rectangle(control),
+            PropertyId::RectangleFill,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
+            control
+                .cast::<IShape>()
+                .map_err(native_error)?
+                .SetFill(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::Rectangle(control),
             PropertyId::RectangleStroke,
             PropertyValue::Brush(crate::Brush::Solid(color)),
         ) => {
@@ -2402,6 +2837,38 @@ pub fn set_property(
                     b: color.b,
                 })
                 .map_err(native_error)?;
+            control
+                .cast::<IShape>()
+                .map_err(native_error)?
+                .SetStroke(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::Rectangle(control),
+            PropertyId::RectangleStroke,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
             control
                 .cast::<IShape>()
                 .map_err(native_error)?
@@ -2445,6 +2912,38 @@ pub fn set_property(
         }
         (
             Handle::Ellipse(control),
+            PropertyId::EllipseFill,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
+            control
+                .cast::<IShape>()
+                .map_err(native_error)?
+                .SetFill(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::Ellipse(control),
             PropertyId::EllipseStroke,
             PropertyValue::Brush(crate::Brush::Solid(color)),
         ) => {
@@ -2457,6 +2956,38 @@ pub fn set_property(
                     b: color.b,
                 })
                 .map_err(native_error)?;
+            control
+                .cast::<IShape>()
+                .map_err(native_error)?
+                .SetStroke(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::Ellipse(control),
+            PropertyId::EllipseStroke,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
             control
                 .cast::<IShape>()
                 .map_err(native_error)?
@@ -2486,6 +3017,38 @@ pub fn set_property(
                     b: color.b,
                 })
                 .map_err(native_error)?;
+            control
+                .cast::<IShape>()
+                .map_err(native_error)?
+                .SetStroke(&brush)
+                .map_err(native_error)
+        }
+        (
+            Handle::Line(control),
+            PropertyId::LineStroke,
+            PropertyValue::Brush(crate::Brush::Acrylic(acrylic)),
+        ) => {
+            let brush = AcrylicBrush::new().map_err(native_error)?;
+            {
+                let acrylic_brush = brush.cast::<IAcrylicBrush>().map_err(native_error)?;
+                acrylic_brush
+                    .SetTintColor(bindings::Color {
+                        a: acrylic.tint.a,
+                        r: acrylic.tint.r,
+                        g: acrylic.tint.g,
+                        b: acrylic.tint.b,
+                    })
+                    .map_err(native_error)?;
+                acrylic_brush
+                    .SetTintOpacity(f64::from(acrylic.tint_opacity) / 100.0)
+                    .map_err(native_error)?;
+                if let Some(luminosity) = acrylic.luminosity_opacity {
+                    let acrylic_brush = brush.cast::<IAcrylicBrush2>().map_err(native_error)?;
+                    acrylic_brush
+                        .SetTintLuminosityOpacity(Some(f64::from(luminosity) / 100.0))
+                        .map_err(native_error)?;
+                }
+            }
             control
                 .cast::<IShape>()
                 .map_err(native_error)?
@@ -2843,6 +3406,28 @@ pub fn set_property(
                 .SetIsEnabled(*value)
                 .map_err(native_error)
         }
+        (
+            Handle::ComboBox(_),
+            PropertyId::ComboBoxResources,
+            PropertyValue::ResourceOverrides(_),
+        ) => Err(RuntimeError::UnsupportedKind),
+        (
+            Handle::ComboBox(control),
+            PropertyId::ComboBoxCornerRadius,
+            PropertyValue::CornerRadius(value),
+        ) => control
+            .cast::<IControl>()
+            .map_err(native_error)?
+            .SetCornerRadius({
+                let [top_left, top_right, bottom_right, bottom_left] = value.values();
+                bindings::CornerRadius {
+                    top_left,
+                    top_right,
+                    bottom_right,
+                    bottom_left,
+                }
+            })
+            .map_err(native_error),
         (
             Handle::Pivot(control),
             PropertyId::PivotSelectedIndex,
@@ -3811,6 +4396,20 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
             .map_err(native_error)?
             .SetScaleTransition(None::<&Vector3Transition>)
             .map_err(native_error),
+        (Handle::Border(control), PropertyId::BorderTranslation) => control
+            .cast::<IUIElement>()
+            .map_err(native_error)?
+            .SetTranslation(windows_numerics::Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            })
+            .map_err(native_error),
+        (Handle::Border(control), PropertyId::BorderTranslationTransition) => control
+            .cast::<IUIElement>()
+            .map_err(native_error)?
+            .SetTranslationTransition(None::<&Vector3Transition>)
+            .map_err(native_error),
         (Handle::Border(_), PropertyId::BorderCapturePointerOnPress) => {
             Err(RuntimeError::UnsupportedKind)
         }
@@ -3912,6 +4511,7 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
         (Handle::TextBox(_), PropertyId::TextBoxBorderThickness) => dependency_object
             .ClearValue(&bindings::Control::BorderThicknessProperty().map_err(native_error)?)
             .map_err(native_error),
+        (Handle::TextBox(_), PropertyId::TextBoxResources) => Err(RuntimeError::UnsupportedKind),
         (Handle::AutoSuggestBox(_), PropertyId::AutoSuggestBoxText) => dependency_object
             .ClearValue(&bindings::AutoSuggestBox::TextProperty().map_err(native_error)?)
             .map_err(native_error),
@@ -3948,6 +4548,9 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
         (Handle::NumberBox(_), PropertyId::NumberBoxIsEnabled) => dependency_object
             .ClearValue(&bindings::Control::IsEnabledProperty().map_err(native_error)?)
             .map_err(native_error),
+        (Handle::NumberBox(_), PropertyId::NumberBoxResources) => {
+            Err(RuntimeError::UnsupportedKind)
+        }
         (Handle::Slider(_), PropertyId::SliderMinimum) => dependency_object
             .ClearValue(&bindings::RangeBase::MinimumProperty().map_err(native_error)?)
             .map_err(native_error),
@@ -3968,6 +4571,10 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
             .map_err(native_error),
         (Handle::Slider(_), PropertyId::SliderIsThumbToolTipEnabled) => dependency_object
             .ClearValue(&bindings::Slider::IsThumbToolTipEnabledProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::Slider(_), PropertyId::SliderResources) => Err(RuntimeError::UnsupportedKind),
+        (Handle::Slider(_), PropertyId::SliderCornerRadius) => dependency_object
+            .ClearValue(&bindings::Control::CornerRadiusProperty().map_err(native_error)?)
             .map_err(native_error),
         (Handle::TitleBar(_), PropertyId::TitleBarTitle) => dependency_object
             .ClearValue(&bindings::TitleBar::TitleProperty().map_err(native_error)?)
@@ -4102,11 +4709,23 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
         (Handle::ProgressBar(_), PropertyId::ProgressBarIsHitTestVisible) => dependency_object
             .ClearValue(&bindings::UIElement::IsHitTestVisibleProperty().map_err(native_error)?)
             .map_err(native_error),
+        (Handle::ProgressBar(_), PropertyId::ProgressBarResources) => {
+            Err(RuntimeError::UnsupportedKind)
+        }
+        (Handle::ProgressBar(_), PropertyId::ProgressBarCornerRadius) => dependency_object
+            .ClearValue(&bindings::Control::CornerRadiusProperty().map_err(native_error)?)
+            .map_err(native_error),
         (Handle::ToggleSwitch(_), PropertyId::ToggleSwitchIsOn) => dependency_object
             .ClearValue(&bindings::ToggleSwitch::IsOnProperty().map_err(native_error)?)
             .map_err(native_error),
         (Handle::ToggleSwitch(_), PropertyId::ToggleSwitchIsEnabled) => dependency_object
             .ClearValue(&bindings::Control::IsEnabledProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::ToggleSwitch(_), PropertyId::ToggleSwitchResources) => {
+            Err(RuntimeError::UnsupportedKind)
+        }
+        (Handle::ToggleSwitch(_), PropertyId::ToggleSwitchCornerRadius) => dependency_object
+            .ClearValue(&bindings::Control::CornerRadiusProperty().map_err(native_error)?)
             .map_err(native_error),
         (Handle::CheckBox(_), PropertyId::CheckBoxIsChecked) => dependency_object
             .ClearValue(&bindings::ToggleButton::IsCheckedProperty().map_err(native_error)?)
@@ -4114,6 +4733,7 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
         (Handle::CheckBox(_), PropertyId::CheckBoxIsEnabled) => dependency_object
             .ClearValue(&bindings::Control::IsEnabledProperty().map_err(native_error)?)
             .map_err(native_error),
+        (Handle::CheckBox(_), PropertyId::CheckBoxResources) => Err(RuntimeError::UnsupportedKind),
         (Handle::ToggleButton(_), PropertyId::ToggleButtonIsChecked) => dependency_object
             .ClearValue(&bindings::ToggleButton::IsCheckedProperty().map_err(native_error)?)
             .map_err(native_error),
@@ -4334,6 +4954,10 @@ pub fn clear_property(handle: &Handle, property: PropertyId) -> Result<(), Runti
             .map_err(native_error),
         (Handle::ComboBox(_), PropertyId::ComboBoxIsEnabled) => dependency_object
             .ClearValue(&bindings::Control::IsEnabledProperty().map_err(native_error)?)
+            .map_err(native_error),
+        (Handle::ComboBox(_), PropertyId::ComboBoxResources) => Err(RuntimeError::UnsupportedKind),
+        (Handle::ComboBox(_), PropertyId::ComboBoxCornerRadius) => dependency_object
+            .ClearValue(&bindings::Control::CornerRadiusProperty().map_err(native_error)?)
             .map_err(native_error),
         (Handle::Pivot(_), PropertyId::PivotSelectedIndex) => dependency_object
             .ClearValue(&bindings::Pivot::SelectedIndexProperty().map_err(native_error)?)
@@ -6398,6 +7022,31 @@ pub fn subscribe_event(
                         Err(error) => sink.error(
                             node,
                             EventId::AutoSuggestBoxSuggestionChosen,
+                            revision,
+                            native_error(error),
+                        ),
+                    }
+                }
+            })
+        }
+        .map(|revoker| NativeSubscription::Event {
+            _revoker: revoker,
+            revision,
+        })
+        .map_err(native_error),
+        (Handle::AutoSuggestBox(value), EventId::AutoSuggestBoxQuerySubmitted) => {
+            value.QuerySubmitted(move |_, args| {
+                if let Some(args) = args.as_ref() {
+                    match args.QueryText() {
+                        Ok(value) => sink.enqueue(
+                            node,
+                            EventId::AutoSuggestBoxQuerySubmitted,
+                            revision,
+                            EventPayload::Str(value),
+                        ),
+                        Err(error) => sink.error(
+                            node,
+                            EventId::AutoSuggestBoxQuerySubmitted,
                             revision,
                             native_error(error),
                         ),

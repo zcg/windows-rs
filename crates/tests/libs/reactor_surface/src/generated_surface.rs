@@ -46,8 +46,8 @@ pub struct ExtensionSurface {
     pub name: &'static str,
 }
 pub(crate) const PROJECTED_CONTROL_COUNT: usize = 100usize;
-pub(crate) const PROJECTED_PROPERTY_COUNT: usize = 283usize;
-pub(crate) const PROJECTED_EVENT_COUNT: usize = 84usize;
+pub(crate) const PROJECTED_PROPERTY_COUNT: usize = 296usize;
+pub(crate) const PROJECTED_EVENT_COUNT: usize = 85usize;
 pub(crate) const CAPABILITY_PROPERTY_COUNT: usize = 27usize;
 pub(crate) const STRUCTURAL_COUNT: usize = 78usize;
 pub(crate) const EXTENSION_COUNT: usize = 5;
@@ -663,6 +663,34 @@ fn property_border_scale_transition(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_border_translation(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Border::new(),)),
+        1 => Grid::new().children((Border::new().translation(Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }),)),
+        2 => Grid::new().children((Border::new().translation(Vector3 {
+            x: 0.0,
+            y: 8.0,
+            z: 0.0,
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn property_border_translation_transition(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Border::new(),)),
+        1 => Grid::new().children((
+            Border::new().translation_transition(std::time::Duration::from_millis(50)),
+        )),
+        2 => Grid::new().children((
+            Border::new().translation_transition(std::time::Duration::from_millis(100)),
+        )),
+        _ => unreachable!(),
+    }
+}
 fn property_border_capture_pointer_on_press(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((Border::new(),)),
@@ -898,6 +926,18 @@ fn property_text_box_border_thickness(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_text_box_resource_overrides(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((TextBox::new(),)),
+        1 => Grid::new().children((TextBox::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonBackground", Color::rgb(32, 64, 96)),
+        ),)),
+        2 => Grid::new().children((TextBox::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonForeground", Color::rgb(96, 64, 32)),
+        ),)),
+        _ => unreachable!(),
+    }
+}
 fn property_auto_suggest_box_text(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((AutoSuggestBox::new(),)),
@@ -1000,6 +1040,18 @@ fn property_number_box_is_enabled(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_number_box_resource_overrides(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((NumberBox::new(),)),
+        1 => Grid::new().children((NumberBox::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonBackground", Color::rgb(32, 64, 96)),
+        ),)),
+        2 => Grid::new().children((NumberBox::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonForeground", Color::rgb(96, 64, 32)),
+        ),)),
+        _ => unreachable!(),
+    }
+}
 fn property_slider_minimum(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((Slider::new(),)),
@@ -1053,6 +1105,26 @@ fn property_slider_is_thumb_tool_tip_enabled(stage: usize) -> View {
         0 | 3 => Grid::new().children((Slider::new(),)),
         1 => Grid::new().children((Slider::new().is_thumb_tool_tip_enabled(true),)),
         2 => Grid::new().children((Slider::new().is_thumb_tool_tip_enabled(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_slider_resource_overrides(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Slider::new(),)),
+        1 => Grid::new().children((Slider::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonBackground", Color::rgb(32, 64, 96)),
+        ),)),
+        2 => Grid::new().children((Slider::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonForeground", Color::rgb(96, 64, 32)),
+        ),)),
+        _ => unreachable!(),
+    }
+}
+fn property_slider_corner_radius(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((Slider::new(),)),
+        1 => Grid::new().children((Slider::new().corner_radius(CornerRadius::uniform(2.0)),)),
+        2 => Grid::new().children((Slider::new().corner_radius(CornerRadius::uniform(4.0)),)),
         _ => unreachable!(),
     }
 }
@@ -1291,6 +1363,26 @@ fn property_progress_bar_is_hit_test_visible(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_progress_bar_resource_overrides(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ProgressBar::new(),)),
+        1 => Grid::new().children((ProgressBar::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonBackground", Color::rgb(32, 64, 96)),
+        ),)),
+        2 => Grid::new().children((ProgressBar::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonForeground", Color::rgb(96, 64, 32)),
+        ),)),
+        _ => unreachable!(),
+    }
+}
+fn property_progress_bar_corner_radius(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ProgressBar::new(),)),
+        1 => Grid::new().children((ProgressBar::new().corner_radius(CornerRadius::uniform(2.0)),)),
+        2 => Grid::new().children((ProgressBar::new().corner_radius(CornerRadius::uniform(4.0)),)),
+        _ => unreachable!(),
+    }
+}
 fn property_toggle_switch_is_on(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((ToggleSwitch::new(),)),
@@ -1307,6 +1399,26 @@ fn property_toggle_switch_is_enabled(stage: usize) -> View {
         _ => unreachable!(),
     }
 }
+fn property_toggle_switch_resource_overrides(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ToggleSwitch::new(),)),
+        1 => Grid::new().children((ToggleSwitch::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonBackground", Color::rgb(32, 64, 96)),
+        ),)),
+        2 => Grid::new().children((ToggleSwitch::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonForeground", Color::rgb(96, 64, 32)),
+        ),)),
+        _ => unreachable!(),
+    }
+}
+fn property_toggle_switch_corner_radius(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ToggleSwitch::new(),)),
+        1 => Grid::new().children((ToggleSwitch::new().corner_radius(CornerRadius::uniform(2.0)),)),
+        2 => Grid::new().children((ToggleSwitch::new().corner_radius(CornerRadius::uniform(4.0)),)),
+        _ => unreachable!(),
+    }
+}
 fn property_check_box_is_checked(stage: usize) -> View {
     match stage {
         0 | 3 => Grid::new().children((CheckBox::new(),)),
@@ -1320,6 +1432,18 @@ fn property_check_box_is_enabled(stage: usize) -> View {
         0 | 3 => Grid::new().children((CheckBox::new(),)),
         1 => Grid::new().children((CheckBox::new().is_enabled(true),)),
         2 => Grid::new().children((CheckBox::new().is_enabled(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_check_box_resource_overrides(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((CheckBox::new(),)),
+        1 => Grid::new().children((CheckBox::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonBackground", Color::rgb(32, 64, 96)),
+        ),)),
+        2 => Grid::new().children((CheckBox::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonForeground", Color::rgb(96, 64, 32)),
+        ),)),
         _ => unreachable!(),
     }
 }
@@ -1891,6 +2015,26 @@ fn property_combo_box_is_enabled(stage: usize) -> View {
         0 | 3 => Grid::new().children((ComboBox::new(),)),
         1 => Grid::new().children((ComboBox::new().is_enabled(true),)),
         2 => Grid::new().children((ComboBox::new().is_enabled(false),)),
+        _ => unreachable!(),
+    }
+}
+fn property_combo_box_resource_overrides(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ComboBox::new(),)),
+        1 => Grid::new().children((ComboBox::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonBackground", Color::rgb(32, 64, 96)),
+        ),)),
+        2 => Grid::new().children((ComboBox::new().resource_overrides(
+            ResourceOverrides::new().set("ButtonForeground", Color::rgb(96, 64, 32)),
+        ),)),
+        _ => unreachable!(),
+    }
+}
+fn property_combo_box_corner_radius(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((ComboBox::new(),)),
+        1 => Grid::new().children((ComboBox::new().corner_radius(CornerRadius::uniform(2.0)),)),
+        2 => Grid::new().children((ComboBox::new().corner_radius(CornerRadius::uniform(4.0)),)),
         _ => unreachable!(),
     }
 }
@@ -3118,6 +3262,18 @@ fn event_auto_suggest_box_on_suggestion_chosen(stage: usize) -> View {
             let _ = 0u8;
         }),)),
         2 => Grid::new().children((AutoSuggestBox::new().on_suggestion_chosen(move |_| {
+            let _ = 1u8;
+        }),)),
+        _ => unreachable!(),
+    }
+}
+fn event_auto_suggest_box_on_query_submitted(stage: usize) -> View {
+    match stage {
+        0 | 3 => Grid::new().children((AutoSuggestBox::new(),)),
+        1 => Grid::new().children((AutoSuggestBox::new().on_query_submitted(move |_| {
+            let _ = 0u8;
+        }),)),
+        2 => Grid::new().children((AutoSuggestBox::new().on_query_submitted(move |_| {
             let _ = 1u8;
         }),)),
         _ => unreachable!(),
@@ -5386,6 +5542,20 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: property_border_scale_transition,
     },
     SurfaceCase {
+        name: "property.Border.Translation",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_border_translation,
+    },
+    SurfaceCase {
+        name: "property.Border.TranslationTransition",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_border_translation_transition,
+    },
+    SurfaceCase {
         name: "property.Border.CapturePointerOnPress",
         kind: SurfaceKind::Property,
         stages: 4,
@@ -5799,6 +5969,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: property_text_box_border_thickness,
     },
     SurfaceCase {
+        name: "property.TextBox.Resources",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_text_box_resource_overrides,
+    },
+    SurfaceCase {
         name: "structural.TextBox.Slot.Header",
         kind: SurfaceKind::Structural,
         stages: 4,
@@ -5867,6 +6044,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: Some(1usize),
         build: event_auto_suggest_box_on_suggestion_chosen,
+    },
+    SurfaceCase {
+        name: "event.AutoSuggestBox.QuerySubmitted",
+        kind: SurfaceKind::Event,
+        stages: 4,
+        subscription_delta: Some(1usize),
+        build: event_auto_suggest_box_on_query_submitted,
     },
     SurfaceCase {
         name: "control.PasswordBox.construct",
@@ -5953,6 +6137,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: property_number_box_is_enabled,
     },
     SurfaceCase {
+        name: "property.NumberBox.Resources",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_number_box_resource_overrides,
+    },
+    SurfaceCase {
         name: "structural.NumberBox.Slot.Header",
         kind: SurfaceKind::Structural,
         stages: 4,
@@ -6021,6 +6212,20 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: None,
         build: property_slider_is_thumb_tool_tip_enabled,
+    },
+    SurfaceCase {
+        name: "property.Slider.Resources",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_slider_resource_overrides,
+    },
+    SurfaceCase {
+        name: "property.Slider.CornerRadius",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_slider_corner_radius,
     },
     SurfaceCase {
         name: "structural.Slider.Slot.Header",
@@ -6373,6 +6578,20 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         build: property_progress_bar_is_hit_test_visible,
     },
     SurfaceCase {
+        name: "property.ProgressBar.Resources",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_progress_bar_resource_overrides,
+    },
+    SurfaceCase {
+        name: "property.ProgressBar.CornerRadius",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_progress_bar_corner_radius,
+    },
+    SurfaceCase {
         name: "control.ToggleSwitch.construct",
         kind: SurfaceKind::Control,
         stages: 1,
@@ -6392,6 +6611,20 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: None,
         build: property_toggle_switch_is_enabled,
+    },
+    SurfaceCase {
+        name: "property.ToggleSwitch.Resources",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_toggle_switch_resource_overrides,
+    },
+    SurfaceCase {
+        name: "property.ToggleSwitch.CornerRadius",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_toggle_switch_corner_radius,
     },
     SurfaceCase {
         name: "structural.ToggleSwitch.Slot.Header",
@@ -6441,6 +6674,13 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: None,
         build: property_check_box_is_enabled,
+    },
+    SurfaceCase {
+        name: "property.CheckBox.Resources",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_check_box_resource_overrides,
     },
     SurfaceCase {
         name: "structural.CheckBox.Content",
@@ -7239,6 +7479,20 @@ pub(crate) static SURFACE_CASES: &[SurfaceCase] = &[
         stages: 4,
         subscription_delta: None,
         build: property_combo_box_is_enabled,
+    },
+    SurfaceCase {
+        name: "property.ComboBox.Resources",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_combo_box_resource_overrides,
+    },
+    SurfaceCase {
+        name: "property.ComboBox.CornerRadius",
+        kind: SurfaceKind::Property,
+        stages: 4,
+        subscription_delta: None,
+        build: property_combo_box_corner_radius,
     },
     SurfaceCase {
         name: "structural.ComboBox.Slot.Header",
@@ -9185,6 +9439,24 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
     },
     PropertySurface {
         control: "Border",
+        property: "Translation",
+        value: "Vector3",
+        adapter: "ImplicitTranslation",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "Border",
+        property: "TranslationTransition",
+        value: "Duration",
+        adapter: "ImplicitTranslationTransition",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "Border",
         property: "CapturePointerOnPress",
         value: "Bool",
         adapter: "PointerCapture",
@@ -9436,6 +9708,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         theme_style: false,
     },
     PropertySurface {
+        control: "TextBox",
+        property: "Resources",
+        value: "ResourceOverrides",
+        adapter: "ResourceOverrides",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
         control: "AutoSuggestBox",
         property: "Text",
         value: "Str",
@@ -9544,6 +9825,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         theme_style: false,
     },
     PropertySurface {
+        control: "NumberBox",
+        property: "Resources",
+        value: "ResourceOverrides",
+        adapter: "ResourceOverrides",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
         control: "Slider",
         property: "Minimum",
         value: "F64",
@@ -9603,6 +9893,24 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         value: "Bool",
         adapter: "direct",
         validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "Slider",
+        property: "Resources",
+        value: "ResourceOverrides",
+        adapter: "ResourceOverrides",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "Slider",
+        property: "CornerRadius",
+        value: "CornerRadius",
+        adapter: "direct",
+        validation: Some("FiniteNonNegative"),
         clearable: true,
         theme_style: false,
     },
@@ -9904,6 +10212,24 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         theme_style: false,
     },
     PropertySurface {
+        control: "ProgressBar",
+        property: "Resources",
+        value: "ResourceOverrides",
+        adapter: "ResourceOverrides",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "ProgressBar",
+        property: "CornerRadius",
+        value: "CornerRadius",
+        adapter: "direct",
+        validation: Some("FiniteNonNegative"),
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
         control: "ToggleSwitch",
         property: "IsOn",
         value: "Bool",
@@ -9922,6 +10248,24 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         theme_style: false,
     },
     PropertySurface {
+        control: "ToggleSwitch",
+        property: "Resources",
+        value: "ResourceOverrides",
+        adapter: "ResourceOverrides",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "ToggleSwitch",
+        property: "CornerRadius",
+        value: "CornerRadius",
+        adapter: "direct",
+        validation: Some("FiniteNonNegative"),
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
         control: "CheckBox",
         property: "IsChecked",
         value: "Bool",
@@ -9935,6 +10279,15 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         property: "IsEnabled",
         value: "Bool",
         adapter: "direct",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "CheckBox",
+        property: "Resources",
+        value: "ResourceOverrides",
+        adapter: "ResourceOverrides",
         validation: None,
         clearable: true,
         theme_style: false,
@@ -10539,6 +10892,24 @@ pub static PROJECTED_PROPERTIES: &[PropertySurface] = &[
         value: "Bool",
         adapter: "direct",
         validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "ComboBox",
+        property: "Resources",
+        value: "ResourceOverrides",
+        adapter: "ResourceOverrides",
+        validation: None,
+        clearable: true,
+        theme_style: false,
+    },
+    PropertySurface {
+        control: "ComboBox",
+        property: "CornerRadius",
+        value: "CornerRadius",
+        adapter: "direct",
+        validation: Some("FiniteNonNegative"),
         clearable: true,
         theme_style: false,
     },
@@ -11672,6 +12043,15 @@ pub static PROJECTED_EVENTS: &[EventSurface] = &[
     EventSurface {
         control: "AutoSuggestBox",
         event: "SuggestionChosen",
+        payload: "Str",
+        conversion: "Identity",
+        subscription: "callback",
+        delivery: "registration+deterministic",
+        active_properties: &[],
+    },
+    EventSurface {
+        control: "AutoSuggestBox",
+        event: "QuerySubmitted",
         payload: "Str",
         conversion: "Identity",
         subscription: "callback",

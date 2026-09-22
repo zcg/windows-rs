@@ -198,3 +198,30 @@ pub fn schedule_live_test_exit(success: bool) -> windows_core::Result<()> {
         std::process::exit(1);
     }
 }
+
+/// 读取 `Application.Resources` 里某个 `CornerRadius` 类型的资源键，用于验证应用级形状
+/// token（[`install_theme_resources`]）真的写进了应用资源字典。
+///
+/// 返回 `None` 表示该键不存在。查询走的是资源字典自己的查找路径，因此在键只由
+/// `XamlControlsResources` 提供时（宿主没有覆盖）同样能读到 WinUI 的默认值。
+///
+/// 必须在 UI 线程调用：`Application.Current` 是线程局的。
+pub fn application_corner_radius(key: &str) -> Result<Option<f64>, RuntimeError> {
+    let resources = Application::Current()
+        .and_then(|application| application.Resources())
+        .map_err(native_error)?;
+    let map = resources
+        .cast::<windows_collections::IMap<windows_core::IInspectable, windows_core::IInspectable>>()
+        .map_err(native_error)?;
+    let key = windows_reference::IReference::from(key);
+    if !map.HasKey(&key).map_err(native_error)? {
+        return Ok(None);
+    }
+    let radius = map
+        .Lookup(&key)
+        .map_err(native_error)?
+        .cast::<windows_reference::IReference<bindings::CornerRadius>>()
+        .and_then(|radius| radius.Value())
+        .map_err(native_error)?;
+    Ok(Some(radius.top_left))
+}

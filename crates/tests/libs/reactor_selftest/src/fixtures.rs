@@ -10,10 +10,10 @@ use windows::UI::Input::Preview::Injection::{
 use windows::Win32::winuser::{
     BringWindowToTop, ClientToScreen, DispatchMessageW, GetClientRect, GetForegroundWindow,
     GetMessageW, GetMonitorInfoW, GetSystemMetrics, GetWindowRect, KillTimer,
-    MONITOR_DEFAULTTONEAREST, MONITORINFO, MSG, MonitorFromWindow, PostQuitMessage,
-    SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SWP_NOSIZE,
-    SWP_NOZORDER, SendInput, SetForegroundWindow, SetTimer, SetWindowPos, TranslateMessage,
-    WM_TIMER,
+    MONITOR_DEFAULTTONEAREST, MONITOR_DEFAULTTOPRIMARY, MONITORINFO, MSG, MonitorFromPoint,
+    MonitorFromWindow, PostQuitMessage, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
+    SM_YVIRTUALSCREEN, SWP_NOSIZE, SWP_NOZORDER, SendInput, SetForegroundWindow, SetTimer,
+    SetWindowPos, TranslateMessage, WM_TIMER,
 };
 use windows::Win32::{
     HWND, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE, POINT,
@@ -24,7 +24,9 @@ use windows_canvas::{
 };
 use windows_collections::IIterable;
 use windows_composition::{Compositor as CompositionCompositor, ContainerVisual, SpriteVisual};
-use windows_reactor::test::{LiveProbe, schedule_live_probe, schedule_live_window_handle};
+use windows_reactor::test::{
+    LiveProbe, application_corner_radius, schedule_live_probe, schedule_live_window_handle,
+};
 use windows_reactor::*;
 #[cfg(feature = "self-contained")]
 use windows_webview::{EventRegistration, WebView, webview_result};
@@ -2249,4 +2251,416 @@ impl Component for ThemeResources {
             .resource_overrides(resources)
             .content(TextBlock::new().text("theme target"))
     }
+}
+
+/// 启动时通过 `App::theme_resources` 声明的浮层圆角 token（宿主读到这个值才算注入生效）。
+pub(crate) const SHAPE_TOKEN_OVERLAY_CORNER_RADIUS: f64 = 10.0;
+
+/// WinUI 主题资源 `ControlCornerRadius` 的默认值；宿主没有覆盖它时必须保持这个值。
+const WINUI_DEFAULT_CONTROL_CORNER_RADIUS: f64 = 4.0;
+
+pub(crate) enum ShapeTokenMessage {
+    Probe,
+}
+
+/// 应用级形状 token 的端到端验证：启动时只声明了 `OverlayCornerRadius`，所以探针必须证明
+/// 「声明的键被写进 `Application.Resources`」；资源字典的查找同时能穿透到 WinUI 主题资源
+/// （未声明的 `ControlCornerRadius` 仍读得到默认 4），因此顺带证明「没声明的键不被改写」。
+pub(crate) struct ShapeTokens {
+    complete: Callback<FixtureResult>,
+}
+
+impl Component for ShapeTokens {
+    type Input = FixtureInput;
+    type Message = ShapeTokenMessage;
+
+    fn create(input: &Self::Input, _context: &ComponentContext<Self>) -> Self {
+        Self {
+            complete: input.complete.clone(),
+        }
+    }
+
+    fn input_changed(&mut self, input: &Self::Input, _context: &ComponentContext<Self>) {
+        self.complete = input.complete.clone();
+    }
+
+    fn update(&mut self, _message: ShapeTokenMessage, _context: &ComponentContext<Self>) {
+        let result = (|| {
+            let overlay = corner_radius("OverlayCornerRadius")?;
+            if overlay != Some(SHAPE_TOKEN_OVERLAY_CORNER_RADIUS) {
+                return Err(format!(
+                    "OverlayCornerRadius = {overlay:?}, expected {SHAPE_TOKEN_OVERLAY_CORNER_RADIUS}"
+                ));
+            }
+            let control = corner_radius("ControlCornerRadius")?;
+            if control.is_some_and(|value| value != WINUI_DEFAULT_CONTROL_CORNER_RADIUS) {
+                return Err(format!(
+                    "undeclared ControlCornerRadius = {control:?}, expected WinUI default {WINUI_DEFAULT_CONTROL_CORNER_RADIUS}"
+                ));
+            }
+            println!(
+                "# ControlCornerRadius = {control:?}, OverlayCornerRadius = {overlay:?}"
+            );
+            Ok(())
+        })();
+        if !self.complete.call(result) {
+            eprintln!("shape token fixture completion was rejected");
+            std::process::exit(1);
+        }
+    }
+
+    fn view(&self, _input: &Self::Input, context: &mut ViewContext<Self>) -> View {
+        let sender = context.sender();
+        context.use_effect("shape-tokens", (), move || {
+            if !sender.send(ShapeTokenMessage::Probe) {
+                eprintln!("shape token probe message was rejected");
+                std::process::exit(1);
+            }
+            None
+        });
+        TextBlock::new().text("shape token probe").into()
+    }
+}
+
+/// 读取应用级资源字典里的圆角 token（探针必须在 UI 线程调用）。
+fn corner_radius(key: &str) -> Result<Option<f64>, String> {
+    application_corner_radius(key).map_err(|error| format!("{key}: {error:?}"))
+}
+
+// ===================== 窗口位置 / 居中的真机探针 =====================
+
+/// 声明给窗口的客户区尺寸（DIP）。缩放比例由"实测客户区 ÷ 这个声明值"反推。
+pub(crate) const PLACEMENT_CLIENT_SIZE: (f64, f64) = (900.0, 620.0);
+
+/// 声明的窗口位置（DIP，外框左上角）。
+const PLACEMENT_POSITION_DIP: (f64, f64) = (80.0, 60.0);
+
+/// 阶段 2 手动把窗口挪开的偏移（物理像素）：用来证明"值没变的声明不会把窗口拨回去"。
+const PLACEMENT_MANUAL_SHIFT: (i32, i32) = (40, 30);
+
+/// 允许的落点误差（物理像素）：DIP→像素的四舍五入，加上系统对窗口矩形的微调。
+const PLACEMENT_TOLERANCE_PX: i32 = 2;
+
+/// 每个阶段允许的测量重试次数：新窗口的尺寸/位置可能比应用晚一拍才生效。
+const PLACEMENT_MEASURE_RETRIES: usize = 6;
+
+/// 阶段数：0 居中、1 声明坐标、2 手动挪开、3 重声明同一坐标后必须纹丝不动。
+const PLACEMENT_STAGES: usize = 4;
+
+/// 窗口位置的真机探针（四个阶段）。
+///
+/// 判定用的是**独立**的 Win32 读取（`GetWindowRect` / `GetClientRect` / `GetMonitorInfoW`
+/// 来自 `windows` crate），而不是 reactor 自己的查询函数——否则探针只能证明"reactor 前后
+/// 自洽"，证明不了"窗口真的在那个位置"。
+///
+/// 缩放比例也不另查 DPI，而是从"声明尺寸 vs 实测客户区尺寸"反推：同一个比例既决定
+/// `client_size` 也决定 `client_position`/`centered` 的换算，用它比对位置才能同时验证两者。
+pub(crate) struct WindowPlacement {
+    complete: Callback<FixtureResult>,
+    /// 当前阶段，决定 view 声明什么。
+    stage: usize,
+    /// 测量轮次：作为 effect 依赖，换阶段或重试时让 effect 再跑一次。
+    generation: u64,
+    /// 本阶段已重试次数。
+    retries: usize,
+    /// 阶段 2 手动挪开后的窗口左上角（物理像素）；阶段 3 拿它当期望值。
+    manual: Option<(i32, i32)>,
+}
+
+pub(crate) enum PlacementMessage {
+    /// 测量一次当前阶段（由 effect 发出）。
+    Check,
+    /// 一次测量的结果。
+    Measured {
+        stage: usize,
+        result: Result<PlacementMeasurement, String>,
+    },
+}
+
+/// 一次实测的结果。
+pub(crate) struct PlacementMeasurement {
+    /// 阶段 2 手动挪开后的左上角。
+    manual: Option<(i32, i32)>,
+}
+
+impl Component for WindowPlacement {
+    type Input = FixtureInput;
+    type Message = PlacementMessage;
+
+    fn create(input: &Self::Input, _context: &ComponentContext<Self>) -> Self {
+        Self {
+            complete: input.complete.clone(),
+            stage: 0,
+            generation: 0,
+            retries: 0,
+            manual: None,
+        }
+    }
+
+    fn input_changed(&mut self, input: &Self::Input, _context: &ComponentContext<Self>) {
+        self.complete = input.complete.clone();
+    }
+
+    fn update(&mut self, message: Self::Message, context: &ComponentContext<Self>) {
+        match message {
+            PlacementMessage::Check => {
+                let stage = self.stage;
+                let manual = self.manual;
+                // 测量排进本窗口的 native work：执行时上一次发布（含窗口几何命令）已经落地。
+                if !context.run_window(move |handle| PlacementMessage::Measured {
+                    stage,
+                    result: measure_window_placement(handle, stage, manual),
+                }) {
+                    eprintln!("window placement probe could not stage a measurement");
+                    std::process::exit(1);
+                }
+            }
+            PlacementMessage::Measured { stage, result } if stage == self.stage => match result {
+                Ok(measurement) => {
+                    self.manual = measurement.manual.or(self.manual);
+                    self.stage += 1;
+                    self.retries = 0;
+                    self.generation += 1;
+                    if self.stage == PLACEMENT_STAGES && !self.complete.call(Ok(())) {
+                        eprintln!("window placement fixture completion was rejected");
+                        std::process::exit(1);
+                    }
+                }
+                Err(error) => {
+                    self.retries += 1;
+                    if self.retries > PLACEMENT_MEASURE_RETRIES {
+                        if !self.complete.call(Err(error)) {
+                            eprintln!("window placement fixture completion was rejected");
+                            std::process::exit(1);
+                        }
+                    } else {
+                        // 重试：依赖变了，effect 会再测量一次，并把新的失败原因带上来。
+                        self.generation += 1;
+                    }
+                }
+            },
+            PlacementMessage::Measured { .. } => {}
+        }
+    }
+
+    fn view(&self, _input: &Self::Input, context: &mut ViewContext<Self>) -> View {
+        let visuals = WindowVisuals::new()
+            .client_size(PLACEMENT_CLIENT_SIZE.0, PLACEMENT_CLIENT_SIZE.1);
+        // 阶段 0 声明居中；1/2/3 声明同一份坐标——阶段 3 要验证的正是"声明没变就不动窗口"。
+        let visuals = if self.stage == 0 {
+            visuals.centered()
+        } else {
+            visuals.client_position(PLACEMENT_POSITION_DIP.0, PLACEMENT_POSITION_DIP.1)
+        };
+        context.window_visuals(visuals);
+
+        if self.stage < PLACEMENT_STAGES {
+            let sender = context.sender();
+            context.use_effect("window-placement", (self.stage, self.generation), move || {
+                if !sender.send(PlacementMessage::Check) {
+                    eprintln!("window placement probe message was rejected");
+                    std::process::exit(1);
+                }
+                None
+            });
+        }
+        TextBlock::new().text("window placement probe").into()
+    }
+}
+
+/// 实测当前窗口几何并按阶段判定。
+fn measure_window_placement(
+    handle: WindowHandle<'_>,
+    stage: usize,
+    manual: Option<(i32, i32)>,
+) -> Result<PlacementMeasurement, String> {
+    let hwnd = HWND(handle.as_raw() as *mut _);
+    let mut outer = RECT::default();
+    if !unsafe { GetWindowRect(hwnd, &mut outer) }.as_bool() {
+        return Err("could not read the placement probe window rect".to_string());
+    }
+    let mut client = RECT::default();
+    if !unsafe { GetClientRect(hwnd, &mut client) }.as_bool() {
+        return Err("could not read the placement probe client rect".to_string());
+    }
+    let monitor = unsafe { MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST as u32) };
+    let mut info = MONITORINFO {
+        cbSize: size_of::<MONITORINFO>() as u32,
+        ..Default::default()
+    };
+    if !unsafe { GetMonitorInfoW(monitor, &mut info) }.as_bool() {
+        return Err("could not read the placement probe monitor work area".to_string());
+    }
+
+    let size = (outer.right - outer.left, outer.bottom - outer.top);
+    let work = info.rcWork;
+    let work_size = (work.right - work.left, work.bottom - work.top);
+    // 缩放比例 = 实测客户区 ÷ 声明的 DIP 尺寸（两个方向取平均，抵消取整误差）。
+    let scale = (f64::from(client.right) / PLACEMENT_CLIENT_SIZE.0
+        + f64::from(client.bottom) / PLACEMENT_CLIENT_SIZE.1)
+        / 2.0;
+    println!(
+        "# placement stage {stage}: outer = ({}, {}) {}x{}, client = {}x{}, work = ({}, {}) {}x{}, scale = {scale:.3}",
+        outer.left, outer.top, size.0, size.1, client.right, client.bottom,
+        work.left, work.top, work_size.0, work_size.1
+    );
+
+    let declared_pixels = |dips: f64| (dips * scale).round() as i32;
+    let declared_origin = (
+        declared_pixels(PLACEMENT_POSITION_DIP.0),
+        declared_pixels(PLACEMENT_POSITION_DIP.1),
+    );
+    verify_geometry_queries(&handle, (outer.left, outer.top), work, scale)?;
+
+    match stage {
+        // 阶段 0：外框中心 == 所在显示器工作区中心。
+        0 => {
+            let expected = (
+                work.left + (work_size.0 - size.0) / 2,
+                work.top + (work_size.1 - size.1) / 2,
+            );
+            check_window_position("centered on the work area", (outer.left, outer.top), expected)?;
+            Ok(PlacementMeasurement { manual: None })
+        }
+        // 阶段 1：外框左上角 == 声明的 DIP 位置换算成物理像素。
+        1 => {
+            check_window_position("declared position", (outer.left, outer.top), declared_origin)?;
+            Ok(PlacementMeasurement { manual: None })
+        }
+        // 阶段 2：先确认声明生效，再手动挪开，并确认挪动真的落到了窗口上。
+        2 => {
+            check_window_position("declared position", (outer.left, outer.top), declared_origin)?;
+            let manual = (
+                outer.left + PLACEMENT_MANUAL_SHIFT.0,
+                outer.top + PLACEMENT_MANUAL_SHIFT.1,
+            );
+            if !unsafe {
+                SetWindowPos(
+                    hwnd,
+                    None,
+                    manual.0,
+                    manual.1,
+                    0,
+                    0,
+                    (SWP_NOSIZE | SWP_NOZORDER) as u32,
+                )
+            }
+            .as_bool()
+            {
+                return Err("could not move the placement probe window manually".to_string());
+            }
+            let mut moved = RECT::default();
+            if !unsafe { GetWindowRect(hwnd, &mut moved) }.as_bool() {
+                return Err("could not read the manually moved window rect".to_string());
+            }
+            check_window_position("manual move", (moved.left, moved.top), manual)?;
+            println!(
+                "# placement stage 2: window moved manually to ({}, {})",
+                manual.0, manual.1
+            );
+            Ok(PlacementMeasurement { manual: Some(manual) })
+        }
+        // 阶段 3：声明值与阶段 2 完全相同，窗口必须留在手动挪开的位置。
+        3 => {
+            let manual = manual.ok_or("the manual placement from stage 2 is missing")?;
+            check_window_position(
+                "re-declared position (the window must not move)",
+                (outer.left, outer.top),
+                manual,
+            )?;
+            Ok(PlacementMeasurement { manual: None })
+        }
+        _ => Err(format!("placement stage {stage} is invalid")),
+    }
+}
+
+/// 位置比对：允许 [`PLACEMENT_TOLERANCE_PX`] 的取整误差。
+fn check_window_position(what: &str, actual: (i32, i32), expected: (i32, i32)) -> FixtureResult {
+    let off = (
+        (actual.0 - expected.0).abs(),
+        (actual.1 - expected.1).abs(),
+    );
+    if off.0 > PLACEMENT_TOLERANCE_PX || off.1 > PLACEMENT_TOLERANCE_PX {
+        return Err(format!(
+            "{what}: window at {actual:?}, expected {expected:?} (±{PLACEMENT_TOLERANCE_PX}px)"
+        ));
+    }
+    Ok(())
+}
+
+/// 宿主查询 API（`primary_work_area` / `primary_work_area_dip` / `work_area_for_window` /
+/// `window_placement_dip`）与独立 Win32 读数逐项对照。
+///
+/// 对照的基准是探针自己读出来的系统数据，不是 reactor 自己的另一条路径：这样这组查询才算
+/// 被真机验证过，而不是"自己证明自己"。
+fn verify_geometry_queries(
+    handle: &WindowHandle<'_>,
+    window_origin: (i32, i32),
+    monitor_work: RECT,
+    scale: f64,
+) -> FixtureResult {
+    // 主显示器工作区（独立读法：主显示器 = 包含虚拟屏幕原点 (0,0) 的那块）。
+    let primary = unsafe { MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY as u32) };
+    let mut primary_info = MONITORINFO {
+        cbSize: size_of::<MONITORINFO>() as u32,
+        ..Default::default()
+    };
+    if !unsafe { GetMonitorInfoW(primary, &mut primary_info) }.as_bool() {
+        return Err("could not read the primary monitor work area".to_string());
+    }
+    let primary_work = primary_info.rcWork;
+    let close = |what: &str, actual: f64, expected: f64| -> Option<String> {
+        ((actual - expected).abs() > f64::from(PLACEMENT_TOLERANCE_PX))
+            .then(|| format!("{what}: {actual}, expected {expected}"))
+    };
+
+    let area = primary_work_area()
+        .ok_or_else(|| "primary_work_area returned None".to_string())?;
+    if let Some(error) = close("primary_work_area().x", area.x, f64::from(primary_work.left))
+        .or_else(|| close("primary_work_area().y", area.y, f64::from(primary_work.top)))
+        .or_else(|| close("primary_work_area().width", area.width, f64::from(primary_work.right - primary_work.left)))
+        .or_else(|| close("primary_work_area().height", area.height, f64::from(primary_work.bottom - primary_work.top)))
+    {
+        return Err(error);
+    }
+
+    let (dip_width, dip_height) = primary_work_area_dip()
+        .ok_or_else(|| "primary_work_area_dip returned None".to_string())?;
+    if let Some(error) = close("primary_work_area_dip().0", dip_width, area.width / scale)
+        .or_else(|| close("primary_work_area_dip().1", dip_height, area.height / scale))
+    {
+        return Err(error);
+    }
+
+    let window_area = work_area_for_window(handle)
+        .ok_or_else(|| "work_area_for_window returned None".to_string())?;
+    if let Some(error) = close("work_area_for_window().x", window_area.x, f64::from(monitor_work.left))
+        .or_else(|| close("work_area_for_window().width", window_area.width, f64::from(monitor_work.right - monitor_work.left)))
+        .or_else(|| close("work_area_for_window().height", window_area.height, f64::from(monitor_work.bottom - monitor_work.top)))
+    {
+        return Err(error);
+    }
+
+    let placement = window_placement_dip(handle)
+        .ok_or_else(|| "window_placement_dip returned None".to_string())?;
+    if let Some(error) = close(
+        "window_placement_dip().0",
+        placement.0,
+        f64::from(window_origin.0) / scale,
+    )
+    .or_else(|| {
+        close(
+            "window_placement_dip().1",
+            placement.1,
+            f64::from(window_origin.1) / scale,
+        )
+    }) {
+        return Err(error);
+    }
+
+    println!(
+        "# queries: primary work = {}x{} px / {dip_width:.1}x{dip_height:.1} dip, window work = {}x{}, placement dip = ({:.2}, {:.2})",
+        area.width, area.height, window_area.width, window_area.height, placement.0, placement.1
+    );
+    Ok(())
 }

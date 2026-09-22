@@ -1,6 +1,7 @@
 pub mod windows_reactor
 pub use windows_reactor::DateTime
 pub use windows_reactor::TimeSpan
+pub use windows_reactor::Vector3
 pub enum windows_reactor::AcceleratorKey
 pub windows_reactor::AcceleratorKey::Add
 pub windows_reactor::AcceleratorKey::Decimal
@@ -40,6 +41,7 @@ pub windows_reactor::AutomationHeadingLevel::Level7
 pub windows_reactor::AutomationHeadingLevel::Level8
 pub windows_reactor::AutomationHeadingLevel::Level9
 pub enum windows_reactor::Brush
+pub windows_reactor::Brush::Acrylic(windows_reactor::Acrylic)
 pub windows_reactor::Brush::Solid(windows_reactor::Color)
 pub windows_reactor::Brush::Theme(windows_reactor::ThemeBrush)
 impl core::convert::From<windows_reactor::Color> for windows_reactor::Brush
@@ -139,6 +141,15 @@ pub windows_reactor::InfoBarSeverity::Warning
 pub enum windows_reactor::IntegrationError
 pub windows_reactor::IntegrationError::Native(i32)
 pub windows_reactor::IntegrationError::Unavailable
+pub enum windows_reactor::ItemsViewLayout
+pub windows_reactor::ItemsViewLayout::Grid
+pub windows_reactor::ItemsViewLayout::Lined
+pub windows_reactor::ItemsViewLayout::Stack
+#[non_exhaustive] pub enum windows_reactor::ItemsViewSelectionMode
+pub windows_reactor::ItemsViewSelectionMode::Extended
+pub windows_reactor::ItemsViewSelectionMode::Multiple
+pub windows_reactor::ItemsViewSelectionMode::None
+pub windows_reactor::ItemsViewSelectionMode::Single
 #[non_exhaustive] pub enum windows_reactor::ListViewSelectionMode
 pub windows_reactor::ListViewSelectionMode::Extended
 pub windows_reactor::ListViewSelectionMode::Multiple
@@ -149,17 +160,28 @@ pub windows_reactor::MenuItem::Item
 pub windows_reactor::MenuItem::Item::enabled: bool
 pub windows_reactor::MenuItem::Item::key: windows_reactor::Key
 pub windows_reactor::MenuItem::Item::label: alloc::string::String
+pub windows_reactor::MenuItem::Radio
+pub windows_reactor::MenuItem::Radio::checked: bool
+pub windows_reactor::MenuItem::Radio::group: alloc::string::String
+pub windows_reactor::MenuItem::Radio::key: windows_reactor::Key
+pub windows_reactor::MenuItem::Radio::label: alloc::string::String
 pub windows_reactor::MenuItem::Separator
 pub windows_reactor::MenuItem::Separator::key: windows_reactor::Key
 pub windows_reactor::MenuItem::Submenu
 pub windows_reactor::MenuItem::Submenu::items: alloc::vec::Vec<Self>
 pub windows_reactor::MenuItem::Submenu::key: windows_reactor::Key
 pub windows_reactor::MenuItem::Submenu::label: alloc::string::String
+pub windows_reactor::MenuItem::Toggle
+pub windows_reactor::MenuItem::Toggle::checked: bool
+pub windows_reactor::MenuItem::Toggle::key: windows_reactor::Key
+pub windows_reactor::MenuItem::Toggle::label: alloc::string::String
 impl windows_reactor::MenuItem
 pub fn windows_reactor::MenuItem::disabled(impl core::convert::Into<windows_reactor::Key>, impl core::convert::Into<alloc::string::String>) -> Self
 pub fn windows_reactor::MenuItem::item(impl core::convert::Into<windows_reactor::Key>, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn windows_reactor::MenuItem::radio(impl core::convert::Into<windows_reactor::Key>, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>, bool) -> Self
 pub fn windows_reactor::MenuItem::separator(impl core::convert::Into<windows_reactor::Key>) -> Self
 pub fn windows_reactor::MenuItem::submenu(impl core::convert::Into<windows_reactor::Key>, impl core::convert::Into<alloc::string::String>, impl core::iter::traits::collect::IntoIterator<Item = Self>) -> Self
+pub fn windows_reactor::MenuItem::toggle(impl core::convert::Into<windows_reactor::Key>, impl core::convert::Into<alloc::string::String>, bool) -> Self
 #[non_exhaustive] pub enum windows_reactor::NavigationViewBackButtonVisible
 pub windows_reactor::NavigationViewBackButtonVisible::Auto
 pub windows_reactor::NavigationViewBackButtonVisible::Collapsed
@@ -191,6 +213,16 @@ pub windows_reactor::PumpDiagnostic::VirtualRowRootCount::collection: windows_re
 pub windows_reactor::PumpDiagnostic::VirtualRowRootCount::key: windows_reactor::Key
 pub windows_reactor::PumpDiagnostic::WindowOpenRejected
 pub windows_reactor::PumpDiagnostic::WindowOpenRejected::error: windows_reactor::core::runtime::RuntimeError
+#[non_exhaustive] pub enum windows_reactor::RefreshPullDirection
+pub windows_reactor::RefreshPullDirection::BottomToTop
+pub windows_reactor::RefreshPullDirection::LeftToRight
+pub windows_reactor::RefreshPullDirection::RightToLeft
+pub windows_reactor::RefreshPullDirection::TopToBottom
+#[non_exhaustive] pub enum windows_reactor::RefreshVisualizerOrientation
+pub windows_reactor::RefreshVisualizerOrientation::Auto
+pub windows_reactor::RefreshVisualizerOrientation::Normal
+pub windows_reactor::RefreshVisualizerOrientation::Rotate270DegreesCounterclockwise
+pub windows_reactor::RefreshVisualizerOrientation::Rotate90DegreesCounterclockwise
 pub enum windows_reactor::ResourceValue
 pub windows_reactor::ResourceValue::Color(windows_reactor::Color)
 pub windows_reactor::ResourceValue::CornerRadius(windows_reactor::CornerRadius)
@@ -482,9 +514,23 @@ pub windows_reactor::VerticalAlignment::Stretch
 pub windows_reactor::VerticalAlignment::Top
 pub enum windows_reactor::WindowBackdrop
 pub windows_reactor::WindowBackdrop::Acrylic
+pub windows_reactor::WindowBackdrop::AcrylicThin
 pub windows_reactor::WindowBackdrop::Mica
 pub windows_reactor::WindowBackdrop::MicaAlt
 pub windows_reactor::WindowBackdrop::None
+pub windows_reactor::WindowBackdrop::Solid
+pub enum windows_reactor::WindowBorder
+pub windows_reactor::WindowBorder::Color(windows_reactor::Color)
+pub windows_reactor::WindowBorder::Default
+pub windows_reactor::WindowBorder::Hidden
+pub enum windows_reactor::WindowCorner
+pub windows_reactor::WindowCorner::Default
+pub windows_reactor::WindowCorner::DoNotRound
+pub windows_reactor::WindowCorner::Round
+pub windows_reactor::WindowCorner::RoundSmall
+pub enum windows_reactor::WindowPresenter
+pub windows_reactor::WindowPresenter::Default
+pub windows_reactor::WindowPresenter::FullScreen
 pub enum windows_reactor::WindowTheme
 pub windows_reactor::WindowTheme::Dark
 pub windows_reactor::WindowTheme::Light
@@ -492,11 +538,74 @@ pub windows_reactor::WindowTheme::System
 pub enum windows_reactor::WindowTitleBarHeight
 pub windows_reactor::WindowTitleBarHeight::Standard
 pub windows_reactor::WindowTitleBarHeight::Tall
+pub struct windows_reactor::Acrylic
+pub windows_reactor::Acrylic::luminosity_opacity: core::option::Option<u8>
+pub windows_reactor::Acrylic::tint: windows_reactor::Color
+pub windows_reactor::Acrylic::tint_opacity: u8
+impl windows_reactor::Acrylic
+pub const fn windows_reactor::Acrylic::new(windows_reactor::Color, u8) -> Self
+pub struct windows_reactor::AnimatedIcon
+impl windows_reactor::AnimatedIcon
+pub fn windows_reactor::AnimatedIcon::new() -> Self
+impl core::convert::From<windows_reactor::AnimatedIcon> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::AnimatedIcon) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::AnimatedIcon
+pub fn windows_reactor::AnimatedIcon::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::AnimatedIcon::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::AnimatedVisualPlayer
+impl windows_reactor::AnimatedVisualPlayer
+pub fn windows_reactor::AnimatedVisualPlayer::auto_play(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::AnimatedVisualPlayer::new() -> Self
+impl core::convert::From<windows_reactor::AnimatedVisualPlayer> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::AnimatedVisualPlayer) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::AnimatedVisualPlayer
+pub fn windows_reactor::AnimatedVisualPlayer::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::AnimatedVisualPlayer::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::AnnotatedScrollBar
+impl windows_reactor::AnnotatedScrollBar
+pub fn windows_reactor::AnnotatedScrollBar::new() -> Self
+pub fn windows_reactor::AnnotatedScrollBar::small_change(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
+impl core::convert::From<windows_reactor::AnnotatedScrollBar> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::AnnotatedScrollBar) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::AnnotatedScrollBar
+pub fn windows_reactor::AnnotatedScrollBar::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::AnnotatedScrollBar::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::App
 impl windows_reactor::App
 pub fn windows_reactor::App::run(windows_reactor::View) -> windows_result::Result<()>
 pub fn windows_reactor::App::run_component<C: windows_reactor::Component>(<C as windows_reactor::Component>::Input) -> windows_result::Result<()>
 pub fn windows_reactor::App::run_windows<I>(I) -> windows_result::Result<()> where I: core::iter::traits::collect::IntoIterator<Item = windows_reactor::View>
+pub fn windows_reactor::App::theme_resources(windows_reactor::ResourceOverrides) -> windows_reactor::AppResources
 pub struct windows_reactor::AppBarButton
 impl windows_reactor::AppBarButton
 pub fn windows_reactor::AppBarButton::icon(self, impl core::convert::Into<windows_reactor::View>) -> Self
@@ -520,6 +629,26 @@ pub fn windows_reactor::AppBarButton::min_width(self, impl core::convert::Into<c
 pub fn windows_reactor::AppBarButton::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::AppBarButton::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::AppBarButton::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::AppBarElementContainer
+impl windows_reactor::AppBarElementContainer
+pub fn windows_reactor::AppBarElementContainer::new() -> Self
+impl core::convert::From<windows_reactor::AppBarElementContainer> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::AppBarElementContainer) -> Self
+impl windows_reactor::ContentControl for windows_reactor::AppBarElementContainer
+pub fn windows_reactor::AppBarElementContainer::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
+impl windows_reactor::LayoutControl for windows_reactor::AppBarElementContainer
+pub fn windows_reactor::AppBarElementContainer::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::AppBarElementContainer::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::AppBarSeparator
 impl windows_reactor::AppBarSeparator
 pub fn windows_reactor::AppBarSeparator::new() -> Self
@@ -538,6 +667,35 @@ pub fn windows_reactor::AppBarSeparator::min_width(self, impl core::convert::Int
 pub fn windows_reactor::AppBarSeparator::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::AppBarSeparator::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::AppBarSeparator::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::AppBarToggleButton
+impl windows_reactor::AppBarToggleButton
+pub fn windows_reactor::AppBarToggleButton::icon(self, impl core::convert::Into<windows_reactor::View>) -> Self
+pub fn windows_reactor::AppBarToggleButton::is_checked(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::AppBarToggleButton::is_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::AppBarToggleButton::label(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn windows_reactor::AppBarToggleButton::label_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<alloc::string::String>
+pub fn windows_reactor::AppBarToggleButton::new() -> Self
+pub fn windows_reactor::AppBarToggleButton::on_click(self, impl windows_reactor::IntoUnitCallback) -> Self
+impl core::convert::From<windows_reactor::AppBarToggleButton> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::AppBarToggleButton) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::AppBarToggleButton
+pub fn windows_reactor::AppBarToggleButton::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::AppBarToggleButton::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::AppResources
+impl windows_reactor::AppResources
+pub fn windows_reactor::AppResources::run(self, windows_reactor::View) -> windows_result::Result<()>
+pub fn windows_reactor::AppResources::run_component<C: windows_reactor::Component>(self, <C as windows_reactor::Component>::Input) -> windows_result::Result<()>
+pub fn windows_reactor::AppResources::run_windows<I>(self, I) -> windows_result::Result<()> where I: core::iter::traits::collect::IntoIterator<Item = windows_reactor::View>
 pub struct windows_reactor::AutoSuggestBox
 impl windows_reactor::AutoSuggestBox
 pub fn windows_reactor::AutoSuggestBox::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
@@ -546,6 +704,7 @@ pub fn windows_reactor::AutoSuggestBox::is_enabled(self, impl core::convert::Int
 pub fn windows_reactor::AutoSuggestBox::items_source<I, S>(self, I) -> Self where I: core::iter::traits::collect::IntoIterator<Item = S>, S: core::convert::Into<alloc::string::String>
 pub fn windows_reactor::AutoSuggestBox::items_source_optional<I, S>(self, core::option::Option<I>) -> Self where I: core::iter::traits::collect::IntoIterator<Item = S>, S: core::convert::Into<alloc::string::String>
 pub fn windows_reactor::AutoSuggestBox::new() -> Self
+pub fn windows_reactor::AutoSuggestBox::on_query_submitted(self, impl windows_reactor::IntoPayloadCallback<alloc::string::String>) -> Self
 pub fn windows_reactor::AutoSuggestBox::on_suggestion_chosen(self, impl windows_reactor::IntoPayloadCallback<alloc::string::String>) -> Self
 pub fn windows_reactor::AutoSuggestBox::on_text_changed(self, impl windows_reactor::IntoPayloadCallback<alloc::string::String>) -> Self
 pub fn windows_reactor::AutoSuggestBox::placeholder_text(self, impl core::convert::Into<alloc::string::String>) -> Self
@@ -605,6 +764,7 @@ pub fn windows_reactor::Border::corner_radius_optional<T>(self, core::option::Op
 pub fn windows_reactor::Border::drop_policy(self, impl core::convert::Into<core::option::Option<windows_reactor::DragDropPolicy>>) -> Self
 pub fn windows_reactor::Border::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
 pub fn windows_reactor::Border::focus_on_pointer_release(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::Border::is_hit_test_visible(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::Border::is_tab_stop(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::Border::new() -> Self
 pub fn windows_reactor::Border::on_character_received(self, windows_reactor::RoutedCallback<windows_reactor::CharacterEventInfo>) -> Self
@@ -622,12 +782,16 @@ pub fn windows_reactor::Border::on_pointer_exited(self, impl windows_reactor::In
 pub fn windows_reactor::Border::on_pointer_moved(self, impl windows_reactor::IntoPayloadCallback<windows_reactor::PointerEventInfo>) -> Self
 pub fn windows_reactor::Border::on_pointer_pressed(self, impl windows_reactor::IntoPayloadCallback<windows_reactor::PointerEventInfo>) -> Self
 pub fn windows_reactor::Border::on_pointer_released(self, impl windows_reactor::IntoPayloadCallback<windows_reactor::PointerEventInfo>) -> Self
+pub fn windows_reactor::Border::on_pointer_wheel_changed(self, impl windows_reactor::IntoPayloadCallback<windows_reactor::PointerEventInfo>) -> Self
 pub fn windows_reactor::Border::on_preview_key_down(self, windows_reactor::RoutedCallback<windows_reactor::KeyEventInfo>) -> Self
+pub fn windows_reactor::Border::on_tapped(self, impl windows_reactor::IntoUnitCallback) -> Self
 pub fn windows_reactor::Border::opacity_transition(self, impl core::convert::Into<core::option::Option<core::time::Duration>>) -> Self
 pub fn windows_reactor::Border::padding(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self
 pub fn windows_reactor::Border::padding_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::Thickness>
 pub fn windows_reactor::Border::scale(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 pub fn windows_reactor::Border::scale_transition(self, impl core::convert::Into<core::option::Option<core::time::Duration>>) -> Self
+pub fn windows_reactor::Border::translation(self, impl core::convert::Into<core::option::Option<windows_numerics::bindings::Vector3>>) -> Self
+pub fn windows_reactor::Border::translation_transition(self, impl core::convert::Into<core::option::Option<core::time::Duration>>) -> Self
 impl core::convert::From<windows_reactor::Border> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::Border) -> Self
 impl windows_reactor::ContentControl for windows_reactor::Border
@@ -670,12 +834,22 @@ pub fn windows_reactor::BreadcrumbBar::vertical_alignment(self, impl core::conve
 pub fn windows_reactor::BreadcrumbBar::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::Button
 impl windows_reactor::Button
+pub fn windows_reactor::Button::background(self, impl core::convert::Into<windows_reactor::Brush>) -> Self
+pub fn windows_reactor::Button::background_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::Brush>
+pub fn windows_reactor::Button::corner_radius(self, impl core::convert::Into<windows_reactor::CornerRadius>) -> Self
+pub fn windows_reactor::Button::corner_radius_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::CornerRadius>
 pub fn windows_reactor::Button::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
+pub fn windows_reactor::Button::foreground(self, impl core::convert::Into<windows_reactor::Brush>) -> Self
+pub fn windows_reactor::Button::foreground_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::Brush>
 pub fn windows_reactor::Button::horizontal_content_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self
 pub fn windows_reactor::Button::is_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::Button::is_hit_test_visible(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::Button::key_accelerators(self, impl core::convert::Into<core::option::Option<windows_reactor::KeyAccelerators>>) -> Self
 pub fn windows_reactor::Button::new() -> Self
 pub fn windows_reactor::Button::on_click(self, impl windows_reactor::IntoUnitCallback) -> Self
+pub fn windows_reactor::Button::on_tapped(self, impl windows_reactor::IntoUnitCallback) -> Self
+pub fn windows_reactor::Button::padding(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self
+pub fn windows_reactor::Button::padding_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::Thickness>
 pub fn windows_reactor::Button::resource_overrides(self, impl core::convert::Into<core::option::Option<windows_reactor::ResourceOverrides>>) -> Self
 pub fn windows_reactor::Button::style(self, impl core::convert::Into<core::option::Option<windows_reactor::ButtonStyle>>) -> Self
 pub fn windows_reactor::Button::vertical_content_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self
@@ -794,6 +968,7 @@ pub fn windows_reactor::CheckBox::is_checked(self, impl core::convert::Into<core
 pub fn windows_reactor::CheckBox::is_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::CheckBox::new() -> Self
 pub fn windows_reactor::CheckBox::on_is_checked_changed(self, impl windows_reactor::IntoPayloadCallback<bool>) -> Self
+pub fn windows_reactor::CheckBox::resource_overrides(self, impl core::convert::Into<core::option::Option<windows_reactor::ResourceOverrides>>) -> Self
 impl core::convert::From<windows_reactor::CheckBox> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::CheckBox) -> Self
 impl windows_reactor::ContentControl for windows_reactor::CheckBox
@@ -853,6 +1028,8 @@ pub fn windows_reactor::ColorPicker::vertical_alignment(self, impl core::convert
 pub fn windows_reactor::ColorPicker::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::ComboBox
 impl windows_reactor::ComboBox
+pub fn windows_reactor::ComboBox::corner_radius(self, impl core::convert::Into<windows_reactor::CornerRadius>) -> Self
+pub fn windows_reactor::ComboBox::corner_radius_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::CornerRadius>
 pub fn windows_reactor::ComboBox::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
 pub fn windows_reactor::ComboBox::header(self, impl core::convert::Into<windows_reactor::View>) -> Self
 pub fn windows_reactor::ComboBox::is_editable(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
@@ -863,6 +1040,7 @@ pub fn windows_reactor::ComboBox::new() -> Self
 pub fn windows_reactor::ComboBox::on_selection_changed(self, impl windows_reactor::IntoPayloadCallback<core::option::Option<usize>>) -> Self
 pub fn windows_reactor::ComboBox::placeholder_text(self, impl core::convert::Into<alloc::string::String>) -> Self
 pub fn windows_reactor::ComboBox::placeholder_text_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<alloc::string::String>
+pub fn windows_reactor::ComboBox::resource_overrides(self, impl core::convert::Into<core::option::Option<windows_reactor::ResourceOverrides>>) -> Self
 pub fn windows_reactor::ComboBox::selected_index(self, impl core::convert::Into<core::option::Option<usize>>) -> Self
 impl core::convert::From<windows_reactor::ComboBox> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::ComboBox) -> Self
@@ -912,6 +1090,7 @@ pub fn windows_reactor::ComponentContext<C>::open_window(&self, windows_reactor:
 pub fn windows_reactor::ComponentContext<C>::run_window<F>(&self, F) -> bool where F: for<'a> core::ops::function::FnOnce(windows_reactor::WindowHandle<'a>) -> <C as windows_reactor::Component>::Message + 'static
 pub fn windows_reactor::ComponentContext<C>::sender(&self) -> windows_reactor::LocalSender<<C as windows_reactor::Component>::Message>
 pub fn windows_reactor::ComponentContext<C>::set_timeout(&self, core::time::Duration, <C as windows_reactor::Component>::Message) -> windows_result::Result<windows_reactor::ComponentTimer>
+pub fn windows_reactor::ComponentContext<C>::set_timeout_checked<F>(&self, core::time::Duration, F) -> windows_result::Result<windows_reactor::ComponentTimer> where F: core::ops::function::FnOnce() -> core::option::Option<<C as windows_reactor::Component>::Message> + 'static
 pub fn windows_reactor::ComponentContext<C>::spawn_background<F>(&self, F) -> windows_reactor::ComponentTask where <C as windows_reactor::Component>::Message: core::marker::Send, F: core::ops::function::FnOnce(windows_reactor::CancellationToken) -> <C as windows_reactor::Component>::Message + core::marker::Send + 'static
 pub fn windows_reactor::ComponentContext<C>::spawn_background_with_rejection<F>(&self, F, <C as windows_reactor::Component>::Message) -> windows_reactor::ComponentTask where <C as windows_reactor::Component>::Message: core::marker::Send, F: core::ops::function::FnOnce(windows_reactor::CancellationToken) -> <C as windows_reactor::Component>::Message + core::marker::Send + 'static
 pub fn windows_reactor::ComponentContext<C>::window(&self) -> windows_reactor::WindowRef
@@ -1047,12 +1226,18 @@ pub struct windows_reactor::ElementObservation
 impl core::ops::drop::Drop for windows_reactor::ElementObservation
 pub fn windows_reactor::ElementObservation::drop(&mut self)
 pub struct windows_reactor::ElementRef<T>
+impl windows_reactor::ElementRef<windows_reactor::ComboBox>
+pub fn windows_reactor::ElementRef<windows_reactor::ComboBox>::observe_scroll_offsets(&self, impl core::ops::function::Fn(windows_reactor::ScrollOffsets) + 'static) -> windows_reactor::ElementObservation
 impl windows_reactor::ElementRef<windows_reactor::Grid>
 pub fn windows_reactor::ElementRef<windows_reactor::Grid>::observe_composition_host(&self, impl core::ops::function::Fn(windows_reactor::CompositionHostEvent) + 'static) -> windows_reactor::ElementObservation
 pub fn windows_reactor::ElementRef<windows_reactor::Grid>::request_set_child_visual(&self, core::option::Option<windows_core::unknown::IUnknown>, impl core::ops::function::Fn(core::result::Result<(), windows_reactor::CompositionHostError>) + 'static) -> bool
 impl windows_reactor::ElementRef<windows_reactor::Image>
 pub fn windows_reactor::ElementRef<windows_reactor::Image>::observe_rasterization_scale(&self, impl core::ops::function::Fn(f64) + 'static) -> windows_reactor::ElementObservation
 pub fn windows_reactor::ElementRef<windows_reactor::Image>::request_set_native_source(&self, core::option::Option<windows_core::unknown::IUnknown>, impl core::ops::function::Fn(core::result::Result<(), windows_reactor::ImageSourceError>) + 'static) -> bool
+impl windows_reactor::ElementRef<windows_reactor::MediaPlayerElement>
+pub fn windows_reactor::ElementRef<windows_reactor::MediaPlayerElement>::request_set_media_source(&self, core::option::Option<windows_core::unknown::IUnknown>, impl core::ops::function::Fn(core::result::Result<(), windows_reactor::IntegrationError>) + 'static) -> bool
+impl windows_reactor::ElementRef<windows_reactor::ScrollViewer>
+pub fn windows_reactor::ElementRef<windows_reactor::ScrollViewer>::observe_scroll_offsets(&self, impl core::ops::function::Fn(windows_reactor::ScrollOffsets) + 'static) -> windows_reactor::ElementObservation
 impl windows_reactor::ElementRef<windows_reactor::SwapChainPanel>
 pub fn windows_reactor::ElementRef<windows_reactor::SwapChainPanel>::observe_surface(&self, impl core::ops::function::Fn(windows_reactor::SwapChainPanelEvent) + 'static) -> windows_reactor::ElementObservation
 pub fn windows_reactor::ElementRef<windows_reactor::SwapChainPanel>::request_clear_swap_chain(&self, impl core::ops::function::Fn(core::result::Result<(), windows_reactor::SwapChainPanelError>) + 'static) -> bool
@@ -1198,6 +1383,26 @@ pub const fn windows_reactor::FontWeight::get(self) -> u16
 pub const fn windows_reactor::FontWeight::new(u16) -> core::option::Option<Self>
 impl core::default::Default for windows_reactor::FontWeight
 pub fn windows_reactor::FontWeight::default() -> Self
+pub struct windows_reactor::Frame
+impl windows_reactor::Frame
+pub fn windows_reactor::Frame::new() -> Self
+impl core::convert::From<windows_reactor::Frame> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::Frame) -> Self
+impl windows_reactor::ContentControl for windows_reactor::Frame
+pub fn windows_reactor::Frame::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
+impl windows_reactor::LayoutControl for windows_reactor::Frame
+pub fn windows_reactor::Frame::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::Frame::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::Grid
 impl windows_reactor::Grid
 pub fn windows_reactor::Grid::background(self, impl core::convert::Into<windows_reactor::Brush>) -> Self
@@ -1206,8 +1411,11 @@ pub fn windows_reactor::Grid::column_spacing(self, impl core::convert::Into<core
 pub fn windows_reactor::Grid::columns(self, impl core::iter::traits::collect::IntoIterator<Item = windows_reactor::GridLength>) -> Self
 pub fn windows_reactor::Grid::columns_optional<T>(self, core::option::Option<T>) -> Self where T: core::iter::traits::collect::IntoIterator<Item = windows_reactor::GridLength>
 pub fn windows_reactor::Grid::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
+pub fn windows_reactor::Grid::is_hit_test_visible(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::Grid::key_accelerators(self, impl core::convert::Into<core::option::Option<windows_reactor::KeyAccelerators>>) -> Self
 pub fn windows_reactor::Grid::new() -> Self
+pub fn windows_reactor::Grid::on_pointer_wheel_changed(self, impl windows_reactor::IntoPayloadCallback<windows_reactor::PointerEventInfo>) -> Self
+pub fn windows_reactor::Grid::on_tapped(self, impl windows_reactor::IntoUnitCallback) -> Self
 pub fn windows_reactor::Grid::row_spacing(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 pub fn windows_reactor::Grid::rows(self, impl core::iter::traits::collect::IntoIterator<Item = windows_reactor::GridLength>) -> Self
 pub fn windows_reactor::Grid::rows_optional<T>(self, core::option::Option<T>) -> Self where T: core::iter::traits::collect::IntoIterator<Item = windows_reactor::GridLength>
@@ -1306,10 +1514,13 @@ pub fn windows_reactor::HyperlinkButton::width(self, impl core::convert::Into<co
 impl windows_reactor::ReferenceControl for windows_reactor::HyperlinkButton
 pub struct windows_reactor::Image
 impl windows_reactor::Image
+pub fn windows_reactor::Image::decode_width(self, impl core::convert::Into<core::option::Option<i32>>) -> Self
 pub fn windows_reactor::Image::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
+pub fn windows_reactor::Image::is_hit_test_visible(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::Image::new() -> Self
 pub fn windows_reactor::Image::on_failed(self, impl windows_reactor::IntoUnitCallback) -> Self
 pub fn windows_reactor::Image::on_opened(self, impl windows_reactor::IntoUnitCallback) -> Self
+pub fn windows_reactor::Image::on_tapped(self, impl windows_reactor::IntoUnitCallback) -> Self
 pub fn windows_reactor::Image::source(self, impl core::convert::Into<alloc::string::String>) -> windows_result::Result<Self>
 pub fn windows_reactor::Image::source_data(self, windows_reactor::EncodedImage) -> Self
 pub fn windows_reactor::Image::source_file(self, impl core::convert::AsRef<std::path::Path>) -> windows_result::Result<Self>
@@ -1411,6 +1622,26 @@ pub type windows_reactor::InputModifiers::Output = windows_reactor::InputModifie
 pub fn windows_reactor::InputModifiers::bitor(self, Self) -> Self::Output
 impl core::ops::bit::BitOrAssign for windows_reactor::InputModifiers
 pub fn windows_reactor::InputModifiers::bitor_assign(&mut self, Self)
+pub struct windows_reactor::ItemContainer
+impl windows_reactor::ItemContainer
+pub fn windows_reactor::ItemContainer::new() -> Self
+impl core::convert::From<windows_reactor::ItemContainer> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::ItemContainer) -> Self
+impl windows_reactor::ContentControl for windows_reactor::ItemContainer
+pub fn windows_reactor::ItemContainer::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
+impl windows_reactor::LayoutControl for windows_reactor::ItemContainer
+pub fn windows_reactor::ItemContainer::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::ItemContainer::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::ItemsRepeater
 impl windows_reactor::ItemsRepeater
 pub fn windows_reactor::ItemsRepeater::item(self, impl core::convert::Into<windows_reactor::Key>, impl core::convert::Into<windows_reactor::View>) -> Self
@@ -1432,6 +1663,47 @@ pub fn windows_reactor::ItemsRepeater::min_width(self, impl core::convert::Into<
 pub fn windows_reactor::ItemsRepeater::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::ItemsRepeater::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::ItemsRepeater::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::ItemsRepeaterScrollHost
+impl windows_reactor::ItemsRepeaterScrollHost
+pub fn windows_reactor::ItemsRepeaterScrollHost::new() -> Self
+impl core::convert::From<windows_reactor::ItemsRepeaterScrollHost> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::ItemsRepeaterScrollHost) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::ItemsRepeaterScrollHost
+pub fn windows_reactor::ItemsRepeaterScrollHost::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::ItemsRepeaterScrollHost::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::ItemsView
+impl windows_reactor::ItemsView
+pub fn windows_reactor::ItemsView::items_source<I, S>(self, I) -> Self where I: core::iter::traits::collect::IntoIterator<Item = S>, S: core::convert::Into<alloc::string::String>
+pub fn windows_reactor::ItemsView::items_source_optional<I, S>(self, core::option::Option<I>) -> Self where I: core::iter::traits::collect::IntoIterator<Item = S>, S: core::convert::Into<alloc::string::String>
+pub fn windows_reactor::ItemsView::layout(self, impl core::convert::Into<core::option::Option<windows_reactor::ItemsViewLayout>>) -> Self
+pub fn windows_reactor::ItemsView::new() -> Self
+pub fn windows_reactor::ItemsView::on_item_invoked(self, impl windows_reactor::IntoPayloadCallback<alloc::string::String>) -> Self
+pub fn windows_reactor::ItemsView::selection_mode(self, impl core::convert::Into<core::option::Option<windows_reactor::ItemsViewSelectionMode>>) -> Self
+impl core::convert::From<windows_reactor::ItemsView> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::ItemsView) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::ItemsView
+pub fn windows_reactor::ItemsView::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::ItemsView::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::Key(_)
 impl core::convert::From<&str> for windows_reactor::Key
 pub fn windows_reactor::Key::from(&str) -> Self
@@ -1581,10 +1853,77 @@ pub fn windows_reactor::ListViewItem::width(self, impl core::convert::Into<core:
 pub struct windows_reactor::LocalSender<M>
 impl<M: 'static> windows_reactor::LocalSender<M>
 pub fn windows_reactor::LocalSender<M>::callback<T, F>(&self, F) -> windows_reactor::Callback<T> where F: core::ops::function::Fn(T) -> M + 'static
+pub fn windows_reactor::LocalSender<M>::is_alive(&self) -> bool
 pub fn windows_reactor::LocalSender<M>::message(&self, M) -> windows_reactor::Callback<()> where M: core::clone::Clone
 pub fn windows_reactor::LocalSender<M>::send(&self, M) -> bool
 impl<M> core::clone::Clone for windows_reactor::LocalSender<M>
 pub fn windows_reactor::LocalSender<M>::clone(&self) -> Self
+pub struct windows_reactor::MapControl
+impl windows_reactor::MapControl
+pub fn windows_reactor::MapControl::center(self, f64, f64) -> Self
+pub fn windows_reactor::MapControl::center_optional(self, core::option::Option<(f64, f64)>) -> Self
+pub fn windows_reactor::MapControl::interactive_controls_visible(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::MapControl::map_service_token(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn windows_reactor::MapControl::map_service_token_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<alloc::string::String>
+pub fn windows_reactor::MapControl::new() -> Self
+pub fn windows_reactor::MapControl::zoom_level(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
+impl core::convert::From<windows_reactor::MapControl> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::MapControl) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::MapControl
+pub fn windows_reactor::MapControl::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::MapControl::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::MediaPlayerElement
+impl windows_reactor::MediaPlayerElement
+pub fn windows_reactor::MediaPlayerElement::are_transport_controls_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::MediaPlayerElement::auto_play(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::MediaPlayerElement::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
+pub fn windows_reactor::MediaPlayerElement::new() -> Self
+pub fn windows_reactor::MediaPlayerElement::source(self, windows_core::unknown::IUnknown) -> Self
+pub fn windows_reactor::MediaPlayerElement::stretch(self, impl core::convert::Into<core::option::Option<windows_reactor::Stretch>>) -> Self
+impl core::convert::From<windows_reactor::MediaPlayerElement> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::MediaPlayerElement) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::MediaPlayerElement
+pub fn windows_reactor::MediaPlayerElement::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::MediaPlayerElement::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::ReferenceControl for windows_reactor::MediaPlayerElement
+pub struct windows_reactor::MediaTransportControls
+impl windows_reactor::MediaTransportControls
+pub fn windows_reactor::MediaTransportControls::new() -> Self
+impl core::convert::From<windows_reactor::MediaTransportControls> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::MediaTransportControls) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::MediaTransportControls
+pub fn windows_reactor::MediaTransportControls::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::MediaTransportControls::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::Menu
 impl windows_reactor::Menu
 pub fn windows_reactor::Menu::new(impl core::iter::traits::collect::IntoIterator<Item = windows_reactor::MenuItem>, impl windows_reactor::IntoPayloadCallback<alloc::string::String>) -> Self
@@ -1631,6 +1970,8 @@ pub struct windows_reactor::NavigationView
 impl windows_reactor::NavigationView
 pub fn windows_reactor::NavigationView::always_show_header(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::NavigationView::content(self, impl core::convert::Into<windows_reactor::View>) -> Self
+pub fn windows_reactor::NavigationView::font_family(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn windows_reactor::NavigationView::font_family_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<alloc::string::String>
 pub fn windows_reactor::NavigationView::footer_menu_items<T>(self, impl core::iter::traits::collect::IntoIterator<Item = T>) -> Self where T: core::convert::Into<windows_reactor::KeyedView>
 pub fn windows_reactor::NavigationView::header(self, impl core::convert::Into<windows_reactor::View>) -> Self
 pub fn windows_reactor::NavigationView::is_back_button_visible(self, impl core::convert::Into<core::option::Option<windows_reactor::NavigationViewBackButtonVisible>>) -> Self
@@ -1649,6 +1990,7 @@ pub fn windows_reactor::NavigationView::pane_display_mode(self, impl core::conve
 pub fn windows_reactor::NavigationView::pane_footer(self, impl core::convert::Into<windows_reactor::View>) -> Self
 pub fn windows_reactor::NavigationView::pane_title(self, impl core::convert::Into<alloc::string::String>) -> Self
 pub fn windows_reactor::NavigationView::pane_title_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<alloc::string::String>
+pub fn windows_reactor::NavigationView::resource_overrides(self, impl core::convert::Into<core::option::Option<windows_reactor::ResourceOverrides>>) -> Self
 impl core::convert::From<windows_reactor::NavigationView> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::NavigationView) -> Self
 impl windows_reactor::LayoutControl for windows_reactor::NavigationView
@@ -1699,6 +2041,7 @@ pub fn windows_reactor::NumberBox::maximum(self, impl core::convert::Into<core::
 pub fn windows_reactor::NumberBox::minimum(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 pub fn windows_reactor::NumberBox::new() -> Self
 pub fn windows_reactor::NumberBox::on_value_changed(self, impl windows_reactor::IntoPayloadCallback<core::option::Option<f64>>) -> Self
+pub fn windows_reactor::NumberBox::resource_overrides(self, impl core::convert::Into<core::option::Option<windows_reactor::ResourceOverrides>>) -> Self
 pub fn windows_reactor::NumberBox::value(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 impl core::convert::From<windows_reactor::NumberBox> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::NumberBox) -> Self
@@ -1717,6 +2060,27 @@ pub fn windows_reactor::NumberBox::opacity(self, impl core::convert::Into<core::
 pub fn windows_reactor::NumberBox::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::NumberBox::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::ReferenceControl for windows_reactor::NumberBox
+pub struct windows_reactor::ParallaxView
+impl windows_reactor::ParallaxView
+pub fn windows_reactor::ParallaxView::child(self, impl core::convert::Into<windows_reactor::View>) -> Self
+pub fn windows_reactor::ParallaxView::horizontal_shift(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
+pub fn windows_reactor::ParallaxView::new() -> Self
+pub fn windows_reactor::ParallaxView::source(self, impl core::convert::Into<windows_reactor::View>) -> Self
+impl core::convert::From<windows_reactor::ParallaxView> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::ParallaxView) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::ParallaxView
+pub fn windows_reactor::ParallaxView::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::ParallaxView::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::PasswordBox
 impl windows_reactor::PasswordBox
 pub fn windows_reactor::PasswordBox::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
@@ -1795,6 +2159,28 @@ pub windows_reactor::PhysicalKeyStatus::is_released: bool
 pub windows_reactor::PhysicalKeyStatus::repeat_count: u32
 pub windows_reactor::PhysicalKeyStatus::scan_code: u32
 pub windows_reactor::PhysicalKeyStatus::was_down: bool
+pub struct windows_reactor::PipsPager
+impl windows_reactor::PipsPager
+pub fn windows_reactor::PipsPager::max_visible_pips(self, impl core::convert::Into<core::option::Option<i32>>) -> Self
+pub fn windows_reactor::PipsPager::new() -> Self
+pub fn windows_reactor::PipsPager::number_of_pages(self, impl core::convert::Into<core::option::Option<i32>>) -> Self
+pub fn windows_reactor::PipsPager::on_selected_index_changed(self, impl windows_reactor::IntoPayloadCallback<i32>) -> Self
+pub fn windows_reactor::PipsPager::selected_page_index(self, impl core::convert::Into<core::option::Option<i32>>) -> Self
+impl core::convert::From<windows_reactor::PipsPager> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::PipsPager) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::PipsPager
+pub fn windows_reactor::PipsPager::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::PipsPager::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::Pivot
 impl windows_reactor::Pivot
 pub fn windows_reactor::Pivot::items<T>(self, impl core::iter::traits::collect::IntoIterator<Item = T>) -> Self where T: core::convert::Into<windows_reactor::KeyedView>
@@ -1845,17 +2231,24 @@ pub windows_reactor::PointerEventInfo::capture_succeeded: bool
 pub windows_reactor::PointerEventInfo::is_left_button_pressed: bool
 pub windows_reactor::PointerEventInfo::is_middle_button_pressed: bool
 pub windows_reactor::PointerEventInfo::is_right_button_pressed: bool
+pub windows_reactor::PointerEventInfo::mouse_wheel_delta: i32
 pub windows_reactor::PointerEventInfo::window_x: f64
 pub windows_reactor::PointerEventInfo::window_y: f64
 pub windows_reactor::PointerEventInfo::x: f64
 pub windows_reactor::PointerEventInfo::y: f64
 pub struct windows_reactor::ProgressBar
 impl windows_reactor::ProgressBar
+pub fn windows_reactor::ProgressBar::corner_radius(self, impl core::convert::Into<windows_reactor::CornerRadius>) -> Self
+pub fn windows_reactor::ProgressBar::corner_radius_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::CornerRadius>
+pub fn windows_reactor::ProgressBar::foreground(self, impl core::convert::Into<windows_reactor::Brush>) -> Self
+pub fn windows_reactor::ProgressBar::foreground_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::Brush>
 pub fn windows_reactor::ProgressBar::is_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::ProgressBar::is_hit_test_visible(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::ProgressBar::is_indeterminate(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::ProgressBar::maximum(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 pub fn windows_reactor::ProgressBar::minimum(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 pub fn windows_reactor::ProgressBar::new() -> Self
+pub fn windows_reactor::ProgressBar::resource_overrides(self, impl core::convert::Into<core::option::Option<windows_reactor::ResourceOverrides>>) -> Self
 pub fn windows_reactor::ProgressBar::show_error(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::ProgressBar::show_paused(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::ProgressBar::value(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
@@ -1876,8 +2269,11 @@ pub fn windows_reactor::ProgressBar::vertical_alignment(self, impl core::convert
 pub fn windows_reactor::ProgressBar::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::ProgressRing
 impl windows_reactor::ProgressRing
+pub fn windows_reactor::ProgressRing::foreground(self, impl core::convert::Into<windows_reactor::Brush>) -> Self
+pub fn windows_reactor::ProgressRing::foreground_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::Brush>
 pub fn windows_reactor::ProgressRing::is_active(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::ProgressRing::is_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::ProgressRing::is_hit_test_visible(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::ProgressRing::is_indeterminate(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::ProgressRing::maximum(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 pub fn windows_reactor::ProgressRing::minimum(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
@@ -2002,6 +2398,54 @@ pub fn windows_reactor::Rectangle::min_width(self, impl core::convert::Into<core
 pub fn windows_reactor::Rectangle::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::Rectangle::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::Rectangle::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::RefreshContainer
+impl windows_reactor::RefreshContainer
+pub fn windows_reactor::RefreshContainer::new() -> Self
+pub fn windows_reactor::RefreshContainer::on_refresh_requested(self, impl windows_reactor::IntoPayloadCallback<windows_reactor::RefreshDeferral>) -> Self
+pub fn windows_reactor::RefreshContainer::pull_direction(self, impl core::convert::Into<core::option::Option<windows_reactor::RefreshPullDirection>>) -> Self
+impl core::convert::From<windows_reactor::RefreshContainer> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::RefreshContainer) -> Self
+impl windows_reactor::ContentControl for windows_reactor::RefreshContainer
+pub fn windows_reactor::RefreshContainer::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
+impl windows_reactor::LayoutControl for windows_reactor::RefreshContainer
+pub fn windows_reactor::RefreshContainer::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::RefreshContainer::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::RefreshDeferral
+impl windows_reactor::RefreshDeferral
+pub fn windows_reactor::RefreshDeferral::complete(self)
+impl core::cmp::PartialEq for windows_reactor::RefreshDeferral
+pub fn windows_reactor::RefreshDeferral::eq(&self, &Self) -> bool
+impl core::fmt::Debug for windows_reactor::RefreshDeferral
+pub fn windows_reactor::RefreshDeferral::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct windows_reactor::RefreshVisualizer
+impl windows_reactor::RefreshVisualizer
+pub fn windows_reactor::RefreshVisualizer::new() -> Self
+pub fn windows_reactor::RefreshVisualizer::orientation(self, impl core::convert::Into<core::option::Option<windows_reactor::RefreshVisualizerOrientation>>) -> Self
+impl core::convert::From<windows_reactor::RefreshVisualizer> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::RefreshVisualizer) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::RefreshVisualizer
+pub fn windows_reactor::RefreshVisualizer::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::RefreshVisualizer::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::RelativePanel
 impl windows_reactor::RelativePanel
 pub fn windows_reactor::RelativePanel::new() -> Self
@@ -2049,7 +2493,9 @@ pub fn windows_reactor::RepeatButton::vertical_alignment(self, impl core::conver
 pub fn windows_reactor::RepeatButton::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::ResourceOverrides
 impl windows_reactor::ResourceOverrides
+pub fn windows_reactor::ResourceOverrides::control_corner_radius(self, impl core::convert::Into<windows_reactor::CornerRadius>) -> Self
 pub fn windows_reactor::ResourceOverrides::new() -> Self
+pub fn windows_reactor::ResourceOverrides::overlay_corner_radius(self, impl core::convert::Into<windows_reactor::CornerRadius>) -> Self
 pub fn windows_reactor::ResourceOverrides::set(self, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<windows_reactor::ResourceValue>) -> Self
 pub struct windows_reactor::RichEditBox
 impl windows_reactor::RichEditBox
@@ -2086,6 +2532,8 @@ pub fn windows_reactor::RichText::new(impl core::iter::traits::collect::IntoIter
 pub fn windows_reactor::RichText::single_paragraph(impl core::iter::traits::collect::IntoIterator<Item = windows_reactor::RichTextInline>) -> Self
 pub struct windows_reactor::RichTextBlock
 impl windows_reactor::RichTextBlock
+pub fn windows_reactor::RichTextBlock::font_family(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn windows_reactor::RichTextBlock::font_family_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<alloc::string::String>
 pub fn windows_reactor::RichTextBlock::font_size(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 pub fn windows_reactor::RichTextBlock::is_text_selection_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::RichTextBlock::new() -> Self
@@ -2131,6 +2579,14 @@ pub fn windows_reactor::RoutedMessage<M>::bubble(M) -> Self
 pub fn windows_reactor::RoutedMessage<M>::bubble_without_message() -> Self
 pub fn windows_reactor::RoutedMessage<M>::handled(M) -> Self
 pub fn windows_reactor::RoutedMessage<M>::handled_without_message() -> Self
+pub struct windows_reactor::ScrollOffsets
+pub windows_reactor::ScrollOffsets::extent_height: f64
+pub windows_reactor::ScrollOffsets::extent_width: f64
+pub windows_reactor::ScrollOffsets::horizontal: f64
+pub windows_reactor::ScrollOffsets::vertical: f64
+pub windows_reactor::ScrollOffsets::viewport_height: f64
+pub windows_reactor::ScrollOffsets::viewport_width: f64
+pub windows_reactor::ScrollOffsets::zoom: f32
 pub struct windows_reactor::ScrollView
 impl windows_reactor::ScrollView
 pub fn windows_reactor::ScrollView::horizontal_scroll_bar_visibility(self, impl core::convert::Into<core::option::Option<windows_reactor::ScrollingScrollBarVisibility>>) -> Self
@@ -2155,8 +2611,10 @@ pub fn windows_reactor::ScrollView::vertical_alignment(self, impl core::convert:
 pub fn windows_reactor::ScrollView::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::ScrollViewer
 impl windows_reactor::ScrollViewer
+pub fn windows_reactor::ScrollViewer::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
 pub fn windows_reactor::ScrollViewer::horizontal_scroll_bar_visibility(self, impl core::convert::Into<core::option::Option<windows_reactor::ScrollBarVisibility>>) -> Self
 pub fn windows_reactor::ScrollViewer::new() -> Self
+pub fn windows_reactor::ScrollViewer::on_view_changed(self, impl windows_reactor::IntoUnitCallback) -> Self
 pub fn windows_reactor::ScrollViewer::vertical_scroll_bar_visibility(self, impl core::convert::Into<core::option::Option<windows_reactor::ScrollBarVisibility>>) -> Self
 impl core::convert::From<windows_reactor::ScrollViewer> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::ScrollViewer) -> Self
@@ -2175,6 +2633,7 @@ pub fn windows_reactor::ScrollViewer::min_width(self, impl core::convert::Into<c
 pub fn windows_reactor::ScrollViewer::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::ScrollViewer::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::ScrollViewer::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::ReferenceControl for windows_reactor::ScrollViewer
 pub struct windows_reactor::SelectorBar
 impl windows_reactor::SelectorBar
 pub fn windows_reactor::SelectorBar::items<T>(self, impl core::iter::traits::collect::IntoIterator<Item = T>) -> Self where T: core::convert::Into<windows_reactor::KeyedView>
@@ -2217,16 +2676,42 @@ pub fn windows_reactor::SelectorBarItem::min_width(self, impl core::convert::Int
 pub fn windows_reactor::SelectorBarItem::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::SelectorBarItem::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::SelectorBarItem::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::SemanticZoom
+impl windows_reactor::SemanticZoom
+pub fn windows_reactor::SemanticZoom::is_zoomed_in_view_active(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::SemanticZoom::new() -> Self
+pub fn windows_reactor::SemanticZoom::zoomed_in_view(self, impl core::convert::Into<windows_reactor::View>) -> Self
+pub fn windows_reactor::SemanticZoom::zoomed_out_view(self, impl core::convert::Into<windows_reactor::View>) -> Self
+impl core::convert::From<windows_reactor::SemanticZoom> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::SemanticZoom) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::SemanticZoom
+pub fn windows_reactor::SemanticZoom::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::SemanticZoom::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::Slider
 impl windows_reactor::Slider
+pub fn windows_reactor::Slider::corner_radius(self, impl core::convert::Into<windows_reactor::CornerRadius>) -> Self
+pub fn windows_reactor::Slider::corner_radius_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::CornerRadius>
 pub fn windows_reactor::Slider::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
 pub fn windows_reactor::Slider::header(self, impl core::convert::Into<windows_reactor::View>) -> Self
 pub fn windows_reactor::Slider::is_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::Slider::is_thumb_tool_tip_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::Slider::maximum(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 pub fn windows_reactor::Slider::minimum(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 pub fn windows_reactor::Slider::new() -> Self
+pub fn windows_reactor::Slider::on_size_changed(self, impl windows_reactor::IntoPayloadCallback<f64>) -> Self
 pub fn windows_reactor::Slider::on_value_changed(self, impl windows_reactor::IntoPayloadCallback<f64>) -> Self
 pub fn windows_reactor::Slider::orientation(self, impl core::convert::Into<core::option::Option<windows_reactor::Orientation>>) -> Self
+pub fn windows_reactor::Slider::resource_overrides(self, impl core::convert::Into<core::option::Option<windows_reactor::ResourceOverrides>>) -> Self
 pub fn windows_reactor::Slider::step_frequency(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 pub fn windows_reactor::Slider::value(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 impl core::convert::From<windows_reactor::Slider> for windows_reactor::View
@@ -2295,8 +2780,12 @@ pub fn windows_reactor::SplitView::vertical_alignment(self, impl core::convert::
 pub fn windows_reactor::SplitView::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::StackPanel
 impl windows_reactor::StackPanel
+pub fn windows_reactor::StackPanel::is_hit_test_visible(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::StackPanel::new() -> Self
+pub fn windows_reactor::StackPanel::on_tapped(self, impl windows_reactor::IntoUnitCallback) -> Self
 pub fn windows_reactor::StackPanel::orientation(self, impl core::convert::Into<core::option::Option<windows_reactor::Orientation>>) -> Self
+pub fn windows_reactor::StackPanel::padding(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self
+pub fn windows_reactor::StackPanel::padding_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::Thickness>
 pub fn windows_reactor::StackPanel::spacing(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 impl core::convert::From<windows_reactor::StackPanel> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::StackPanel) -> Self
@@ -2336,6 +2825,33 @@ pub fn windows_reactor::SwapChainPanel::opacity(self, impl core::convert::Into<c
 pub fn windows_reactor::SwapChainPanel::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::SwapChainPanel::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::ReferenceControl for windows_reactor::SwapChainPanel
+pub struct windows_reactor::SwipeControl
+impl windows_reactor::SwipeControl
+pub fn windows_reactor::SwipeControl::content(self, impl core::convert::Into<windows_reactor::View>) -> Self
+pub fn windows_reactor::SwipeControl::new() -> Self
+impl core::convert::From<windows_reactor::SwipeControl> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::SwipeControl) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::SwipeControl
+pub fn windows_reactor::SwipeControl::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::SwipeControl::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::SwipeItem
+impl windows_reactor::SwipeItem
+pub fn windows_reactor::SwipeItem::background(self, impl core::convert::Into<windows_reactor::Brush>) -> Self
+pub fn windows_reactor::SwipeItem::foreground(self, impl core::convert::Into<windows_reactor::Brush>) -> Self
+pub fn windows_reactor::SwipeItem::new(impl core::convert::Into<windows_reactor::Key>, impl core::convert::Into<alloc::string::String>) -> Self
+pub struct windows_reactor::SwipeItems
+impl windows_reactor::SwipeItems
+pub fn windows_reactor::SwipeItems::new(impl core::iter::traits::collect::IntoIterator<Item = windows_reactor::SwipeItem>, impl core::iter::traits::collect::IntoIterator<Item = windows_reactor::SwipeItem>, impl windows_reactor::IntoPayloadCallback<alloc::string::String>) -> Self
 pub struct windows_reactor::SymbolIcon
 impl windows_reactor::SymbolIcon
 pub fn windows_reactor::SymbolIcon::new() -> Self
@@ -2355,6 +2871,24 @@ pub fn windows_reactor::SymbolIcon::min_width(self, impl core::convert::Into<cor
 pub fn windows_reactor::SymbolIcon::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::SymbolIcon::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::SymbolIcon::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::SystemBackdropElement
+impl windows_reactor::SystemBackdropElement
+pub fn windows_reactor::SystemBackdropElement::new() -> Self
+impl core::convert::From<windows_reactor::SystemBackdropElement> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::SystemBackdropElement) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::SystemBackdropElement
+pub fn windows_reactor::SystemBackdropElement::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::SystemBackdropElement::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::TabView
 impl windows_reactor::TabView
 pub fn windows_reactor::TabView::can_reorder_tabs(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
@@ -2439,13 +2973,17 @@ pub fn windows_reactor::TeachingTip::vertical_alignment(self, impl core::convert
 pub fn windows_reactor::TeachingTip::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::TextBlock
 impl windows_reactor::TextBlock
+pub fn windows_reactor::TextBlock::font_family(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn windows_reactor::TextBlock::font_family_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<alloc::string::String>
 pub fn windows_reactor::TextBlock::font_size(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 pub fn windows_reactor::TextBlock::font_weight(self, impl core::convert::Into<core::option::Option<windows_reactor::FontWeight>>) -> Self
 pub fn windows_reactor::TextBlock::foreground(self, impl core::convert::Into<windows_reactor::Brush>) -> Self
 pub fn windows_reactor::TextBlock::foreground_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::Brush>
+pub fn windows_reactor::TextBlock::is_hit_test_visible(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::TextBlock::is_text_selection_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::TextBlock::max_lines(self, impl core::convert::Into<core::option::Option<i32>>) -> Self
 pub fn windows_reactor::TextBlock::new() -> Self
+pub fn windows_reactor::TextBlock::on_tapped(self, impl windows_reactor::IntoUnitCallback) -> Self
 pub fn windows_reactor::TextBlock::text(self, impl core::convert::Into<alloc::string::String>) -> Self
 pub fn windows_reactor::TextBlock::text_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<alloc::string::String>
 pub fn windows_reactor::TextBlock::text_trimming(self, impl core::convert::Into<core::option::Option<windows_reactor::TextTrimming>>) -> Self
@@ -2475,12 +3013,16 @@ pub fn windows_reactor::TextBox::border_brush_optional<T>(self, core::option::Op
 pub fn windows_reactor::TextBox::border_thickness(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self
 pub fn windows_reactor::TextBox::border_thickness_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::Thickness>
 pub fn windows_reactor::TextBox::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
+pub fn windows_reactor::TextBox::font_size(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 pub fn windows_reactor::TextBox::header(self, impl core::convert::Into<windows_reactor::View>) -> Self
 pub fn windows_reactor::TextBox::is_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::TextBox::new() -> Self
 pub fn windows_reactor::TextBox::on_text_changed(self, impl windows_reactor::IntoPayloadCallback<alloc::string::String>) -> Self
+pub fn windows_reactor::TextBox::padding(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self
+pub fn windows_reactor::TextBox::padding_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::Thickness>
 pub fn windows_reactor::TextBox::placeholder_text(self, impl core::convert::Into<alloc::string::String>) -> Self
 pub fn windows_reactor::TextBox::placeholder_text_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<alloc::string::String>
+pub fn windows_reactor::TextBox::resource_overrides(self, impl core::convert::Into<core::option::Option<windows_reactor::ResourceOverrides>>) -> Self
 pub fn windows_reactor::TextBox::text(self, impl core::convert::Into<alloc::string::String>) -> Self
 pub fn windows_reactor::TextBox::text_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<alloc::string::String>
 pub fn windows_reactor::TextBox::text_wrapping(self, impl core::convert::Into<core::option::Option<windows_reactor::TextWrapping>>) -> Self
@@ -2574,11 +3116,14 @@ pub fn windows_reactor::TitleBar::vertical_alignment(self, impl core::convert::I
 pub fn windows_reactor::TitleBar::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::ToggleButton
 impl windows_reactor::ToggleButton
+pub fn windows_reactor::ToggleButton::corner_radius(self, impl core::convert::Into<windows_reactor::CornerRadius>) -> Self
+pub fn windows_reactor::ToggleButton::corner_radius_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::CornerRadius>
 pub fn windows_reactor::ToggleButton::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
 pub fn windows_reactor::ToggleButton::is_checked(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::ToggleButton::is_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
 pub fn windows_reactor::ToggleButton::new() -> Self
 pub fn windows_reactor::ToggleButton::on_is_checked_changed(self, impl windows_reactor::IntoPayloadCallback<bool>) -> Self
+pub fn windows_reactor::ToggleButton::resource_overrides(self, impl core::convert::Into<core::option::Option<windows_reactor::ResourceOverrides>>) -> Self
 impl core::convert::From<windows_reactor::ToggleButton> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::ToggleButton) -> Self
 impl windows_reactor::ContentControl for windows_reactor::ToggleButton
@@ -2598,8 +3143,37 @@ pub fn windows_reactor::ToggleButton::opacity(self, impl core::convert::Into<cor
 pub fn windows_reactor::ToggleButton::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::ToggleButton::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::ReferenceControl for windows_reactor::ToggleButton
+pub struct windows_reactor::ToggleSplitButton
+impl windows_reactor::ToggleSplitButton
+pub fn windows_reactor::ToggleSplitButton::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
+pub fn windows_reactor::ToggleSplitButton::is_checked(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::ToggleSplitButton::is_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
+pub fn windows_reactor::ToggleSplitButton::new() -> Self
+pub fn windows_reactor::ToggleSplitButton::on_click(self, impl windows_reactor::IntoUnitCallback) -> Self
+pub fn windows_reactor::ToggleSplitButton::on_is_checked_changed(self, impl windows_reactor::IntoPayloadCallback<bool>) -> Self
+impl core::convert::From<windows_reactor::ToggleSplitButton> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::ToggleSplitButton) -> Self
+impl windows_reactor::ContentControl for windows_reactor::ToggleSplitButton
+pub fn windows_reactor::ToggleSplitButton::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
+impl windows_reactor::FocusControl for windows_reactor::ToggleSplitButton
+impl windows_reactor::LayoutControl for windows_reactor::ToggleSplitButton
+pub fn windows_reactor::ToggleSplitButton::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::ToggleSplitButton::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::ReferenceControl for windows_reactor::ToggleSplitButton
 pub struct windows_reactor::ToggleSwitch
 impl windows_reactor::ToggleSwitch
+pub fn windows_reactor::ToggleSwitch::corner_radius(self, impl core::convert::Into<windows_reactor::CornerRadius>) -> Self
+pub fn windows_reactor::ToggleSwitch::corner_radius_optional<T>(self, core::option::Option<T>) -> Self where T: core::convert::Into<windows_reactor::CornerRadius>
 pub fn windows_reactor::ToggleSwitch::element_ref(self, &windows_reactor::ElementRef<Self>) -> Self
 pub fn windows_reactor::ToggleSwitch::header(self, impl core::convert::Into<windows_reactor::View>) -> Self
 pub fn windows_reactor::ToggleSwitch::is_enabled(self, impl core::convert::Into<core::option::Option<bool>>) -> Self
@@ -2608,6 +3182,7 @@ pub fn windows_reactor::ToggleSwitch::new() -> Self
 pub fn windows_reactor::ToggleSwitch::off_content(self, impl core::convert::Into<windows_reactor::View>) -> Self
 pub fn windows_reactor::ToggleSwitch::on_content(self, impl core::convert::Into<windows_reactor::View>) -> Self
 pub fn windows_reactor::ToggleSwitch::on_toggled(self, impl windows_reactor::IntoPayloadCallback<bool>) -> Self
+pub fn windows_reactor::ToggleSwitch::resource_overrides(self, impl core::convert::Into<core::option::Option<windows_reactor::ResourceOverrides>>) -> Self
 impl core::convert::From<windows_reactor::ToggleSwitch> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::ToggleSwitch) -> Self
 impl windows_reactor::FocusControl for windows_reactor::ToggleSwitch
@@ -2656,10 +3231,31 @@ pub fn windows_reactor::TreeView::min_width(self, impl core::convert::Into<core:
 pub fn windows_reactor::TreeView::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::TreeView::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::TreeView::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub struct windows_reactor::TwoPaneView
+impl windows_reactor::TwoPaneView
+pub fn windows_reactor::TwoPaneView::new() -> Self
+pub fn windows_reactor::TwoPaneView::pane1(self, impl core::convert::Into<windows_reactor::View>) -> Self
+pub fn windows_reactor::TwoPaneView::pane2(self, impl core::convert::Into<windows_reactor::View>) -> Self
+impl core::convert::From<windows_reactor::TwoPaneView> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::TwoPaneView) -> Self
+impl windows_reactor::LayoutControl for windows_reactor::TwoPaneView
+pub fn windows_reactor::TwoPaneView::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::TwoPaneView::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub struct windows_reactor::VariableSizedWrapGrid
 impl windows_reactor::VariableSizedWrapGrid
 pub fn windows_reactor::VariableSizedWrapGrid::item_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
 pub fn windows_reactor::VariableSizedWrapGrid::item_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self
+pub fn windows_reactor::VariableSizedWrapGrid::maximum_rows_or_columns(self, impl core::convert::Into<core::option::Option<i32>>) -> Self
 pub fn windows_reactor::VariableSizedWrapGrid::new() -> Self
 pub fn windows_reactor::VariableSizedWrapGrid::orientation(self, impl core::convert::Into<core::option::Option<windows_reactor::Orientation>>) -> Self
 impl core::convert::From<windows_reactor::VariableSizedWrapGrid> for windows_reactor::View
@@ -2691,10 +3287,20 @@ impl core::convert::From<&str> for windows_reactor::View
 pub fn windows_reactor::View::from(&str) -> Self
 impl core::convert::From<alloc::string::String> for windows_reactor::View
 pub fn windows_reactor::View::from(alloc::string::String) -> Self
+impl core::convert::From<windows_reactor::AnimatedIcon> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::AnimatedIcon) -> Self
+impl core::convert::From<windows_reactor::AnimatedVisualPlayer> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::AnimatedVisualPlayer) -> Self
+impl core::convert::From<windows_reactor::AnnotatedScrollBar> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::AnnotatedScrollBar) -> Self
 impl core::convert::From<windows_reactor::AppBarButton> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::AppBarButton) -> Self
+impl core::convert::From<windows_reactor::AppBarElementContainer> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::AppBarElementContainer) -> Self
 impl core::convert::From<windows_reactor::AppBarSeparator> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::AppBarSeparator) -> Self
+impl core::convert::From<windows_reactor::AppBarToggleButton> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::AppBarToggleButton) -> Self
 impl core::convert::From<windows_reactor::AutoSuggestBox> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::AutoSuggestBox) -> Self
 impl core::convert::From<windows_reactor::BitmapIcon> for windows_reactor::View
@@ -2733,6 +3339,8 @@ impl core::convert::From<windows_reactor::FlipView> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::FlipView) -> Self
 impl core::convert::From<windows_reactor::FontIcon> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::FontIcon) -> Self
+impl core::convert::From<windows_reactor::Frame> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::Frame) -> Self
 impl core::convert::From<windows_reactor::Grid> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::Grid) -> Self
 impl core::convert::From<windows_reactor::GridView> for windows_reactor::View
@@ -2749,8 +3357,14 @@ impl core::convert::From<windows_reactor::InfoBadge> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::InfoBadge) -> Self
 impl core::convert::From<windows_reactor::InfoBar> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::InfoBar) -> Self
+impl core::convert::From<windows_reactor::ItemContainer> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::ItemContainer) -> Self
 impl core::convert::From<windows_reactor::ItemsRepeater> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::ItemsRepeater) -> Self
+impl core::convert::From<windows_reactor::ItemsRepeaterScrollHost> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::ItemsRepeaterScrollHost) -> Self
+impl core::convert::From<windows_reactor::ItemsView> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::ItemsView) -> Self
 impl core::convert::From<windows_reactor::Line> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::Line) -> Self
 impl core::convert::From<windows_reactor::ListBox> for windows_reactor::View
@@ -2761,6 +3375,12 @@ impl core::convert::From<windows_reactor::ListView> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::ListView) -> Self
 impl core::convert::From<windows_reactor::ListViewItem> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::ListViewItem) -> Self
+impl core::convert::From<windows_reactor::MapControl> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::MapControl) -> Self
+impl core::convert::From<windows_reactor::MediaPlayerElement> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::MediaPlayerElement) -> Self
+impl core::convert::From<windows_reactor::MediaTransportControls> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::MediaTransportControls) -> Self
 impl core::convert::From<windows_reactor::MenuBar> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::MenuBar) -> Self
 impl core::convert::From<windows_reactor::MenuBarItem> for windows_reactor::View
@@ -2771,12 +3391,16 @@ impl core::convert::From<windows_reactor::NavigationViewItem> for windows_reacto
 pub fn windows_reactor::View::from(windows_reactor::NavigationViewItem) -> Self
 impl core::convert::From<windows_reactor::NumberBox> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::NumberBox) -> Self
+impl core::convert::From<windows_reactor::ParallaxView> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::ParallaxView) -> Self
 impl core::convert::From<windows_reactor::PasswordBox> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::PasswordBox) -> Self
 impl core::convert::From<windows_reactor::PathIcon> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::PathIcon) -> Self
 impl core::convert::From<windows_reactor::PersonPicture> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::PersonPicture) -> Self
+impl core::convert::From<windows_reactor::PipsPager> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::PipsPager) -> Self
 impl core::convert::From<windows_reactor::Pivot> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::Pivot) -> Self
 impl core::convert::From<windows_reactor::PivotItem> for windows_reactor::View
@@ -2793,6 +3417,10 @@ impl core::convert::From<windows_reactor::RatingControl> for windows_reactor::Vi
 pub fn windows_reactor::View::from(windows_reactor::RatingControl) -> Self
 impl core::convert::From<windows_reactor::Rectangle> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::Rectangle) -> Self
+impl core::convert::From<windows_reactor::RefreshContainer> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::RefreshContainer) -> Self
+impl core::convert::From<windows_reactor::RefreshVisualizer> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::RefreshVisualizer) -> Self
 impl core::convert::From<windows_reactor::RelativePanel> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::RelativePanel) -> Self
 impl core::convert::From<windows_reactor::RepeatButton> for windows_reactor::View
@@ -2809,6 +3437,8 @@ impl core::convert::From<windows_reactor::SelectorBar> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::SelectorBar) -> Self
 impl core::convert::From<windows_reactor::SelectorBarItem> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::SelectorBarItem) -> Self
+impl core::convert::From<windows_reactor::SemanticZoom> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::SemanticZoom) -> Self
 impl core::convert::From<windows_reactor::Slider> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::Slider) -> Self
 impl core::convert::From<windows_reactor::SplitButton> for windows_reactor::View
@@ -2819,8 +3449,12 @@ impl core::convert::From<windows_reactor::StackPanel> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::StackPanel) -> Self
 impl core::convert::From<windows_reactor::SwapChainPanel> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::SwapChainPanel) -> Self
+impl core::convert::From<windows_reactor::SwipeControl> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::SwipeControl) -> Self
 impl core::convert::From<windows_reactor::SymbolIcon> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::SymbolIcon) -> Self
+impl core::convert::From<windows_reactor::SystemBackdropElement> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::SystemBackdropElement) -> Self
 impl core::convert::From<windows_reactor::TabView> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::TabView) -> Self
 impl core::convert::From<windows_reactor::TabViewItem> for windows_reactor::View
@@ -2837,10 +3471,14 @@ impl core::convert::From<windows_reactor::TitleBar> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::TitleBar) -> Self
 impl core::convert::From<windows_reactor::ToggleButton> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::ToggleButton) -> Self
+impl core::convert::From<windows_reactor::ToggleSplitButton> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::ToggleSplitButton) -> Self
 impl core::convert::From<windows_reactor::ToggleSwitch> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::ToggleSwitch) -> Self
 impl core::convert::From<windows_reactor::TreeView> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::TreeView) -> Self
+impl core::convert::From<windows_reactor::TwoPaneView> for windows_reactor::View
+pub fn windows_reactor::View::from(windows_reactor::TwoPaneView) -> Self
 impl core::convert::From<windows_reactor::VariableSizedWrapGrid> for windows_reactor::View
 pub fn windows_reactor::View::from(windows_reactor::VariableSizedWrapGrid) -> Self
 impl core::convert::From<windows_reactor::Viewbox> for windows_reactor::View
@@ -2958,6 +3596,11 @@ pub fn windows_reactor::WebView2::opacity(self, impl core::convert::Into<core::o
 pub fn windows_reactor::WebView2::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::WebView2::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::ReferenceControl for windows_reactor::WebView2
+pub struct windows_reactor::WindowBackdropTuning
+pub windows_reactor::WindowBackdropTuning::fallback_color: core::option::Option<windows_reactor::Color>
+pub windows_reactor::WindowBackdropTuning::luminosity_opacity: core::option::Option<f64>
+pub windows_reactor::WindowBackdropTuning::tint_color: core::option::Option<windows_reactor::Color>
+pub windows_reactor::WindowBackdropTuning::tint_opacity: core::option::Option<f64>
 pub struct windows_reactor::WindowConstraints
 pub windows_reactor::WindowConstraints::max_height: core::option::Option<f64>
 pub windows_reactor::WindowConstraints::max_width: core::option::Option<f64>
@@ -2977,11 +3620,25 @@ pub windows_reactor::WindowSize::width: f64
 pub struct windows_reactor::WindowVisuals
 impl windows_reactor::WindowVisuals
 pub fn windows_reactor::WindowVisuals::backdrop(self, windows_reactor::WindowBackdrop) -> Self
+pub fn windows_reactor::WindowVisuals::backdrop_tuning(self, windows_reactor::WindowBackdropTuning) -> Self
+pub fn windows_reactor::WindowVisuals::border(self, windows_reactor::WindowBorder) -> Self
+pub fn windows_reactor::WindowVisuals::centered(self) -> Self
+pub fn windows_reactor::WindowVisuals::client_position(self, f64, f64) -> Self
 pub fn windows_reactor::WindowVisuals::client_size(self, f64, f64) -> Self
 pub fn windows_reactor::WindowVisuals::constraints(self, windows_reactor::WindowConstraints) -> Self
+pub fn windows_reactor::WindowVisuals::corner(self, windows_reactor::WindowCorner) -> Self
 pub fn windows_reactor::WindowVisuals::icon(self, &'static str) -> Self
 pub fn windows_reactor::WindowVisuals::new() -> Self
+pub fn windows_reactor::WindowVisuals::presenter(self, windows_reactor::WindowPresenter) -> Self
 pub fn windows_reactor::WindowVisuals::theme(self, windows_reactor::WindowTheme) -> Self
+pub struct windows_reactor::WorkArea
+pub windows_reactor::WorkArea::height: f64
+pub windows_reactor::WorkArea::width: f64
+pub windows_reactor::WorkArea::x: f64
+pub windows_reactor::WorkArea::y: f64
+impl windows_reactor::WorkArea
+pub fn windows_reactor::WorkArea::centered_origin(self, f64, f64) -> (f64, f64)
+pub fn windows_reactor::WorkArea::dips(self, u32) -> Self
 pub trait windows_reactor::AutomationExt: windows_reactor::LayoutControl + core::marker::Sized
 pub fn windows_reactor::AutomationExt::automation_heading_level(self, windows_reactor::AutomationHeadingLevel) -> Self
 pub fn windows_reactor::AutomationExt::automation_id(self, impl core::convert::Into<alloc::string::String>) -> Self
@@ -3027,6 +3684,8 @@ pub fn windows_reactor::Component::update(&mut self, Self::Message, &windows_rea
 pub fn windows_reactor::Component::view(&self, &Self::Input, &mut windows_reactor::ViewContext<Self>) -> windows_reactor::View
 pub trait windows_reactor::ContentControl: sealed::ContentControl + core::marker::Sized
 pub fn windows_reactor::ContentControl::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
+impl windows_reactor::ContentControl for windows_reactor::AppBarElementContainer
+pub fn windows_reactor::AppBarElementContainer::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
 impl windows_reactor::ContentControl for windows_reactor::Border
 pub fn windows_reactor::Border::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
 impl windows_reactor::ContentControl for windows_reactor::Button
@@ -3037,10 +3696,14 @@ impl windows_reactor::ContentControl for windows_reactor::ContentDialog
 pub fn windows_reactor::ContentDialog::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
 impl windows_reactor::ContentControl for windows_reactor::DropDownButton
 pub fn windows_reactor::DropDownButton::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
+impl windows_reactor::ContentControl for windows_reactor::Frame
+pub fn windows_reactor::Frame::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
 impl windows_reactor::ContentControl for windows_reactor::GridViewItem
 pub fn windows_reactor::GridViewItem::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
 impl windows_reactor::ContentControl for windows_reactor::HyperlinkButton
 pub fn windows_reactor::HyperlinkButton::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
+impl windows_reactor::ContentControl for windows_reactor::ItemContainer
+pub fn windows_reactor::ItemContainer::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
 impl windows_reactor::ContentControl for windows_reactor::ListBoxItem
 pub fn windows_reactor::ListBoxItem::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
 impl windows_reactor::ContentControl for windows_reactor::ListViewItem
@@ -3049,6 +3712,8 @@ impl windows_reactor::ContentControl for windows_reactor::PivotItem
 pub fn windows_reactor::PivotItem::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
 impl windows_reactor::ContentControl for windows_reactor::RadioButton
 pub fn windows_reactor::RadioButton::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
+impl windows_reactor::ContentControl for windows_reactor::RefreshContainer
+pub fn windows_reactor::RefreshContainer::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
 impl windows_reactor::ContentControl for windows_reactor::RepeatButton
 pub fn windows_reactor::RepeatButton::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
 impl windows_reactor::ContentControl for windows_reactor::ScrollView
@@ -3061,6 +3726,8 @@ impl windows_reactor::ContentControl for windows_reactor::TabViewItem
 pub fn windows_reactor::TabViewItem::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
 impl windows_reactor::ContentControl for windows_reactor::ToggleButton
 pub fn windows_reactor::ToggleButton::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
+impl windows_reactor::ContentControl for windows_reactor::ToggleSplitButton
+pub fn windows_reactor::ToggleSplitButton::content(self, impl core::convert::Into<windows_reactor::View>) -> windows_reactor::View
 pub trait windows_reactor::FlyoutExt: core::convert::Into<windows_reactor::View> + core::marker::Sized
 pub fn windows_reactor::FlyoutExt::flyout(self, impl core::convert::Into<alloc::string::String>) -> windows_reactor::View
 pub fn windows_reactor::FlyoutExt::flyout_with(self, windows_reactor::Flyout) -> windows_reactor::View
@@ -3082,6 +3749,7 @@ impl windows_reactor::FocusControl for windows_reactor::RichEditBox
 impl windows_reactor::FocusControl for windows_reactor::Slider
 impl windows_reactor::FocusControl for windows_reactor::TextBox
 impl windows_reactor::FocusControl for windows_reactor::ToggleButton
+impl windows_reactor::FocusControl for windows_reactor::ToggleSplitButton
 impl windows_reactor::FocusControl for windows_reactor::ToggleSwitch
 pub trait windows_reactor::GridChildExt: windows_reactor::LayoutControl + core::marker::Sized
 pub fn windows_reactor::GridChildExt::grid_column(self, i32) -> Self
@@ -3137,6 +3805,45 @@ pub fn windows_reactor::LayoutControl::min_width(self, impl core::convert::Into<
 pub fn windows_reactor::LayoutControl::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::LayoutControl::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::LayoutControl::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::AnimatedIcon
+pub fn windows_reactor::AnimatedIcon::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::AnimatedIcon::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedIcon::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::AnimatedVisualPlayer
+pub fn windows_reactor::AnimatedVisualPlayer::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::AnimatedVisualPlayer::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnimatedVisualPlayer::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::AnnotatedScrollBar
+pub fn windows_reactor::AnnotatedScrollBar::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::AnnotatedScrollBar::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AnnotatedScrollBar::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::AppBarButton
 pub fn windows_reactor::AppBarButton::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::AppBarButton::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -3150,6 +3857,19 @@ pub fn windows_reactor::AppBarButton::min_width(self, impl core::convert::Into<c
 pub fn windows_reactor::AppBarButton::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::AppBarButton::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::AppBarButton::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::AppBarElementContainer
+pub fn windows_reactor::AppBarElementContainer::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::AppBarElementContainer::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarElementContainer::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::AppBarSeparator
 pub fn windows_reactor::AppBarSeparator::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::AppBarSeparator::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -3163,6 +3883,19 @@ pub fn windows_reactor::AppBarSeparator::min_width(self, impl core::convert::Int
 pub fn windows_reactor::AppBarSeparator::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::AppBarSeparator::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::AppBarSeparator::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::AppBarToggleButton
+pub fn windows_reactor::AppBarToggleButton::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::AppBarToggleButton::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::AppBarToggleButton::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::AutoSuggestBox
 pub fn windows_reactor::AutoSuggestBox::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::AutoSuggestBox::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -3397,6 +4130,19 @@ pub fn windows_reactor::FontIcon::min_width(self, impl core::convert::Into<core:
 pub fn windows_reactor::FontIcon::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::FontIcon::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::FontIcon::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::Frame
+pub fn windows_reactor::Frame::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::Frame::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::Frame::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::Grid
 pub fn windows_reactor::Grid::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::Grid::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -3501,6 +4247,19 @@ pub fn windows_reactor::InfoBar::min_width(self, impl core::convert::Into<core::
 pub fn windows_reactor::InfoBar::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::InfoBar::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::InfoBar::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::ItemContainer
+pub fn windows_reactor::ItemContainer::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::ItemContainer::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemContainer::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::ItemsRepeater
 pub fn windows_reactor::ItemsRepeater::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::ItemsRepeater::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -3514,6 +4273,32 @@ pub fn windows_reactor::ItemsRepeater::min_width(self, impl core::convert::Into<
 pub fn windows_reactor::ItemsRepeater::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::ItemsRepeater::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::ItemsRepeater::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::ItemsRepeaterScrollHost
+pub fn windows_reactor::ItemsRepeaterScrollHost::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::ItemsRepeaterScrollHost::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsRepeaterScrollHost::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::ItemsView
+pub fn windows_reactor::ItemsView::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::ItemsView::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ItemsView::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::Line
 pub fn windows_reactor::Line::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::Line::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -3579,6 +4364,45 @@ pub fn windows_reactor::ListViewItem::min_width(self, impl core::convert::Into<c
 pub fn windows_reactor::ListViewItem::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::ListViewItem::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::ListViewItem::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::MapControl
+pub fn windows_reactor::MapControl::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::MapControl::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MapControl::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::MediaPlayerElement
+pub fn windows_reactor::MediaPlayerElement::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::MediaPlayerElement::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaPlayerElement::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::MediaTransportControls
+pub fn windows_reactor::MediaTransportControls::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::MediaTransportControls::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::MediaTransportControls::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::MenuBar
 pub fn windows_reactor::MenuBar::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::MenuBar::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -3644,6 +4468,19 @@ pub fn windows_reactor::NumberBox::min_width(self, impl core::convert::Into<core
 pub fn windows_reactor::NumberBox::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::NumberBox::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::NumberBox::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::ParallaxView
+pub fn windows_reactor::ParallaxView::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::ParallaxView::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ParallaxView::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::PasswordBox
 pub fn windows_reactor::PasswordBox::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::PasswordBox::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -3683,6 +4520,19 @@ pub fn windows_reactor::PersonPicture::min_width(self, impl core::convert::Into<
 pub fn windows_reactor::PersonPicture::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::PersonPicture::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::PersonPicture::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::PipsPager
+pub fn windows_reactor::PipsPager::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::PipsPager::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::PipsPager::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::Pivot
 pub fn windows_reactor::Pivot::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::Pivot::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -3787,6 +4637,32 @@ pub fn windows_reactor::Rectangle::min_width(self, impl core::convert::Into<core
 pub fn windows_reactor::Rectangle::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::Rectangle::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::Rectangle::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::RefreshContainer
+pub fn windows_reactor::RefreshContainer::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::RefreshContainer::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshContainer::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::RefreshVisualizer
+pub fn windows_reactor::RefreshVisualizer::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::RefreshVisualizer::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::RefreshVisualizer::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::RelativePanel
 pub fn windows_reactor::RelativePanel::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::RelativePanel::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -3891,6 +4767,19 @@ pub fn windows_reactor::SelectorBarItem::min_width(self, impl core::convert::Int
 pub fn windows_reactor::SelectorBarItem::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::SelectorBarItem::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::SelectorBarItem::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::SemanticZoom
+pub fn windows_reactor::SemanticZoom::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::SemanticZoom::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SemanticZoom::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::Slider
 pub fn windows_reactor::Slider::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::Slider::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -3956,6 +4845,19 @@ pub fn windows_reactor::SwapChainPanel::min_width(self, impl core::convert::Into
 pub fn windows_reactor::SwapChainPanel::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::SwapChainPanel::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::SwapChainPanel::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::SwipeControl
+pub fn windows_reactor::SwipeControl::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::SwipeControl::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SwipeControl::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::SymbolIcon
 pub fn windows_reactor::SymbolIcon::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::SymbolIcon::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -3969,6 +4871,19 @@ pub fn windows_reactor::SymbolIcon::min_width(self, impl core::convert::Into<cor
 pub fn windows_reactor::SymbolIcon::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::SymbolIcon::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::SymbolIcon::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::SystemBackdropElement
+pub fn windows_reactor::SystemBackdropElement::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::SystemBackdropElement::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::SystemBackdropElement::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::TabView
 pub fn windows_reactor::TabView::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::TabView::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -4073,6 +4988,19 @@ pub fn windows_reactor::ToggleButton::min_width(self, impl core::convert::Into<c
 pub fn windows_reactor::ToggleButton::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::ToggleButton::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::ToggleButton::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::ToggleSplitButton
+pub fn windows_reactor::ToggleSplitButton::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::ToggleSplitButton::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::ToggleSplitButton::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::ToggleSwitch
 pub fn windows_reactor::ToggleSwitch::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::ToggleSwitch::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -4099,6 +5027,19 @@ pub fn windows_reactor::TreeView::min_width(self, impl core::convert::Into<core:
 pub fn windows_reactor::TreeView::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::TreeView::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::TreeView::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+impl windows_reactor::LayoutControl for windows_reactor::TwoPaneView
+pub fn windows_reactor::TwoPaneView::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::horizontal_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::HorizontalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::margin(self, impl core::convert::Into<windows_reactor::Thickness>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::margin_optional<T>(self, core::option::Option<T>) -> Self where Self: core::marker::Sized, T: core::convert::Into<windows_reactor::Thickness>
+pub fn windows_reactor::TwoPaneView::max_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::max_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::min_height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::min_width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::opacity(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::vertical_alignment(self, impl core::convert::Into<core::option::Option<windows_reactor::VerticalAlignment>>) -> Self where Self: core::marker::Sized
+pub fn windows_reactor::TwoPaneView::width(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
 impl windows_reactor::LayoutControl for windows_reactor::VariableSizedWrapGrid
 pub fn windows_reactor::VariableSizedWrapGrid::exit_transition(self, windows_reactor::ExitTransition) -> Self where Self: core::marker::Sized
 pub fn windows_reactor::VariableSizedWrapGrid::height(self, impl core::convert::Into<core::option::Option<f64>>) -> Self where Self: core::marker::Sized
@@ -4151,15 +5092,18 @@ impl windows_reactor::ReferenceControl for windows_reactor::ComboBox
 impl windows_reactor::ReferenceControl for windows_reactor::Grid
 impl windows_reactor::ReferenceControl for windows_reactor::HyperlinkButton
 impl windows_reactor::ReferenceControl for windows_reactor::Image
+impl windows_reactor::ReferenceControl for windows_reactor::MediaPlayerElement
 impl windows_reactor::ReferenceControl for windows_reactor::NumberBox
 impl windows_reactor::ReferenceControl for windows_reactor::PasswordBox
 impl windows_reactor::ReferenceControl for windows_reactor::RadioButton
 impl windows_reactor::ReferenceControl for windows_reactor::RatingControl
 impl windows_reactor::ReferenceControl for windows_reactor::RichEditBox
+impl windows_reactor::ReferenceControl for windows_reactor::ScrollViewer
 impl windows_reactor::ReferenceControl for windows_reactor::Slider
 impl windows_reactor::ReferenceControl for windows_reactor::SwapChainPanel
 impl windows_reactor::ReferenceControl for windows_reactor::TextBox
 impl windows_reactor::ReferenceControl for windows_reactor::ToggleButton
+impl windows_reactor::ReferenceControl for windows_reactor::ToggleSplitButton
 impl windows_reactor::ReferenceControl for windows_reactor::ToggleSwitch
 impl windows_reactor::ReferenceControl for windows_reactor::WebView2
 pub trait windows_reactor::RelativePanelChildExt: windows_reactor::LayoutControl + core::marker::Sized
@@ -4176,6 +5120,10 @@ pub fn T::relative_align_left(self) -> Self
 pub fn T::relative_align_right(self) -> Self
 pub fn T::relative_align_top(self) -> Self
 pub fn T::relative_align_vertical_center(self) -> Self
+pub trait windows_reactor::SwipeExt: core::convert::Into<windows_reactor::View> + core::marker::Sized
+pub fn windows_reactor::SwipeExt::swipe_items(self, windows_reactor::SwipeItems) -> windows_reactor::View
+impl<T> windows_reactor::SwipeExt for T where T: core::convert::Into<windows_reactor::View>
+pub fn T::swipe_items(self, windows_reactor::SwipeItems) -> windows_reactor::View
 pub trait windows_reactor::TooltipExt: core::convert::Into<windows_reactor::View> + core::marker::Sized
 pub fn windows_reactor::TooltipExt::tooltip(self, impl core::convert::Into<alloc::string::String>) -> windows_reactor::View
 pub fn windows_reactor::TooltipExt::tooltip_with(self, windows_reactor::Tooltip) -> windows_reactor::View
@@ -4186,6 +5134,18 @@ pub trait windows_reactor::TreeViewExt: core::convert::Into<windows_reactor::Vie
 pub fn windows_reactor::TreeViewExt::nodes(self, impl core::iter::traits::collect::IntoIterator<Item = windows_reactor::TreeNode>) -> windows_reactor::View
 impl<T> windows_reactor::TreeViewExt for T where T: core::convert::Into<windows_reactor::View>
 pub fn T::nodes(self, impl core::iter::traits::collect::IntoIterator<Item = windows_reactor::TreeNode>) -> windows_reactor::View
+pub trait windows_reactor::WrapGridChildExt: windows_reactor::LayoutControl + core::marker::Sized
+pub fn windows_reactor::WrapGridChildExt::wrap_grid_column_span(self, i32) -> Self
+pub fn windows_reactor::WrapGridChildExt::wrap_grid_row_span(self, i32) -> Self
+impl<T: windows_reactor::LayoutControl> windows_reactor::WrapGridChildExt for T
+pub fn T::wrap_grid_column_span(self, i32) -> Self
+pub fn T::wrap_grid_row_span(self, i32) -> Self
+pub fn windows_reactor::backdrop_is_supported(windows_reactor::WindowBackdrop) -> bool
+pub fn windows_reactor::primary_work_area() -> core::option::Option<windows_reactor::WorkArea>
+pub fn windows_reactor::primary_work_area_dip() -> core::option::Option<(f64, f64)>
+pub fn windows_reactor::translation_y(f64) -> windows_numerics::bindings::Vector3
+pub fn windows_reactor::window_placement_dip(&windows_reactor::WindowHandle<'_>) -> core::option::Option<(f64, f64)>
+pub fn windows_reactor::work_area_for_window(&windows_reactor::WindowHandle<'_>) -> core::option::Option<windows_reactor::WorkArea>
 pub type windows_reactor::CompositionHostError = windows_reactor::IntegrationError
 pub type windows_reactor::FocusError = windows_reactor::IntegrationError
 pub type windows_reactor::ImageSourceError = windows_reactor::IntegrationError

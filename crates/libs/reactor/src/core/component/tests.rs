@@ -773,6 +773,41 @@ fn local_message_queue_reports_backpressure_at_its_fixed_capacity() {
     assert_eq!(store.pending(), LOCAL_MESSAGE_QUEUE_CAPACITY);
 }
 
+#[test]
+fn liveness_survives_backpressure_but_not_retirement() {
+    let mut store = store();
+    let token = reserve_state(&mut store, "");
+    store.publish(token);
+    let sender = store.sender::<u32>(token);
+    assert!(sender.is_alive());
+
+    for value in 0..LOCAL_MESSAGE_QUEUE_CAPACITY {
+        assert!(sender.send(value as u32));
+    }
+    // A full queue drops this message...
+    assert!(!sender.send(u32::MAX));
+    // ...but the receiver is still there. Reading `send`'s `false` as "the receiver is gone" is
+    // exactly how a subscriber that is merely busy gets retired for good.
+    assert!(sender.is_alive());
+    assert_eq!(store.pending(), LOCAL_MESSAGE_QUEUE_CAPACITY);
+
+    store.remove(token);
+    assert!(!sender.is_alive());
+    assert!(!sender.send(0));
+}
+
+#[test]
+fn a_closed_store_reports_every_sender_as_gone() {
+    let mut store = store();
+    let token = reserve_state(&mut store, "");
+    store.publish(token);
+    let sender = store.sender::<u32>(token);
+
+    assert!(sender.is_alive());
+    store.close();
+    assert!(!sender.is_alive());
+}
+
 struct Counter {
     value: u32,
 }

@@ -43,6 +43,11 @@ mod generated;
 pub use generated::*;
 mod framework;
 mod grid;
+mod window_geometry;
+pub use window_geometry::{
+    WorkArea, primary_work_area, primary_work_area_dip, window_placement_dip, work_area_for_window,
+};
+use window_geometry::{window_frame_size, work_area_of};
 #[cfg(feature = "test")]
 pub(crate) mod test;
 #[cfg(feature = "test")]
@@ -53,6 +58,45 @@ enum PropertyTarget<'a> {
     Attached(UIElement),
     GridDefinitions(&'a Handle),
     Generated(&'a Handle),
+}
+
+/// 把 [`ResourceValue`] 转换成 WinUI 资源字典可以存放的 boxed 值。
+///
+/// 元素级覆盖（[`WinUiRuntime::set_resource_overrides`]）与应用级覆盖
+/// （[`install_theme_resources`]）共用这一条转换路径，保证两处语义完全一致。
+pub(crate) fn resource_value(
+    value: &ResourceValue,
+) -> windows_core::Result<windows_core::IInspectable> {
+    Ok(match value {
+        ResourceValue::Color(value) => {
+            let brush = SolidColorBrush::new()?;
+            brush.SetColor(bindings::Color {
+                a: value.a,
+                r: value.r,
+                g: value.g,
+                b: value.b,
+            })?;
+            brush.into()
+        }
+        ResourceValue::Thickness(value) => {
+            windows_reference::IReference::from(bindings::Thickness {
+                left: value.left(),
+                top: value.top(),
+                right: value.right(),
+                bottom: value.bottom(),
+            })
+            .into()
+        }
+        ResourceValue::CornerRadius(value) => {
+            windows_reference::IReference::from(bindings::CornerRadius {
+                top_left: value.top_left(),
+                top_right: value.top_right(),
+                bottom_right: value.bottom_right(),
+                bottom_left: value.bottom_left(),
+            })
+            .into()
+        }
+    })
 }
 
 impl<'a> PropertyTarget<'a> {
@@ -191,6 +235,9 @@ pub struct WinUiRuntime {
     image_decode_tickets: HashMap<NodeId, u64>,
     observation_subscriptions: HashMap<(NodeId, u64), ObservationSubscription>,
     subscriptions: HashMap<(NodeId, EventId), NativeSubscription>,
+    /// `Border::scale` 的缩放原点订阅（见 [`WinUiRuntime::sync_scale_center`]）：
+    /// `CenterPoint` 只能在元素测量之后建立，故按元素挂 `SizeChanged` 维持。
+    scale_center_subscriptions: HashMap<NodeId, windows_core::EventRevoker>,
     theme_styles: HashMap<(MountedKind, ThemeStyle), Style>,
     virtuals: HashMap<NodeId, element_factory::VirtualHandle>,
     window_backdrops: Rc<RefCell<HashMap<NodeId, BackdropHost>>>,
@@ -356,6 +403,28 @@ fn scroll_offsets_of(viewer: &bindings::ScrollViewer) -> ScrollOffsets {
     }
 }
 
+/// 以元素**当前的测量尺寸**为缩放原点（`Border::scale` 用）。
+///
+/// 未测量时（宽或高为 0）什么都不设：此时按 0 反算会把原点定在左上角，交给
+/// [`WinUiRuntime::sync_scale_center`] 挂的 `SizeChanged` 在尺寸到位后补设。
+fn apply_scale_center(
+    element: &IUIElement,
+    framework: &IFrameworkElement,
+) -> Result<(), RuntimeError> {
+    let width = framework.ActualWidth().map_err(native_error)? as f32;
+    let height = framework.ActualHeight().map_err(native_error)? as f32;
+    if width <= 0.0 || height <= 0.0 {
+        return Ok(());
+    }
+    element
+        .SetCenterPoint(Vector3 {
+            x: width / 2.0,
+            y: height / 2.0,
+            z: 0.0,
+        })
+        .map_err(native_error)
+}
+
 fn emit_scroll_offsets(viewer: &bindings::ScrollViewer, callback: &Callback<ScrollOffsets>) {
     invoke_callback(callback, scroll_offsets_of(viewer));
 }
@@ -471,12 +540,41 @@ struct WindowVisualChanges {
     backdrop_tuning: bool,
     border: bool,
     client_size: bool,
-    client_position: bool,
     constraints: bool,
     corner: bool,
     icon: bool,
+    placement: bool,
     presenter: bool,
     theme: bool,
+}
+
+/// Whether `property` is a control's element-level `Resources` overrides property.
+///
+/// The generated dispatch cannot apply this property on its own: `FrameworkElement.Resources`
+/// has no setter, so the generated arm only ever answers `RuntimeError::UnsupportedKind`.
+/// [`WinUiRuntime::set_resource_overrides`] and [`WinUiRuntime::clear_resource_overrides`] do
+/// the real work, and they are generic — they take any node's `IFrameworkElement.Resources`
+/// dictionary — so this predicate is the only thing standing between the generator's output and
+/// a control that opted into the `resource_overrides` adapter.
+///
+/// Keep the list in sync with the `resource_overrides` `OneOf` allow-list in
+/// `crates/tools/reactor/src/schema.rs`. Adding a control to `winui.toml` without adding it
+/// here compiles and generates, but every `resource_overrides` write on that control fails at
+/// runtime with `UnsupportedKind`.
+fn is_resource_overrides_property(property: PropertyId) -> bool {
+    matches!(
+        property,
+        PropertyId::ButtonResources
+            | PropertyId::CheckBoxResources
+            | PropertyId::ComboBoxResources
+            | PropertyId::NavigationViewResources
+            | PropertyId::NumberBoxResources
+            | PropertyId::ProgressBarResources
+            | PropertyId::SliderResources
+            | PropertyId::TextBoxResources
+            | PropertyId::ToggleButtonResources
+            | PropertyId::ToggleSwitchResources
+    )
 }
 
 fn set_resource_style(
@@ -800,11 +898,10 @@ fn window_visual_changes(
             .is_none_or(|previous| previous.backdrop_tuning != next.backdrop_tuning),
         border: previous.is_none_or(|previous| previous.border != next.border),
         client_size: previous.is_none_or(|previous| previous.client_size != next.client_size),
-        client_position: previous
-            .is_none_or(|previous| previous.client_position != next.client_position),
         constraints: previous.is_none_or(|previous| previous.constraints != next.constraints),
         corner: previous.is_none_or(|previous| previous.corner != next.corner),
         icon: next.icon.is_some() && previous.is_none_or(|previous| previous.icon != next.icon),
+        placement: previous.is_none_or(|previous| previous.placement != next.placement),
         presenter: previous.is_none_or(|previous| previous.presenter != next.presenter),
         theme: previous.is_none_or(|previous| previous.theme != next.theme),
     }
@@ -1185,11 +1282,13 @@ mod window_visual_tests {
         let previous = WindowVisuals::new()
             .theme(WindowTheme::System)
             .backdrop(WindowBackdrop::Mica)
-            .client_size(1400.0, 900.0);
+            .client_size(1400.0, 900.0)
+            .centered();
         let next = WindowVisuals::new()
             .theme(WindowTheme::Dark)
             .backdrop(WindowBackdrop::Mica)
-            .client_size(1400.0, 900.0);
+            .client_size(1400.0, 900.0)
+            .centered();
 
         assert_eq!(
             window_visual_changes(Some(previous), next),
@@ -1198,10 +1297,10 @@ mod window_visual_tests {
                 backdrop_tuning: false,
                 border: false,
                 client_size: false,
-                client_position: false,
                 constraints: false,
                 corner: false,
                 icon: false,
+                placement: false,
                 presenter: false,
                 theme: true,
             }
@@ -1233,10 +1332,10 @@ mod window_visual_tests {
                 backdrop_tuning: false,
                 border: false,
                 client_size: true,
-                client_position: false,
                 constraints: false,
                 corner: false,
                 icon: false,
+                placement: false,
                 presenter: false,
                 theme: false,
             }
@@ -1248,13 +1347,49 @@ mod window_visual_tests {
                 backdrop_tuning: false,
                 border: false,
                 client_size: false,
-                client_position: false,
                 constraints: true,
                 corner: false,
                 icon: false,
+                placement: false,
                 presenter: false,
                 theme: false,
             }
+        );
+    }
+
+    /// 位置只在声明值变化时下发一次：每帧重声明同一个位置（居中或坐标）都不会跟用户拖动
+    /// 窗口较劲；改成另一种位置声明时则必须重新下发。
+    #[test]
+    fn placement_applies_only_when_the_declaration_changes() {
+        let centered = WindowVisuals::new().client_size(900.0, 700.0).centered();
+        let position = WindowVisuals::new()
+            .client_size(900.0, 700.0)
+            .client_position(120.0, 80.0);
+        let moved = WindowVisuals::new()
+            .client_size(900.0, 700.0)
+            .client_position(300.0, 200.0);
+        let silent = WindowVisuals::new().client_size(900.0, 700.0);
+
+        let placement = |previous, next| window_visual_changes(Some(previous), next).placement;
+        assert!(placement(WindowVisuals::default(), centered));
+        assert!(!placement(centered, centered));
+        assert!(placement(centered, position));
+        assert!(placement(position, moved));
+        assert!(placement(position, silent));
+        assert!(!placement(silent, silent));
+    }
+
+    /// 位置与居中互斥：两者写同一个声明，后调用的那个生效。否则"既给了坐标又要求居中"的
+    /// 声明没有任何合理语义。
+    #[test]
+    fn later_placement_declaration_wins() {
+        let centered_last = WindowVisuals::new().client_position(10.0, 20.0).centered();
+        let position_last = WindowVisuals::new().centered().client_position(10.0, 20.0);
+
+        assert_eq!(centered_last.placement, WindowPlacement::Centered);
+        assert_eq!(
+            position_last.placement,
+            WindowPlacement::Position { x: 10.0, y: 20.0 }
         );
     }
 }
@@ -1580,32 +1715,58 @@ impl WinUiRuntime {
                 })
                 .map_err(native_error)?;
         }
-        if changes.client_position
-            && let Some((x, y)) = visuals.client_position
-        {
-            // Position goes through Win32 `SetWindowPos` rather than `AppWindow.Move`:
-            // the bindings only generate `IAppWindow2`'s resize path
-            // (`ClientSize`/`ResizeClient`) — the position slots exist in that interface's
-            // vtable as anonymous placeholders (`MoveInZOrder*`) — and hand-rebuilding an
-            // interface layout costs far more than it buys. `SetWindowPos` is the standard
-            // entry point for window placement, and `AppWindow` reads its geometry back
-            // from the same layer, so the two cannot disagree.
-            //
-            // `SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE`: move only. Declaring "where the
-            // window was" must not resize it, restack it, or steal focus.
-            let hwnd = window_handle()?;
-            let dpi = unsafe { GetDpiForWindow(hwnd) }.max(96);
-            let pixels = |dips: f64| (dips * f64::from(dpi) / 96.0).round() as i32;
-            unsafe {
-                _ = SetWindowPos(
-                    hwnd,
-                    std::ptr::null_mut(),
-                    pixels(x),
-                    pixels(y),
-                    0,
-                    0,
-                    SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
-                );
+        if changes.placement {
+            // 位置放在尺寸之后应用：`.centered()` 要按**最终**的外框尺寸算居中，先
+            // `ResizeClient` 再移动才不会用旧尺寸算出一个偏掉的坐标。
+            match visuals.placement {
+                WindowPlacement::Unspecified => {}
+                WindowPlacement::Position { x, y } => {
+                    // 位置走 Win32 `SetWindowPos` 而不是 `AppWindow.Move`：绑定只生成了
+                    // `IAppWindow2` 的尺寸路径（`ClientSize`/`ResizeClient`），位置槽在
+                    // vtable 里还是匿名占位（`MoveInZOrder*`），手搓接口布局的代价远大于
+                    // 收益。`SetWindowPos` 本来就是窗口放置的标准入口，`AppWindow` 也是从
+                    // 同一层读回几何信息，两者不会打架。
+                    //
+                    // `SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE`：只移动。声明"窗口在
+                    // 哪儿"不该顺手改尺寸、改 Z 序或抢走焦点。
+                    let hwnd = window_handle()?;
+                    let dpi = unsafe { GetDpiForWindow(hwnd) }.max(96);
+                    let pixels = |dips: f64| (dips * f64::from(dpi) / 96.0).round() as i32;
+                    unsafe {
+                        _ = SetWindowPos(
+                            hwnd,
+                            std::ptr::null_mut(),
+                            pixels(x),
+                            pixels(y),
+                            0,
+                            0,
+                            SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+                        );
+                    }
+                }
+                WindowPlacement::Centered => {
+                    // 居中在物理像素层面算：工作区（`GetMonitorInfoW` 的 `rcWork`，已经排除
+                    // 任务栏）和窗口外框（`GetWindowRect`）本来就是同一套单位，中间不过
+                    // DPI，也就不存在"用错缩放比例"这一类错误。窗口当前在哪块显示器上，
+                    // 就居中到哪块显示器。
+                    let hwnd = window_handle()?;
+                    if let (Some(area), Some((width, height))) =
+                        (work_area_of(hwnd), window_frame_size(hwnd))
+                    {
+                        let (x, y) = area.centered_origin(width, height);
+                        unsafe {
+                            _ = SetWindowPos(
+                                hwnd,
+                                std::ptr::null_mut(),
+                                x as i32,
+                                y as i32,
+                                0,
+                                0,
+                                SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+                            );
+                        }
+                    }
+                }
             }
         }
         self.window_visuals.insert(node, visuals);
@@ -1814,38 +1975,7 @@ impl WinUiRuntime {
 
         for (key, value) in resources.values() {
             let key = windows_reference::IReference::from(key);
-            let value: windows_core::IInspectable = match value {
-                ResourceValue::Color(value) => {
-                    let brush = SolidColorBrush::new().map_err(native_error)?;
-                    brush
-                        .SetColor(bindings::Color {
-                            a: value.a,
-                            r: value.r,
-                            g: value.g,
-                            b: value.b,
-                        })
-                        .map_err(native_error)?;
-                    brush.into()
-                }
-                ResourceValue::Thickness(value) => {
-                    windows_reference::IReference::from(bindings::Thickness {
-                        left: value.left(),
-                        top: value.top(),
-                        right: value.right(),
-                        bottom: value.bottom(),
-                    })
-                    .into()
-                }
-                ResourceValue::CornerRadius(value) => {
-                    windows_reference::IReference::from(bindings::CornerRadius {
-                        top_left: value.top_left(),
-                        top_right: value.top_right(),
-                        bottom_right: value.bottom_right(),
-                        bottom_left: value.bottom_left(),
-                    })
-                    .into()
-                }
-            };
+            let value = resource_value(value).map_err(native_error)?;
             map.Insert(&key, &value).map_err(native_error)?;
         }
 
@@ -2818,18 +2948,16 @@ impl WinUiRuntime {
                         _ => Err(RuntimeError::UnsupportedKind),
                     };
                 }
-                if matches!(
-                    *property,
-                    PropertyId::ButtonResources
-                        | PropertyId::NavigationViewResources
-                        | PropertyId::ToggleButtonResources
-                ) {
+                if is_resource_overrides_property(*property) {
                     return match value {
                         PropertyValue::ResourceOverrides(value) => {
                             self.set_resource_overrides(*node, value)
                         }
                         _ => Err(RuntimeError::UnsupportedKind),
                     };
+                }
+                if *property == PropertyId::BorderScale {
+                    self.sync_scale_center(*node)?;
                 }
                 let target = PropertyTarget::resolve(self, *node, *property)?;
                 let feedback = expected_feedback(*property, Some(value));
@@ -2912,12 +3040,7 @@ impl WinUiRuntime {
                 ) {
                     return self.set_key_accelerators(*node, &KeyAccelerators::default());
                 }
-                if matches!(
-                    *property,
-                    PropertyId::ButtonResources
-                        | PropertyId::NavigationViewResources
-                        | PropertyId::ToggleButtonResources
-                ) {
+                if is_resource_overrides_property(*property) {
                     return self.clear_resource_overrides(*node);
                 }
                 let target = PropertyTarget::resolve(self, *node, *property)?;
@@ -4770,6 +4893,7 @@ impl NativeRuntime for WinUiRuntime {
         self.encoded_image_nodes.borrow_mut().clear();
         self.image_decode_tickets.clear();
         self.observation_subscriptions.clear();
+        self.scale_center_subscriptions.clear();
         self.owned_menus.clear();
         self.command_bar_flyouts.clear();
         self.swipe_attachments.clear();
@@ -5194,6 +5318,48 @@ impl WinUiRuntime {
         Ok(())
     }
 
+    /// `Border::scale` 的缩放原点：`CenterPoint` 是**像素**坐标，只能由元素测量后的
+    /// `ActualWidth/Height` 反算。下发 `BorderScale` 时元素可能刚挂载、尚未测量
+    /// （尺寸读到 0，原点会落到左上角——以"已激活"状态挂载的元素整体偏向右下）；
+    /// 元素尺寸之后还可能变（窗口缩放、瀑布流列宽变化），原点也必须跟上。
+    ///
+    /// 这里按元素挂一个 `SizeChanged`：下发时能读到尺寸就立即设一次，之后每次
+    /// 尺寸变化按 `NewSize` 重设。订阅按元素去重，随 [`Self::remove_node_state`]
+    /// 一起释放。
+    fn sync_scale_center(&mut self, node: NodeId) -> Result<(), RuntimeError> {
+        if self.scale_center_subscriptions.contains_key(&node) {
+            return Ok(());
+        }
+        let Some(Handle::Border(control)) = self.handles.get(&node) else {
+            return Ok(());
+        };
+        let element = control.cast::<IUIElement>().map_err(native_error)?;
+        let framework = control.cast::<IFrameworkElement>().map_err(native_error)?;
+        apply_scale_center(&element, &framework)?;
+        // 闭包**不捕获元素**：`SizeChanged` 的 sender 就是元素本身，捕获它会让
+        // "元素 → 事件源 → 闭包 → 元素" 形成 COM 引用环，元素永不释放。
+        let revoker = framework
+            .SizeChanged(move |sender, args| {
+                let (Some(sender), Some(args)) = (sender.as_ref(), args.as_ref()) else {
+                    return;
+                };
+                let Ok(size) = args.NewSize() else {
+                    return;
+                };
+                let Ok(element) = sender.cast::<IUIElement>() else {
+                    return;
+                };
+                let _ = element.SetCenterPoint(Vector3 {
+                    x: size.width / 2.0,
+                    y: size.height / 2.0,
+                    z: 0.0,
+                });
+            })
+            .map_err(native_error)?;
+        self.scale_center_subscriptions.insert(node, revoker);
+        Ok(())
+    }
+
     fn remove_node_state(&mut self, node: NodeId) -> Result<(), RuntimeError> {
         self.release_encoded_image_source(node);
         self.subscriptions
@@ -5201,6 +5367,7 @@ impl WinUiRuntime {
         self.cancel_async_for_node(node);
         self.window_subscriptions.remove(&node);
         self.window_observation_subscriptions.remove(&node);
+        self.scale_center_subscriptions.remove(&node);
         self.window_observations.remove(&node);
         self.window_hosts.remove(&node);
         self.window_title_bars.remove(&node);

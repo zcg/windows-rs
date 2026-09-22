@@ -721,11 +721,89 @@ impl LivePump for ComponentLoop {
 pub struct App;
 
 impl App {
+    /// 声明应用级主题资源覆盖（形状 token、主题画刷等），返回启动入口
+    /// [`AppResources`]。一次注入即可统一全站控件的圆角等外观，不需要逐个控件设置。
+    ///
+    /// 例：
+    /// ```ignore
+    /// App::theme_resources(
+    ///     ResourceOverrides::new()
+    ///         .control_corner_radius(6.0)   // 控件圆角：ControlCornerRadius
+    ///         .overlay_corner_radius(10.0), // 浮层圆角：OverlayCornerRadius
+    /// )
+    /// .run_component::<MyComponent>(())?;
+    /// ```
+    ///
+    /// 不调用本函数时（即继续使用 [`App::run`] 系列）行为与以前完全一致，一个资源键都不会被改写。
+    ///
+    /// # 实测警告：unpackaged 应用上会启动即崩
+    ///
+    /// 这条路径写的是 `Application.Resources` **自身的条目**，已在 unpackaged 应用上实测为
+    /// **启动即崩**，现象与调用栈如下（同一现象曾由宿主应用侧复现，宿主已停用该方案）：
+    ///
+    /// ```text
+    /// SerializeEffectDescription → MsgBlobCreateShared → CoreUICallSend → CallWindowProcW
+    /// HRESULT 0x80040111 (CLASS_E_CLASSNOTAVAILABLE)，由 Microsoft.ui.xaml.dll 抛出、
+    /// combase.dll 包裹，异常码 0xc000027b；UI 只渲染一帧就随进程消失。
+    /// ```
+    ///
+    /// 因此不要把本函数当作调整圆角等外观的常规手段：单点外观问题的正路是**元素级**
+    /// [`ResourceOverrides`]（例如 `ComboBox::corner_radius` /
+    /// `ComboBox::resource_overrides`，只改写该控件自己的资源字典或依赖属性）。
+    ///
+    /// 本函数作为一条真实的应用级能力保留，但**在重新复测之前不要使用**；复测前也不要试图
+    /// 用"改一改实现"的方式绕开上面的崩溃，那会把崩溃原因藏起来而不是解决它。
+    pub fn theme_resources(resources: ResourceOverrides) -> AppResources {
+        AppResources { resources }
+    }
+
     /// Runs one window whose root content is `root`.
     ///
     /// This call blocks while the WinUI message loop is running.
     pub fn run(root: View) -> windows_core::Result<()> {
-        Self::run_with(move |application| {
+        AppResources::default().run(root)
+    }
+
+    /// Runs one independent window and component pump for each root view.
+    ///
+    /// Unlike placing several views in a fragment, each item creates a separate native window.
+    /// This call blocks until every application-owned window has closed.
+    ///
+    /// Returns an invalid-argument error if `roots` is empty.
+    pub fn run_windows<I>(roots: I) -> windows_core::Result<()>
+    where
+        I: IntoIterator<Item = View>,
+    {
+        AppResources::default().run_windows(roots)
+    }
+
+    /// Runs one window rooted at component `C`.
+    ///
+    /// This is equivalent to passing [`View::component`] to [`run`](Self::run), and blocks while
+    /// the WinUI message loop is running.
+    pub fn run_component<C: Component>(input: C::Input) -> windows_core::Result<()> {
+        AppResources::default().run_component::<C>(input)
+    }
+}
+
+/// 由 [`App::theme_resources`] 返回的启动入口：把声明好的应用级资源带到窗口创建之前注入。
+///
+/// 注入点是 `Application.Resources` 自身的条目，查找优先级高于 reactor 合并进去的
+/// `XamlControlsResources`（WinUI 主题资源来自后者），因此同名键会覆盖 WinUI 默认值，
+/// 而没声明的键保持 WinUI 原样。
+///
+/// 不带覆盖时（[`AppResources::default`]）与 [`App`] 完全等价。
+#[derive(Clone, Debug, Default)]
+pub struct AppResources {
+    resources: ResourceOverrides,
+}
+
+impl AppResources {
+    /// Runs one window whose root content is `root`.
+    ///
+    /// This call blocks while the WinUI message loop is running.
+    pub fn run(self, root: View) -> windows_core::Result<()> {
+        self.run_with(move |application| {
             vec![Box::new(ComponentLoop {
                 pump: Pump::new(WinUiRuntime::with_application(application)),
                 root: Some(root),
@@ -741,7 +819,7 @@ impl App {
     /// This call blocks until every application-owned window has closed.
     ///
     /// Returns an invalid-argument error if `roots` is empty.
-    pub fn run_windows<I>(roots: I) -> windows_core::Result<()>
+    pub fn run_windows<I>(self, roots: I) -> windows_core::Result<()>
     where
         I: IntoIterator<Item = View>,
     {
@@ -752,7 +830,7 @@ impl App {
                 "at least one window is required",
             ));
         }
-        Self::run_with(move |application| {
+        self.run_with(move |application| {
             roots
                 .into_iter()
                 .map(|root| {
@@ -771,13 +849,15 @@ impl App {
     ///
     /// This is equivalent to passing [`View::component`] to [`run`](Self::run), and blocks while
     /// the WinUI message loop is running.
-    pub fn run_component<C: Component>(input: C::Input) -> windows_core::Result<()> {
-        Self::run(View::component::<C>(input))
+    pub fn run_component<C: Component>(self, input: C::Input) -> windows_core::Result<()> {
+        self.run(View::component::<C>(input))
     }
 
     fn run_with(
+        self,
         create_pumps: impl FnOnce(Application) -> Vec<Box<dyn LivePump>> + 'static,
     ) -> windows_core::Result<()> {
+        let theme_resources = Rc::new(self.resources);
         if !is_packaged_process()? {
             bootstrap_runtime()?;
         }
@@ -792,6 +872,7 @@ impl App {
             let launch_application = Rc::clone(&application);
             let launch_result = Rc::clone(&callback_result);
             let launch_create_pumps = Rc::clone(&create_pumps);
+            let launch_theme_resources = Rc::clone(&theme_resources);
             let on_launched = Box::new(move || {
                 let launched: windows_core::Result<()> = (|| {
                     let application = launch_application
@@ -799,6 +880,7 @@ impl App {
                         .take()
                         .ok_or_else(|| windows_core::Error::new(E_FAIL, "missing application"))?;
                     install_xaml_controls_resources(&application)?;
+                    install_theme_resources(&application, &launch_theme_resources)?;
                     let create_pumps = launch_create_pumps.borrow_mut().take().unwrap();
                     let mut pumps = create_pumps(application.clone()).into_iter();
                     let mut primary_pump = pumps.next().ok_or_else(|| {

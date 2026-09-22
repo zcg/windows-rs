@@ -990,6 +990,9 @@ fn generate_mounted_props_visitor(control: &ResolvedControl) -> TokenStream {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::#variant(Brush::Solid(*color)))
                         }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::#variant(Brush::Acrylic(*acrylic)))
+                        }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
                 );
@@ -2500,6 +2503,7 @@ fn value_type(value: &str) -> TokenStream {
         "OptionalDateTime" => quote! { Option<windows_time::DateTime> },
         "Duration" => quote! { std::time::Duration },
         "OptionalF64" => quote! { Option<f64> },
+        "Vector3" => quote! { Vector3 },
         "SelectionIndex" => quote! { Option<usize> },
         "TimeSpan" => quote! { windows_time::TimeSpan },
         "OptionalTimeSpan" => quote! { Option<windows_time::TimeSpan> },

@@ -136,6 +136,50 @@ They declare native window state without adding title-bar content to the view. M
 do not extend through the system title bar, so use `window_frame` when Mica or Acrylic should cover
 the complete window.
 
+## Place the window
+
+`WindowVisuals` also controls where the window lands. `centered` puts the window in the middle of
+the work area of the display it opens on. The work area already excludes the taskbar, and the
+calculation uses the window's own display, frame size, and scale, so multi-monitor setups and
+display scaling need no host-side arithmetic:
+
+```rust,ignore
+context.window_visuals(
+    WindowVisuals::new()
+        .client_size(1280.0, 800.0)
+        .centered(),
+);
+```
+
+Like `client_size`, a position is applied only when the declared value changes. Declaring
+`centered()` on every publication therefore never drags a window the user has moved back to the
+middle of the screen.
+
+Use `client_position` instead when the position is known: it declares the top-left corner of the
+window frame in DIPs, relative to the virtual screen. That is what "remember where the window was"
+is built on - read the position while closing and declare it back at startup. Both methods write the
+same declaration, so the one called last wins.
+
+An application that needs the numbers itself can query them. Sizes and positions are in DIPs where
+the declaration layer expects DIPs, and in physical pixels where Win32 geometry is being compared:
+
+```rust,ignore
+// A first-run window that covers 70% of the primary display's work area, centered.
+let (work_width, work_height) = primary_work_area_dip().unwrap_or((1280.0, 800.0));
+context.window_visuals(
+    WindowVisuals::new()
+        .client_size(work_width * 0.7, work_height * 0.7)
+        .centered(),
+);
+```
+
+`primary_work_area` and `work_area_for_window` report a work area in physical pixels,
+`primary_work_area_dip` reports the primary display's work-area size in DIPs, and
+`window_placement_dip` reports where the window frame currently is in DIPs - the same units and the
+same corner as `client_position`, so a stored position can be declared back without drift. The two
+functions that take a window use the handle from `run_window`. `WorkArea` exposes `dips` and
+`centered_origin` for arithmetic that mixes both unit systems.
+
 ## Build views from controls
 
 WinUI controls use typed builders. Start with `Control::new()`, set properties, connect events, and

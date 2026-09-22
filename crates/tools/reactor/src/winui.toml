@@ -202,6 +202,15 @@ field = "scale_transition"
 adapter = "implicit_scale_transition"
 
 [[control.property]]
+name = "Translation"
+adapter = "implicit_translation"
+
+[[control.property]]
+name = "TranslationTransition"
+field = "translation_transition"
+adapter = "implicit_translation_transition"
+
+[[control.property]]
 name = "CapturePointerOnPress"
 adapter = "pointer_capture"
 
@@ -419,6 +428,11 @@ theme_style = true
 name = "BorderThickness"
 validation = "finite_non_negative"
 
+[[control.property]]
+name = "Resources"
+field = "resource_overrides"
+adapter = "resource_overrides"
+
 [[control.event]]
 name = "TextChanged"
 property = "Text"
@@ -453,6 +467,10 @@ property = "Text"
 name = "SuggestionChosen"
 property = "SelectedItem"
 adapter = "inspectable_string"
+
+[[control.event]]
+name = "QuerySubmitted"
+property = "QueryText"
 
 [[control.slot]]
 name = "Header"
@@ -505,6 +523,11 @@ feedback_contract = "synchronous_normalized"
 [[control.property]]
 name = "IsEnabled"
 
+[[control.property]]
+name = "Resources"
+field = "resource_overrides"
+adapter = "resource_overrides"
+
 [[control.event]]
 name = "ValueChanged"
 property = "NewValue"
@@ -544,6 +567,15 @@ name = "Orientation"
 
 [[control.property]]
 name = "IsThumbToolTipEnabled"
+
+[[control.property]]
+name = "Resources"
+field = "resource_overrides"
+adapter = "resource_overrides"
+
+[[control.property]]
+name = "CornerRadius"
+validation = "finite_non_negative"
 
 [[control.event]]
 name = "ValueChanged"
@@ -771,6 +803,15 @@ theme_style = true
 [[control.property]]
 name = "IsHitTestVisible"
 
+[[control.property]]
+name = "Resources"
+field = "resource_overrides"
+adapter = "resource_overrides"
+
+[[control.property]]
+name = "CornerRadius"
+validation = "finite_non_negative"
+
 [[control]]
 type = "Microsoft.UI.Xaml.Controls.ToggleSwitch"
 capabilities = ["layout", "enabled", "focus"]
@@ -783,6 +824,15 @@ clear_feedback = false
 
 [[control.property]]
 name = "IsEnabled"
+
+[[control.property]]
+name = "Resources"
+field = "resource_overrides"
+adapter = "resource_overrides"
+
+[[control.property]]
+name = "CornerRadius"
+validation = "finite_non_negative"
 
 [[control.event]]
 name = "Toggled"
@@ -809,6 +859,11 @@ clear_feedback = false
 
 [[control.property]]
 name = "IsEnabled"
+
+[[control.property]]
+name = "Resources"
+field = "resource_overrides"
+adapter = "resource_overrides"
 
 [[control.event]]
 name = "IsCheckedChanged"
@@ -1226,6 +1281,15 @@ name = "IsEditable"
 
 [[control.property]]
 name = "IsEnabled"
+
+[[control.property]]
+name = "Resources"
+field = "resource_overrides"
+adapter = "resource_overrides"
+
+[[control.property]]
+name = "CornerRadius"
+validation = "finite_non_negative"
 
 [[control.event]]
 name = "SelectionChanged"

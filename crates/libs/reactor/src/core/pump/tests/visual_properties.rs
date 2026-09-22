@@ -67,6 +67,12 @@ fn implicit_visual_transitions_mount_update_and_clear() {
             .opacity_transition(duration)
             .scale(1.0)
             .scale_transition(duration)
+            .translation(Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            })
+            .translation_transition(duration)
             .into(),
     )
     .unwrap();
@@ -85,6 +91,24 @@ fn implicit_visual_transitions_mount_update_and_clear() {
             .property(PropertyId::BorderScaleTransition),
         Some(&PropertyValue::Duration(duration))
     );
+    assert_eq!(
+        pump.runtime()
+            .node(border)
+            .unwrap()
+            .property(PropertyId::BorderTranslation),
+        Some(&PropertyValue::Vector3(Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0
+        }))
+    );
+    assert_eq!(
+        pump.runtime()
+            .node(border)
+            .unwrap()
+            .property(PropertyId::BorderTranslationTransition),
+        Some(&PropertyValue::Duration(duration))
+    );
 
     pump.update(
         Border::new()
@@ -92,6 +116,12 @@ fn implicit_visual_transitions_mount_update_and_clear() {
             .opacity_transition(duration)
             .scale(1.3)
             .scale_transition(duration)
+            .translation(Vector3 {
+                x: 0.0,
+                y: 32.0,
+                z: 0.0,
+            })
+            .translation_transition(duration)
             .into(),
     )
     .unwrap();
@@ -109,6 +139,17 @@ fn implicit_visual_transitions_mount_update_and_clear() {
             .property(PropertyId::BorderScale),
         Some(&PropertyValue::F64(1.3))
     );
+    assert_eq!(
+        pump.runtime()
+            .node(border)
+            .unwrap()
+            .property(PropertyId::BorderTranslation),
+        Some(&PropertyValue::Vector3(Vector3 {
+            x: 0.0,
+            y: 32.0,
+            z: 0.0
+        }))
+    );
 
     pump.update(Border::new().into()).unwrap();
     assert_eq!(
@@ -124,6 +165,42 @@ fn implicit_visual_transitions_mount_update_and_clear() {
             .unwrap()
             .property(PropertyId::BorderScaleTransition),
         None
+    );
+    assert_eq!(
+        pump.runtime()
+            .node(border)
+            .unwrap()
+            .property(PropertyId::BorderTranslation),
+        None
+    );
+    assert_eq!(
+        pump.runtime()
+            .node(border)
+            .unwrap()
+            .property(PropertyId::BorderTranslationTransition),
+        None
+    );
+}
+
+#[test]
+fn acrylic_brush_takes_the_plain_property_path_not_the_theme_style_one() {
+    let acrylic = Acrylic::new(Color::rgb(0x1C, 0x1C, 0x22), 60);
+    let mut pump = Pump::new(RecordingRuntime::default());
+    pump.mount_view(Border::new().background(Brush::Acrylic(acrylic)).into())
+        .unwrap();
+    let border = pump.root().unwrap();
+
+    assert_eq!(
+        pump.runtime()
+            .node(border)
+            .unwrap()
+            .property(PropertyId::BorderBackground),
+        Some(&PropertyValue::Brush(Brush::Acrylic(acrylic)))
+    );
+    // 亚克力不是主题资源刷：主题样式保持为空，不能顺带下发主题资源。
+    assert_eq!(
+        pump.runtime().node(border).unwrap().theme_style(),
+        ThemeStyle::default()
     );
 }
 
@@ -401,4 +478,103 @@ fn failed_theme_style_update_does_not_publish() {
     ));
     assert_eq!(pump.tree.native(border).desired.theme_style(), original);
     assert_eq!(pump.runtime().node(border).unwrap().theme_style(), original);
+}
+
+/// 虚拟化网格的列结构（与 `bili-rs` 的 `ui/virtual_grid::column_children` 同形）：
+/// `[顶部 spacer] + 可见卡… + [底部 spacer]`。滚动 = spacer 高度变化 + 卡片增删。
+///
+/// 卡片用 `border_brush` 表达 hover 态（这正是 `bili-rs` 里 `feed_card` / `live_card`
+/// 的写法）。
+fn virtualized_column(top_h: f64, cards: &[(&str, bool)], bottom_h: f64) -> View {
+    let accent = Color::rgb(0xFB, 0x72, 0x99);
+    let normal = Color::rgb(0x1F, 0x1F, 0x24);
+    let mut children: Vec<(String, View)> = Vec::new();
+    if top_h > 0.5 {
+        children.push((
+            "col0_top".to_string(),
+            Border::new().height(top_h).content(View::empty()),
+        ));
+    }
+    for (key, hovered) in cards {
+        children.push((
+            (*key).to_string(),
+            Border::new()
+                .border_brush(if *hovered { accent } else { normal })
+                .into(),
+        ));
+    }
+    if bottom_h > 0.5 {
+        children.push((
+            "col0_bottom".to_string(),
+            Border::new().height(bottom_h).content(View::empty()),
+        ));
+    }
+    StackPanel::new().keyed_children(children)
+}
+
+fn keyed_child(pump: &Pump<RecordingRuntime>, parent: NodeId, key: &str) -> NodeId {
+    pump.tree
+        .children(parent)
+        .iter()
+        .copied()
+        .find(|child| pump.tree.key(*child) == Some(&Key::from(key)))
+        .unwrap_or_else(|| panic!("keyed child `{key}` not found"))
+}
+
+fn border_brush_of(pump: &Pump<RecordingRuntime>, node: NodeId) -> Option<&PropertyValue> {
+    pump.runtime()
+        .node(node)
+        .and_then(|state| state.property(PropertyId::BorderBorderBrush))
+}
+
+/// 虚拟化滚动（spacer 高度变化 + 卡片增删）与 hover 状态**在同一拍**变化时，
+/// 每张卡的 hover 视觉属性必须落在**它自己**身上：不会丢，更不会串到别的卡。
+///
+/// 这是"reconciler 对同 key 元素的 brush 更新在虚拟化滚动时不可靠"这类说法的
+/// 直接对手实验。若那种说法成立，下面第二组断言（`b` 亮着、`c` 暗着）就会失败
+/// ——那正是用户描述过的"所有卡都显示 hover 态"。
+#[test]
+fn keyed_cards_keep_their_own_hover_brush_across_virtualized_scroll() {
+    let accent = Color::rgb(0xFB, 0x72, 0x99);
+    let normal = Color::rgb(0x1F, 0x1F, 0x24);
+    let brush = |color| PropertyValue::Brush(Brush::Solid(color));
+
+    let mut pump = Pump::new(RecordingRuntime::default());
+    // 列表顶端：没有顶部 spacer；`a` 被 hover、`b` 没有。
+    pump.mount_view(virtualized_column(0.0, &[("a", true), ("b", false)], 100.0))
+        .unwrap();
+    let root = pump.root().unwrap();
+    let a = keyed_child(&pump, root, "a");
+    let b = keyed_child(&pump, root, "b");
+    assert_eq!(border_brush_of(&pump, a), Some(&brush(accent)));
+    assert_eq!(border_brush_of(&pump, b), Some(&brush(normal)));
+
+    // 滚动一拍：顶部 spacer 长出来（`a` 滚出窗口被移除、`c` 滚进来），
+    // 同时"指针此刻停在 `b` 上"——窗口滑动与 hover 变化发生在同一拍。
+    pump.update_view(virtualized_column(120.0, &[("b", true), ("c", false)], 0.0))
+        .unwrap();
+    let b2 = keyed_child(&pump, root, "b");
+    assert_eq!(
+        b2, b,
+        "同 key 的卡片必须复用同一个节点（而不是重新挂载），否则这个实验就没在考察复用路径"
+    );
+    assert_eq!(
+        border_brush_of(&pump, b2),
+        Some(&brush(accent)),
+        "被 hover 的卡（key 不变、位置平移）必须拿到 accent 边框——相邻卡的插入/移除不能把它丢掉"
+    );
+    assert_eq!(
+        border_brush_of(&pump, keyed_child(&pump, root, "c")),
+        Some(&brush(normal)),
+        "新进入窗口的卡必须是常态色——不能继承窗口里上一张卡的 hover 态"
+    );
+
+    // 再滚一拍：`b` 松开、`c` 被指到，仍然伴随一次窗口滑动，两边的属性各归各。
+    pump.update_view(virtualized_column(80.0, &[("b", false), ("c", true)], 0.0))
+        .unwrap();
+    assert_eq!(border_brush_of(&pump, b), Some(&brush(normal)));
+    assert_eq!(
+        border_brush_of(&pump, keyed_child(&pump, root, "c")),
+        Some(&brush(accent))
+    );
 }

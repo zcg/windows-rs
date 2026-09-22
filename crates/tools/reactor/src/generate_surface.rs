@@ -1183,6 +1183,10 @@ fn direct_property_values(
             quote! { Thickness::uniform(2.0) },
             quote! { Thickness::uniform(4.0) },
         ),
+        "Vector3" => (
+            quote! { Vector3 { x: 0.0, y: 0.0, z: 0.0 } },
+            quote! { Vector3 { x: 0.0, y: 8.0, z: 0.0 } },
+        ),
         "VerticalAlignment" => (
             quote! { VerticalAlignment::Top },
             quote! { VerticalAlignment::Bottom },

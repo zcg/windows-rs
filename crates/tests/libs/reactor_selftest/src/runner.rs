@@ -8,8 +8,8 @@ use crate::fixtures::WebViewLifecycle;
 use crate::fixtures::{
     CompositionLifecycle, EncodedImageLifecycle, FixtureInput, FixtureResult, FocusPublication,
     ImageSourceLifecycle, KeyboardInput, KeyedNativeMutations, NestedWindowOperation,
-    PointerInjection, ProbeFixture, ProbeInput, SwapChainLifecycle, ThemeResources, TimerLifecycle,
-    WindowLifecycle,
+    PointerInjection, ProbeFixture, ProbeInput, ShapeTokens, SwapChainLifecycle, ThemeResources,
+    TimerLifecycle, WindowLifecycle, WindowPlacement,
 };
 
 const FIXTURE_TIMEOUT: Duration = Duration::from_secs(15);
@@ -42,8 +42,10 @@ enum FixtureKind {
     TimerLifecycle,
     SwapChainLifecycle,
     ThemeResources,
+    ShapeTokens,
     PointerInjection,
     KeyedNativeMutations,
+    WindowPlacement,
 }
 
 struct Fixture {
@@ -124,12 +126,20 @@ const FIXTURES: &[Fixture] = &[
         kind: FixtureKind::ThemeResources,
     },
     Fixture {
+        name: "Shape_ApplicationCornerRadiusTokens",
+        kind: FixtureKind::ShapeTokens,
+    },
+    Fixture {
         name: "Pointer_RealInputGesture",
         kind: FixtureKind::PointerInjection,
     },
     Fixture {
         name: "Reconcile_KeyedNativeMutations",
         kind: FixtureKind::KeyedNativeMutations,
+    },
+    Fixture {
+        name: "Window_CenteredAndStickyPlacement",
+        kind: FixtureKind::WindowPlacement,
     },
 ];
 
@@ -299,10 +309,12 @@ impl Component for FixtureRunner {
             Some(FixtureKind::TimerLifecycle) => View::component::<TimerLifecycle>(input),
             Some(FixtureKind::SwapChainLifecycle) => View::component::<SwapChainLifecycle>(input),
             Some(FixtureKind::ThemeResources) => View::component::<ThemeResources>(input),
+            Some(FixtureKind::ShapeTokens) => View::component::<ShapeTokens>(input),
             Some(FixtureKind::PointerInjection) => View::component::<PointerInjection>(input),
             Some(FixtureKind::KeyedNativeMutations) => {
                 View::component::<KeyedNativeMutations>(input)
             }
+            Some(FixtureKind::WindowPlacement) => View::component::<WindowPlacement>(input),
             None => TextBlock::new().text("fixtures complete").into(),
         }
     }

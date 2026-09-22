@@ -89,8 +89,10 @@ Microsoft::UI::Xaml::Controls::IAutoSuggestBox::get_Text
 Microsoft::UI::Xaml::Controls::IAutoSuggestBox::put_Header
 Microsoft::UI::Xaml::Controls::IAutoSuggestBox::put_PlaceholderText
 Microsoft::UI::Xaml::Controls::IAutoSuggestBox::put_Text
+Microsoft::UI::Xaml::Controls::IAutoSuggestBox::{add_QuerySubmitted, remove_QuerySubmitted}
 Microsoft::UI::Xaml::Controls::IAutoSuggestBox::{add_SuggestionChosen, remove_SuggestionChosen}
 Microsoft::UI::Xaml::Controls::IAutoSuggestBox::{add_TextChanged, remove_TextChanged}
+Microsoft::UI::Xaml::Controls::IAutoSuggestBoxQuerySubmittedEventArgs::get_QueryText
 Microsoft::UI::Xaml::Controls::IAutoSuggestBoxSuggestionChosenEventArgs::get_SelectedItem
 Microsoft::UI::Xaml::Controls::IBitmapIcon::put_ShowAsMonochrome
 Microsoft::UI::Xaml::Controls::IBitmapIcon::put_UriSource
@@ -663,6 +665,8 @@ Microsoft::UI::Xaml::IUIElement::put_IsTabStop
 Microsoft::UI::Xaml::IUIElement::put_OpacityTransition
 Microsoft::UI::Xaml::IUIElement::put_Scale
 Microsoft::UI::Xaml::IUIElement::put_ScaleTransition
+Microsoft::UI::Xaml::IUIElement::put_Translation
+Microsoft::UI::Xaml::IUIElement::put_TranslationTransition
 Microsoft::UI::Xaml::IUIElement::{add_CharacterReceived, remove_CharacterReceived}
 Microsoft::UI::Xaml::IUIElement::{add_DragEnter, remove_DragEnter}
 Microsoft::UI::Xaml::IUIElement::{add_DragLeave, remove_DragLeave}
@@ -686,7 +690,11 @@ Microsoft::UI::Xaml::IVector3Transition::put_Duration
 Microsoft::UI::Xaml::Input::IKeyboardAccelerator::{put_Key, put_Modifiers, Invoked}
 Microsoft::UI::Xaml::Input::IKeyboardAcceleratorInvokedEventArgs::put_Handled
 Microsoft::UI::Xaml::Input::KeyboardAccelerator::CreateInstance
+Microsoft::UI::Xaml::Media::AcrylicBrush::CreateInstance
 Microsoft::UI::Xaml::Media::FontFamily::CreateInstanceWithName
+Microsoft::UI::Xaml::Media::IAcrylicBrush2::put_TintLuminosityOpacity
+Microsoft::UI::Xaml::Media::IAcrylicBrush::put_TintColor
+Microsoft::UI::Xaml::Media::IAcrylicBrush::put_TintOpacity
 Microsoft::UI::Xaml::Media::ISolidColorBrush::put_Color
 Microsoft::UI::Xaml::Media::ImageSource
 Microsoft::UI::Xaml::Media::Imaging::BitmapImage::CreateInstance

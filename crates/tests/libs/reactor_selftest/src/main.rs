@@ -28,7 +28,11 @@ fn main() -> Result<()> {
         std::process::exit(1);
     });
 
-    App::run_component::<runner::FixtureRunner>(selected)
+    // 形状 token 的应用级注入探针：只声明浮层圆角，控件圆角必须保持 WinUI 默认值。
+    App::theme_resources(
+        ResourceOverrides::new().overlay_corner_radius(fixtures::SHAPE_TOKEN_OVERLAY_CORNER_RADIUS),
+    )
+    .run_component::<runner::FixtureRunner>(selected)
 }
 
 fn parse_filter(

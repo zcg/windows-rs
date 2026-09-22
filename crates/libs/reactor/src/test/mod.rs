@@ -19,7 +19,8 @@ pub use crate::generated::{
 };
 #[cfg(feature = "test")]
 pub use crate::native::{
-    LiveInputProbe, LiveInputProbeStage, schedule_live_test_exit, subscribe_live_rendering,
+    LiveInputProbe, LiveInputProbeStage, application_corner_radius, schedule_live_test_exit,
+    subscribe_live_rendering,
 };
 #[cfg(test)]
 pub(crate) use recording::RecordedContentDialog;

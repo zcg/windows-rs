@@ -38,6 +38,7 @@ pub(crate) struct GridEvents {
 pub(crate) struct AutoSuggestBoxEvents {
     on_text_changed: Option<Callback<String>>,
     on_suggestion_chosen: Option<Callback<String>>,
+    on_query_submitted: Option<Callback<String>>,
 }
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct SliderEvents {
@@ -874,6 +875,8 @@ pub mod public {
         opacity_transition: Property<std::time::Duration>,
         scale: Property<f64>,
         scale_transition: Property<std::time::Duration>,
+        translation: Property<Vector3>,
+        translation_transition: Property<std::time::Duration>,
         capture_pointer_on_press: Property<bool>,
         focus_on_pointer_release: Property<bool>,
         drop_policy: Property<DragDropPolicy>,
@@ -1011,6 +1014,19 @@ pub mod public {
         pub fn scale_transition(mut self, value: impl Into<Option<std::time::Duration>>) -> Self {
             let value = value.into();
             self.scale_transition = Property::from(value);
+            self
+        }
+        pub fn translation(mut self, value: impl Into<Option<Vector3>>) -> Self {
+            let value = value.into();
+            self.translation = Property::from(value);
+            self
+        }
+        pub fn translation_transition(
+            mut self,
+            value: impl Into<Option<std::time::Duration>>,
+        ) -> Self {
+            let value = value.into();
+            self.translation_transition = Property::from(value);
             self
         }
         pub fn capture_pointer_on_press(mut self, value: impl Into<Option<bool>>) -> Self {
@@ -1578,6 +1594,7 @@ pub mod public {
         background: Property<Brush>,
         border_brush: Property<Brush>,
         border_thickness: Property<Thickness>,
+        resource_overrides: Property<ResourceOverrides>,
         on_text_changed: Option<Callback<String>>,
         reference: Option<NativeElementRef>,
         element_state: Option<std::rc::Rc<ElementState>>,
@@ -1707,6 +1724,11 @@ pub mod public {
             self.border_thickness = Property::from(value);
             self
         }
+        pub fn resource_overrides(mut self, value: impl Into<Option<ResourceOverrides>>) -> Self {
+            let value = value.into();
+            self.resource_overrides = Property::from(value);
+            self
+        }
         pub fn on_text_changed(mut self, callback: impl IntoPayloadCallback<String>) -> Self {
             self.on_text_changed = Some(callback.into_payload_callback());
             self
@@ -1815,6 +1837,14 @@ pub mod public {
                     .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
             )
             .on_suggestion_chosen = Some(callback.into_payload_callback());
+            self
+        }
+        pub fn on_query_submitted(mut self, callback: impl IntoPayloadCallback<String>) -> Self {
+            std::rc::Rc::make_mut(
+                self.events
+                    .get_or_insert_with(|| std::rc::Rc::new(Default::default())),
+            )
+            .on_query_submitted = Some(callback.into_payload_callback());
             self
         }
         pub fn header(mut self, view: impl Into<View>) -> Self {
@@ -1929,6 +1959,7 @@ pub mod public {
         maximum: Property<f64>,
         value: Property<Option<f64>>,
         is_enabled: Property<bool>,
+        resource_overrides: Property<ResourceOverrides>,
         on_value_changed: Option<Callback<Option<f64>>>,
         reference: Option<NativeElementRef>,
         element_state: Option<std::rc::Rc<ElementState>>,
@@ -1960,6 +1991,11 @@ pub mod public {
         pub fn is_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
             let value = value.into();
             self.is_enabled = Property::from(value);
+            self
+        }
+        pub fn resource_overrides(mut self, value: impl Into<Option<ResourceOverrides>>) -> Self {
+            let value = value.into();
+            self.resource_overrides = Property::from(value);
             self
         }
         pub fn on_value_changed(mut self, callback: impl IntoPayloadCallback<Option<f64>>) -> Self {
@@ -1999,6 +2035,8 @@ pub mod public {
         step_frequency: Property<f64>,
         orientation: Property<Orientation>,
         is_thumb_tool_tip_enabled: Property<bool>,
+        resource_overrides: Property<ResourceOverrides>,
+        corner_radius: Property<CornerRadius>,
         events: Option<std::rc::Rc<SliderEvents>>,
         reference: Option<NativeElementRef>,
         element_state: Option<std::rc::Rc<ElementState>>,
@@ -2051,6 +2089,34 @@ pub mod public {
         pub fn is_thumb_tool_tip_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
             let value = value.into();
             self.is_thumb_tool_tip_enabled = Property::from(value);
+            self
+        }
+        pub fn resource_overrides(mut self, value: impl Into<Option<ResourceOverrides>>) -> Self {
+            let value = value.into();
+            self.resource_overrides = Property::from(value);
+            self
+        }
+        pub fn corner_radius(mut self, value: impl Into<CornerRadius>) -> Self {
+            let value = value.into();
+            assert!(
+                value.is_finite_non_negative(),
+                "Slider CornerRadius must contain finite non-negative values"
+            );
+            self.corner_radius = Property::Set(value);
+            self
+        }
+        pub fn corner_radius_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<CornerRadius>,
+        {
+            let value = value.map(Into::into);
+            assert!(
+                value
+                    .as_ref()
+                    .is_none_or(|value| value.is_finite_non_negative()),
+                "Slider CornerRadius must contain finite non-negative values",
+            );
+            self.corner_radius = Property::from(value);
             self
         }
         pub fn on_value_changed(mut self, callback: impl IntoPayloadCallback<f64>) -> Self {
@@ -2555,6 +2621,8 @@ pub mod public {
         is_enabled: Property<bool>,
         foreground: Property<Brush>,
         is_hit_test_visible: Property<bool>,
+        resource_overrides: Property<ResourceOverrides>,
+        corner_radius: Property<CornerRadius>,
         element_state: Option<std::rc::Rc<ElementState>>,
     }
     impl ProgressBar {
@@ -2612,6 +2680,34 @@ pub mod public {
             self.is_hit_test_visible = Property::from(value);
             self
         }
+        pub fn resource_overrides(mut self, value: impl Into<Option<ResourceOverrides>>) -> Self {
+            let value = value.into();
+            self.resource_overrides = Property::from(value);
+            self
+        }
+        pub fn corner_radius(mut self, value: impl Into<CornerRadius>) -> Self {
+            let value = value.into();
+            assert!(
+                value.is_finite_non_negative(),
+                "ProgressBar CornerRadius must contain finite non-negative values"
+            );
+            self.corner_radius = Property::Set(value);
+            self
+        }
+        pub fn corner_radius_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<CornerRadius>,
+        {
+            let value = value.map(Into::into);
+            assert!(
+                value
+                    .as_ref()
+                    .is_none_or(|value| value.is_finite_non_negative()),
+                "ProgressBar CornerRadius must contain finite non-negative values",
+            );
+            self.corner_radius = Property::from(value);
+            self
+        }
     }
     impl sealed::Sealed for ProgressBar {}
     impl sealed::NativeControl for ProgressBar {
@@ -2629,6 +2725,8 @@ pub mod public {
     pub struct ToggleSwitch {
         is_on: Property<bool>,
         is_enabled: Property<bool>,
+        resource_overrides: Property<ResourceOverrides>,
+        corner_radius: Property<CornerRadius>,
         on_toggled: Option<Callback<bool>>,
         reference: Option<NativeElementRef>,
         element_state: Option<std::rc::Rc<ElementState>>,
@@ -2650,6 +2748,34 @@ pub mod public {
         pub fn is_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
             let value = value.into();
             self.is_enabled = Property::from(value);
+            self
+        }
+        pub fn resource_overrides(mut self, value: impl Into<Option<ResourceOverrides>>) -> Self {
+            let value = value.into();
+            self.resource_overrides = Property::from(value);
+            self
+        }
+        pub fn corner_radius(mut self, value: impl Into<CornerRadius>) -> Self {
+            let value = value.into();
+            assert!(
+                value.is_finite_non_negative(),
+                "ToggleSwitch CornerRadius must contain finite non-negative values"
+            );
+            self.corner_radius = Property::Set(value);
+            self
+        }
+        pub fn corner_radius_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<CornerRadius>,
+        {
+            let value = value.map(Into::into);
+            assert!(
+                value
+                    .as_ref()
+                    .is_none_or(|value| value.is_finite_non_negative()),
+                "ToggleSwitch CornerRadius must contain finite non-negative values",
+            );
+            self.corner_radius = Property::from(value);
             self
         }
         pub fn on_toggled(mut self, callback: impl IntoPayloadCallback<bool>) -> Self {
@@ -2700,6 +2826,7 @@ pub mod public {
     pub struct CheckBox {
         is_checked: Property<bool>,
         is_enabled: Property<bool>,
+        resource_overrides: Property<ResourceOverrides>,
         on_is_checked_changed: Option<Callback<bool>>,
         reference: Option<NativeElementRef>,
         element_state: Option<std::rc::Rc<ElementState>>,
@@ -2721,6 +2848,11 @@ pub mod public {
         pub fn is_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
             let value = value.into();
             self.is_enabled = Property::from(value);
+            self
+        }
+        pub fn resource_overrides(mut self, value: impl Into<Option<ResourceOverrides>>) -> Self {
+            let value = value.into();
+            self.resource_overrides = Property::from(value);
             self
         }
         pub fn on_is_checked_changed(mut self, callback: impl IntoPayloadCallback<bool>) -> Self {
@@ -4076,6 +4208,8 @@ pub mod public {
         placeholder_text: Property<String>,
         is_editable: Property<bool>,
         is_enabled: Property<bool>,
+        resource_overrides: Property<ResourceOverrides>,
+        corner_radius: Property<CornerRadius>,
         on_selection_changed: Option<Callback<Option<usize>>>,
         reference: Option<NativeElementRef>,
         element_state: Option<std::rc::Rc<ElementState>>,
@@ -4133,6 +4267,34 @@ pub mod public {
         pub fn is_enabled(mut self, value: impl Into<Option<bool>>) -> Self {
             let value = value.into();
             self.is_enabled = Property::from(value);
+            self
+        }
+        pub fn resource_overrides(mut self, value: impl Into<Option<ResourceOverrides>>) -> Self {
+            let value = value.into();
+            self.resource_overrides = Property::from(value);
+            self
+        }
+        pub fn corner_radius(mut self, value: impl Into<CornerRadius>) -> Self {
+            let value = value.into();
+            assert!(
+                value.is_finite_non_negative(),
+                "ComboBox CornerRadius must contain finite non-negative values"
+            );
+            self.corner_radius = Property::Set(value);
+            self
+        }
+        pub fn corner_radius_optional<T>(mut self, value: Option<T>) -> Self
+        where
+            T: Into<CornerRadius>,
+        {
+            let value = value.map(Into::into);
+            assert!(
+                value
+                    .as_ref()
+                    .is_none_or(|value| value.is_finite_non_negative()),
+                "ComboBox CornerRadius must contain finite non-negative values",
+            );
+            self.corner_radius = Property::from(value);
             self
         }
         pub fn on_selection_changed(
@@ -8259,6 +8421,8 @@ pub mod public {
                         opacity_transition,
                         scale,
                         scale_transition,
+                        translation,
+                        translation_transition,
                         capture_pointer_on_press,
                         focus_on_pointer_release,
                         drop_policy,
@@ -8281,6 +8445,8 @@ pub mod public {
                             opacity_transition,
                             scale,
                             scale_transition,
+                            translation,
+                            translation_transition,
                             capture_pointer_on_press,
                             focus_on_pointer_release,
                             drop_policy,
@@ -8412,6 +8578,7 @@ pub mod public {
                         background,
                         border_brush,
                         border_thickness,
+                        resource_overrides,
                         on_text_changed,
                         reference,
                         element_state,
@@ -8430,6 +8597,7 @@ pub mod public {
                             background,
                             border_brush,
                             border_thickness,
+                            resource_overrides,
                             on_text_changed,
                         })),
                         reference,
@@ -8503,6 +8671,7 @@ pub mod public {
                         maximum,
                         value,
                         is_enabled,
+                        resource_overrides,
                         on_value_changed,
                         reference,
                         element_state,
@@ -8515,6 +8684,7 @@ pub mod public {
                             maximum,
                             value,
                             is_enabled,
+                            resource_overrides,
                             on_value_changed,
                         })),
                         reference,
@@ -8533,6 +8703,8 @@ pub mod public {
                         step_frequency,
                         orientation,
                         is_thumb_tool_tip_enabled,
+                        resource_overrides,
+                        corner_radius,
                         events,
                         reference,
                         element_state,
@@ -8548,6 +8720,8 @@ pub mod public {
                             step_frequency,
                             orientation,
                             is_thumb_tool_tip_enabled,
+                            resource_overrides,
+                            corner_radius,
                             events,
                         })),
                         reference,
@@ -8691,6 +8865,8 @@ pub mod public {
                         is_enabled,
                         foreground,
                         is_hit_test_visible,
+                        resource_overrides,
+                        corner_radius,
                         element_state,
                     } = value;
                     ElementParts {
@@ -8706,6 +8882,8 @@ pub mod public {
                                 is_enabled,
                                 foreground,
                                 is_hit_test_visible,
+                                resource_overrides,
+                                corner_radius,
                             },
                         )),
                         reference: None,
@@ -8719,6 +8897,8 @@ pub mod public {
                     let ToggleSwitch {
                         is_on,
                         is_enabled,
+                        resource_overrides,
+                        corner_radius,
                         on_toggled,
                         reference,
                         element_state,
@@ -8730,6 +8910,8 @@ pub mod public {
                             ToggleSwitchMountedProps {
                                 is_on,
                                 is_enabled,
+                                resource_overrides,
+                                corner_radius,
                                 on_toggled,
                             },
                         )),
@@ -8744,6 +8926,7 @@ pub mod public {
                     let CheckBox {
                         is_checked,
                         is_enabled,
+                        resource_overrides,
                         on_is_checked_changed,
                         reference,
                         element_state,
@@ -8754,6 +8937,7 @@ pub mod public {
                         props: MountedProps::CheckBox(std::rc::Rc::new(CheckBoxMountedProps {
                             is_checked,
                             is_enabled,
+                            resource_overrides,
                             on_is_checked_changed,
                         })),
                         reference,
@@ -9285,6 +9469,8 @@ pub mod public {
                         placeholder_text,
                         is_editable,
                         is_enabled,
+                        resource_overrides,
+                        corner_radius,
                         on_selection_changed,
                         reference,
                         element_state,
@@ -9298,6 +9484,8 @@ pub mod public {
                             placeholder_text,
                             is_editable,
                             is_enabled,
+                            resource_overrides,
+                            corner_radius,
                             on_selection_changed,
                         })),
                         reference,
@@ -10492,6 +10680,8 @@ pub mod public {
                         && value.opacity_transition == mounted.opacity_transition
                         && f64_property_eq(&value.scale, &mounted.scale)
                         && value.scale_transition == mounted.scale_transition
+                        && value.translation == mounted.translation
+                        && value.translation_transition == mounted.translation_transition
                         && value.capture_pointer_on_press == mounted.capture_pointer_on_press
                         && value.focus_on_pointer_release == mounted.focus_on_pointer_release
                         && value.drop_policy == mounted.drop_policy
@@ -10539,6 +10729,7 @@ pub mod public {
                         && value.background == mounted.background
                         && value.border_brush == mounted.border_brush
                         && value.border_thickness == mounted.border_thickness
+                        && value.resource_overrides == mounted.resource_overrides
                         && value.on_text_changed == mounted.on_text_changed
                 }
                 (Self::AutoSuggestBox(value), MountedProps::AutoSuggestBox(mounted)) => {
@@ -10560,6 +10751,7 @@ pub mod public {
                         && f64_property_eq(&value.maximum, &mounted.maximum)
                         && value.value == mounted.value
                         && value.is_enabled == mounted.is_enabled
+                        && value.resource_overrides == mounted.resource_overrides
                         && value.on_value_changed == mounted.on_value_changed
                 }
                 (Self::Slider(value), MountedProps::Slider(mounted)) => {
@@ -10570,6 +10762,8 @@ pub mod public {
                         && f64_property_eq(&value.step_frequency, &mounted.step_frequency)
                         && value.orientation == mounted.orientation
                         && value.is_thumb_tool_tip_enabled == mounted.is_thumb_tool_tip_enabled
+                        && value.resource_overrides == mounted.resource_overrides
+                        && value.corner_radius == mounted.corner_radius
                         && value.events == mounted.events
                 }
                 (Self::TitleBar(value), MountedProps::TitleBar(mounted)) => {
@@ -10619,15 +10813,20 @@ pub mod public {
                         && value.is_enabled == mounted.is_enabled
                         && value.foreground == mounted.foreground
                         && value.is_hit_test_visible == mounted.is_hit_test_visible
+                        && value.resource_overrides == mounted.resource_overrides
+                        && value.corner_radius == mounted.corner_radius
                 }
                 (Self::ToggleSwitch(value), MountedProps::ToggleSwitch(mounted)) => {
                     true && value.is_on == mounted.is_on
                         && value.is_enabled == mounted.is_enabled
+                        && value.resource_overrides == mounted.resource_overrides
+                        && value.corner_radius == mounted.corner_radius
                         && value.on_toggled == mounted.on_toggled
                 }
                 (Self::CheckBox(value), MountedProps::CheckBox(mounted)) => {
                     true && value.is_checked == mounted.is_checked
                         && value.is_enabled == mounted.is_enabled
+                        && value.resource_overrides == mounted.resource_overrides
                         && value.on_is_checked_changed == mounted.on_is_checked_changed
                 }
                 (Self::ToggleButton(value), MountedProps::ToggleButton(mounted)) => {
@@ -10755,6 +10954,8 @@ pub mod public {
                         && value.placeholder_text == mounted.placeholder_text
                         && value.is_editable == mounted.is_editable
                         && value.is_enabled == mounted.is_enabled
+                        && value.resource_overrides == mounted.resource_overrides
+                        && value.corner_radius == mounted.corner_radius
                         && value.on_selection_changed == mounted.on_selection_changed
                 }
                 (Self::Pivot(value), MountedProps::Pivot(mounted)) => {
@@ -11610,6 +11811,13 @@ pub mod public {
                             .as_ref()
                             .is_some_and(|events| events.on_suggestion_chosen.is_some()),
                     );
+                    visit(
+                        EventId::AutoSuggestBoxQuerySubmitted,
+                        value
+                            .events
+                            .as_ref()
+                            .is_some_and(|events| events.on_query_submitted.is_some()),
+                    );
                 }
                 Self::PasswordBox(_) => {
                     visit(EventId::PasswordBoxPasswordChanged, true);
@@ -12013,6 +12221,9 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
                         }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
+                        }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
                 );
@@ -12052,6 +12263,9 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
                         }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
+                        }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
                 );
@@ -12060,6 +12274,9 @@ impl MountedPropsExt for MountedProps {
                     match &values.foreground {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
+                        }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
                         }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
@@ -12188,6 +12405,9 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
                         }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
+                        }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
                 );
@@ -12196,6 +12416,9 @@ impl MountedPropsExt for MountedProps {
                     match &values.border_brush {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
+                        }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
                         }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
@@ -12217,6 +12440,20 @@ impl MountedPropsExt for MountedProps {
                 visit(
                     PropertyId::BorderScaleTransition,
                     match &values.scale_transition {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Duration(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::BorderTranslation,
+                    match &values.translation {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::Vector3(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::BorderTranslationTransition,
+                    match &values.translation_transition {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::Duration(*value)),
                     },
@@ -12347,6 +12584,9 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
                         }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
+                        }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
                 );
@@ -12422,6 +12662,9 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
                         }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
+                        }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
                 );
@@ -12431,6 +12674,9 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
                         }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
+                        }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
                 );
@@ -12439,6 +12685,13 @@ impl MountedPropsExt for MountedProps {
                     match &values.border_thickness {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::Thickness(value)),
+                    },
+                );
+                visit(
+                    PropertyId::TextBoxResources,
+                    match &values.resource_overrides {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::ResourceOverrides(value)),
                     },
                 );
             }
@@ -12531,6 +12784,13 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
                     },
                 );
+                visit(
+                    PropertyId::NumberBoxResources,
+                    match &values.resource_overrides {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::ResourceOverrides(value)),
+                    },
+                );
             }
             Self::Slider(values) => {
                 visit(
@@ -12580,6 +12840,20 @@ impl MountedPropsExt for MountedProps {
                     match &values.is_thumb_tool_tip_enabled {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::SliderResources,
+                    match &values.resource_overrides {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::ResourceOverrides(value)),
+                    },
+                );
+                visit(
+                    PropertyId::SliderCornerRadius,
+                    match &values.corner_radius {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::CornerRadius(value)),
                     },
                 );
             }
@@ -12821,6 +13095,9 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
                         }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
+                        }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
                 );
@@ -12829,6 +13106,20 @@ impl MountedPropsExt for MountedProps {
                     match &values.is_hit_test_visible {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::ProgressBarResources,
+                    match &values.resource_overrides {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::ResourceOverrides(value)),
+                    },
+                );
+                visit(
+                    PropertyId::ProgressBarCornerRadius,
+                    match &values.corner_radius {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::CornerRadius(value)),
                     },
                 );
             }
@@ -12847,6 +13138,20 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
                     },
                 );
+                visit(
+                    PropertyId::ToggleSwitchResources,
+                    match &values.resource_overrides {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::ResourceOverrides(value)),
+                    },
+                );
+                visit(
+                    PropertyId::ToggleSwitchCornerRadius,
+                    match &values.corner_radius {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::CornerRadius(value)),
+                    },
+                );
             }
             Self::CheckBox(values) => {
                 visit(
@@ -12861,6 +13166,13 @@ impl MountedPropsExt for MountedProps {
                     match &values.is_enabled {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::CheckBoxResources,
+                    match &values.resource_overrides {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::ResourceOverrides(value)),
                     },
                 );
             }
@@ -13123,6 +13435,9 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
                         }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
+                        }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
                 );
@@ -13150,6 +13465,9 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
                         }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
+                        }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
                 );
@@ -13158,6 +13476,9 @@ impl MountedPropsExt for MountedProps {
                     match &values.stroke {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
+                        }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
                         }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
@@ -13191,6 +13512,9 @@ impl MountedPropsExt for MountedProps {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
                         }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
+                        }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
                 );
@@ -13199,6 +13523,9 @@ impl MountedPropsExt for MountedProps {
                     match &values.stroke {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
+                        }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
                         }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
@@ -13217,6 +13544,9 @@ impl MountedPropsExt for MountedProps {
                     match &values.stroke {
                         Property::Set(Brush::Solid(color)) => {
                             Some(PropertyValueRef::Brush(Brush::Solid(*color)))
+                        }
+                        Property::Set(Brush::Acrylic(acrylic)) => {
+                            Some(PropertyValueRef::Brush(Brush::Acrylic(*acrylic)))
                         }
                         Property::Inherited | Property::Set(Brush::Theme(_)) => None,
                     },
@@ -13403,6 +13733,20 @@ impl MountedPropsExt for MountedProps {
                     match &values.is_enabled {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::Bool(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::ComboBoxResources,
+                    match &values.resource_overrides {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::ResourceOverrides(value)),
+                    },
+                );
+                visit(
+                    PropertyId::ComboBoxCornerRadius,
+                    match &values.corner_radius {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::CornerRadius(value)),
                     },
                 );
             }
@@ -14545,6 +14889,13 @@ impl MountedEventsExt for MountedProps {
                         .as_ref()
                         .is_some_and(|events| events.on_suggestion_chosen.is_some()),
                 );
+                visit(
+                    EventId::AutoSuggestBoxQuerySubmitted,
+                    values
+                        .events
+                        .as_ref()
+                        .is_some_and(|events| events.on_query_submitted.is_some()),
+                );
             }
             Self::PasswordBox(_) => {
                 visit(EventId::PasswordBoxPasswordChanged, true);
@@ -15035,6 +15386,15 @@ impl MountedEventsExt for MountedProps {
                 .events
                 .as_ref()
                 .and_then(|events| events.on_suggestion_chosen.as_ref())
+                .map(|callback| callback.call(value.clone())),
+            (
+                Self::AutoSuggestBox(values),
+                EventId::AutoSuggestBoxQuerySubmitted,
+                EventPayload::Str(value),
+            ) => values
+                .events
+                .as_ref()
+                .and_then(|events| events.on_query_submitted.as_ref())
                 .map(|callback| callback.call(value.clone())),
             (
                 Self::PasswordBox(values),
@@ -15951,6 +16311,8 @@ pub(crate) struct BorderMountedProps {
     opacity_transition: Property<std::time::Duration>,
     scale: Property<f64>,
     scale_transition: Property<std::time::Duration>,
+    translation: Property<Vector3>,
+    translation_transition: Property<std::time::Duration>,
     capture_pointer_on_press: Property<bool>,
     focus_on_pointer_release: Property<bool>,
     drop_policy: Property<DragDropPolicy>,
@@ -15969,6 +16331,8 @@ impl PartialEq for BorderMountedProps {
             && self.opacity_transition == other.opacity_transition
             && f64_property_eq(&self.scale, &other.scale)
             && self.scale_transition == other.scale_transition
+            && self.translation == other.translation
+            && self.translation_transition == other.translation_transition
             && self.capture_pointer_on_press == other.capture_pointer_on_press
             && self.focus_on_pointer_release == other.focus_on_pointer_release
             && self.drop_policy == other.drop_policy
@@ -16054,6 +16418,7 @@ pub(crate) struct TextBoxMountedProps {
     background: Property<Brush>,
     border_brush: Property<Brush>,
     border_thickness: Property<Thickness>,
+    resource_overrides: Property<ResourceOverrides>,
     on_text_changed: Option<Callback<String>>,
 }
 impl PartialEq for TextBoxMountedProps {
@@ -16068,6 +16433,7 @@ impl PartialEq for TextBoxMountedProps {
             && self.background == other.background
             && self.border_brush == other.border_brush
             && self.border_thickness == other.border_thickness
+            && self.resource_overrides == other.resource_overrides
             && self.on_text_changed == other.on_text_changed
     }
 }
@@ -16111,6 +16477,7 @@ pub(crate) struct NumberBoxMountedProps {
     maximum: Property<f64>,
     value: Property<Option<f64>>,
     is_enabled: Property<bool>,
+    resource_overrides: Property<ResourceOverrides>,
     on_value_changed: Option<Callback<Option<f64>>>,
 }
 impl PartialEq for NumberBoxMountedProps {
@@ -16119,6 +16486,7 @@ impl PartialEq for NumberBoxMountedProps {
             && f64_property_eq(&self.maximum, &other.maximum)
             && self.value == other.value
             && self.is_enabled == other.is_enabled
+            && self.resource_overrides == other.resource_overrides
             && self.on_value_changed == other.on_value_changed
     }
 }
@@ -16131,6 +16499,8 @@ pub(crate) struct SliderMountedProps {
     step_frequency: Property<f64>,
     orientation: Property<Orientation>,
     is_thumb_tool_tip_enabled: Property<bool>,
+    resource_overrides: Property<ResourceOverrides>,
+    corner_radius: Property<CornerRadius>,
     events: Option<std::rc::Rc<SliderEvents>>,
 }
 impl PartialEq for SliderMountedProps {
@@ -16142,6 +16512,8 @@ impl PartialEq for SliderMountedProps {
             && f64_property_eq(&self.step_frequency, &other.step_frequency)
             && self.orientation == other.orientation
             && self.is_thumb_tool_tip_enabled == other.is_thumb_tool_tip_enabled
+            && self.resource_overrides == other.resource_overrides
+            && self.corner_radius == other.corner_radius
             && self.events == other.events
     }
 }
@@ -16238,6 +16610,8 @@ pub(crate) struct ProgressBarMountedProps {
     is_enabled: Property<bool>,
     foreground: Property<Brush>,
     is_hit_test_visible: Property<bool>,
+    resource_overrides: Property<ResourceOverrides>,
+    corner_radius: Property<CornerRadius>,
 }
 impl PartialEq for ProgressBarMountedProps {
     fn eq(&self, other: &Self) -> bool {
@@ -16250,18 +16624,24 @@ impl PartialEq for ProgressBarMountedProps {
             && self.is_enabled == other.is_enabled
             && self.foreground == other.foreground
             && self.is_hit_test_visible == other.is_hit_test_visible
+            && self.resource_overrides == other.resource_overrides
+            && self.corner_radius == other.corner_radius
     }
 }
 #[derive(Clone, Debug)]
 pub(crate) struct ToggleSwitchMountedProps {
     is_on: Property<bool>,
     is_enabled: Property<bool>,
+    resource_overrides: Property<ResourceOverrides>,
+    corner_radius: Property<CornerRadius>,
     on_toggled: Option<Callback<bool>>,
 }
 impl PartialEq for ToggleSwitchMountedProps {
     fn eq(&self, other: &Self) -> bool {
         true && self.is_on == other.is_on
             && self.is_enabled == other.is_enabled
+            && self.resource_overrides == other.resource_overrides
+            && self.corner_radius == other.corner_radius
             && self.on_toggled == other.on_toggled
     }
 }
@@ -16269,12 +16649,14 @@ impl PartialEq for ToggleSwitchMountedProps {
 pub(crate) struct CheckBoxMountedProps {
     is_checked: Property<bool>,
     is_enabled: Property<bool>,
+    resource_overrides: Property<ResourceOverrides>,
     on_is_checked_changed: Option<Callback<bool>>,
 }
 impl PartialEq for CheckBoxMountedProps {
     fn eq(&self, other: &Self) -> bool {
         true && self.is_checked == other.is_checked
             && self.is_enabled == other.is_enabled
+            && self.resource_overrides == other.resource_overrides
             && self.on_is_checked_changed == other.on_is_checked_changed
     }
 }
@@ -16586,6 +16968,8 @@ pub(crate) struct ComboBoxMountedProps {
     placeholder_text: Property<String>,
     is_editable: Property<bool>,
     is_enabled: Property<bool>,
+    resource_overrides: Property<ResourceOverrides>,
+    corner_radius: Property<CornerRadius>,
     on_selection_changed: Option<Callback<Option<usize>>>,
 }
 impl PartialEq for ComboBoxMountedProps {
@@ -16595,6 +16979,8 @@ impl PartialEq for ComboBoxMountedProps {
             && self.placeholder_text == other.placeholder_text
             && self.is_editable == other.is_editable
             && self.is_enabled == other.is_enabled
+            && self.resource_overrides == other.resource_overrides
+            && self.corner_radius == other.corner_radius
             && self.on_selection_changed == other.on_selection_changed
     }
 }
@@ -17413,6 +17799,8 @@ pub enum PropertyId {
     BorderOpacityTransition,
     BorderScale,
     BorderScaleTransition,
+    BorderTranslation,
+    BorderTranslationTransition,
     BorderCapturePointerOnPress,
     BorderFocusOnPointerRelease,
     BorderAllowDrop,
@@ -17441,6 +17829,7 @@ pub enum PropertyId {
     TextBoxBackground,
     TextBoxBorderBrush,
     TextBoxBorderThickness,
+    TextBoxResources,
     AutoSuggestBoxText,
     AutoSuggestBoxItemsSource,
     AutoSuggestBoxPlaceholderText,
@@ -17453,6 +17842,7 @@ pub enum PropertyId {
     NumberBoxMaximum,
     NumberBoxValue,
     NumberBoxIsEnabled,
+    NumberBoxResources,
     SliderMinimum,
     SliderMaximum,
     SliderValue,
@@ -17460,6 +17850,8 @@ pub enum PropertyId {
     SliderStepFrequency,
     SliderOrientation,
     SliderIsThumbToolTipEnabled,
+    SliderResources,
+    SliderCornerRadius,
     TitleBarTitle,
     TitleBarSubtitle,
     TitleBarIsBackButtonVisible,
@@ -17493,10 +17885,15 @@ pub enum PropertyId {
     ProgressBarIsEnabled,
     ProgressBarForeground,
     ProgressBarIsHitTestVisible,
+    ProgressBarResources,
+    ProgressBarCornerRadius,
     ToggleSwitchIsOn,
     ToggleSwitchIsEnabled,
+    ToggleSwitchResources,
+    ToggleSwitchCornerRadius,
     CheckBoxIsChecked,
     CheckBoxIsEnabled,
+    CheckBoxResources,
     ToggleButtonIsChecked,
     ToggleButtonIsEnabled,
     ToggleButtonResources,
@@ -17564,6 +17961,8 @@ pub enum PropertyId {
     ComboBoxPlaceholderText,
     ComboBoxIsEditable,
     ComboBoxIsEnabled,
+    ComboBoxResources,
+    ComboBoxCornerRadius,
     PivotSelectedIndex,
     PivotTitle,
     PivotItemHeader,
@@ -17697,6 +18096,7 @@ pub enum EventId {
     TextBoxTextChanged,
     AutoSuggestBoxTextChanged,
     AutoSuggestBoxSuggestionChosen,
+    AutoSuggestBoxQuerySubmitted,
     PasswordBoxPasswordChanged,
     NumberBoxValueChanged,
     SliderValueChanged,
@@ -17795,6 +18195,7 @@ pub enum PropertyValue {
     TextWrapping(TextWrapping),
     Thickness(Thickness),
     TreeViewSelectionMode(TreeViewSelectionMode),
+    Vector3(Vector3),
     VerticalAlignment(VerticalAlignment),
 }
 impl PartialEq for PropertyValue {
@@ -17865,6 +18266,7 @@ impl PartialEq for PropertyValue {
             (Self::TreeViewSelectionMode(left), Self::TreeViewSelectionMode(right)) => {
                 left == right
             }
+            (Self::Vector3(left), Self::Vector3(right)) => left == right,
             (Self::VerticalAlignment(left), Self::VerticalAlignment(right)) => left == right,
             _ => false,
         }
@@ -17913,6 +18315,7 @@ pub enum PropertyValueRef<'a> {
     TextWrapping(TextWrapping),
     Thickness(&'a Thickness),
     TreeViewSelectionMode(TreeViewSelectionMode),
+    Vector3(Vector3),
     VerticalAlignment(VerticalAlignment),
 }
 impl PropertyValueRef<'_> {
@@ -17996,6 +18399,7 @@ impl PropertyValueRef<'_> {
             (Self::TreeViewSelectionMode(left), PropertyValue::TreeViewSelectionMode(right)) => {
                 left == *right
             }
+            (Self::Vector3(left), PropertyValue::Vector3(right)) => left == *right,
             (Self::VerticalAlignment(left), PropertyValue::VerticalAlignment(right)) => {
                 left == *right
             }
@@ -18053,6 +18457,7 @@ impl PropertyValueRef<'_> {
             Self::TextWrapping(value) => PropertyValue::TextWrapping(value),
             Self::Thickness(value) => PropertyValue::Thickness(value.clone()),
             Self::TreeViewSelectionMode(value) => PropertyValue::TreeViewSelectionMode(value),
+            Self::Vector3(value) => PropertyValue::Vector3(value),
             Self::VerticalAlignment(value) => PropertyValue::VerticalAlignment(value),
         }
     }
@@ -18260,6 +18665,11 @@ impl From<Thickness> for PropertyValue {
 impl From<TreeViewSelectionMode> for PropertyValue {
     fn from(value: TreeViewSelectionMode) -> Self {
         Self::TreeViewSelectionMode(value)
+    }
+}
+impl From<Vector3> for PropertyValue {
+    fn from(value: Vector3) -> Self {
+        Self::Vector3(value)
     }
 }
 impl From<VerticalAlignment> for PropertyValue {
@@ -18856,6 +19266,28 @@ const BORDER_PROPERTIES: &[PropertyDescriptor] = &[
         observes_feedback: false,
     },
     PropertyDescriptor {
+        id: PropertyId::BorderTranslation,
+        name: "Translation",
+        field: "translation",
+        value: "Vector3",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::BorderTranslationTransition,
+        name: "TranslationTransition",
+        field: "translation_transition",
+        value: "Duration",
+        interface: "Microsoft.UI.Xaml.IUIElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
         id: PropertyId::BorderCapturePointerOnPress,
         name: "CapturePointerOnPress",
         field: "capture_pointer_on_press",
@@ -19335,6 +19767,17 @@ const TEXT_BOX_PROPERTIES: &[PropertyDescriptor] = &[
         feedback_contract: None,
         observes_feedback: false,
     },
+    PropertyDescriptor {
+        id: PropertyId::TextBoxResources,
+        name: "Resources",
+        field: "resource_overrides",
+        value: "ResourceOverrides",
+        interface: "Microsoft.UI.Xaml.IFrameworkElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
 ];
 const TEXT_BOX_EVENTS: &[EventDescriptor] = &[EventDescriptor {
     id: EventId::TextBoxTextChanged,
@@ -19408,6 +19851,13 @@ const AUTO_SUGGEST_BOX_EVENTS: &[EventDescriptor] = &[
         id: EventId::AutoSuggestBoxSuggestionChosen,
         name: "SuggestionChosen",
         field: "on_suggestion_chosen",
+        payload: "Str",
+        interface: "Microsoft.UI.Xaml.Controls.IAutoSuggestBox",
+    },
+    EventDescriptor {
+        id: EventId::AutoSuggestBoxQuerySubmitted,
+        name: "QuerySubmitted",
+        field: "on_query_submitted",
         payload: "Str",
         interface: "Microsoft.UI.Xaml.Controls.IAutoSuggestBox",
     },
@@ -19524,6 +19974,17 @@ const NUMBER_BOX_PROPERTIES: &[PropertyDescriptor] = &[
         feedback_contract: None,
         observes_feedback: false,
     },
+    PropertyDescriptor {
+        id: PropertyId::NumberBoxResources,
+        name: "Resources",
+        field: "resource_overrides",
+        value: "ResourceOverrides",
+        interface: "Microsoft.UI.Xaml.IFrameworkElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
 ];
 const NUMBER_BOX_EVENTS: &[EventDescriptor] = &[EventDescriptor {
     id: EventId::NumberBoxValueChanged,
@@ -19612,6 +20073,28 @@ const SLIDER_PROPERTIES: &[PropertyDescriptor] = &[
         field: "is_thumb_tool_tip_enabled",
         value: "Bool",
         interface: "Microsoft.UI.Xaml.Controls.ISlider",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::SliderResources,
+        name: "Resources",
+        field: "resource_overrides",
+        value: "ResourceOverrides",
+        interface: "Microsoft.UI.Xaml.IFrameworkElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::SliderCornerRadius,
+        name: "CornerRadius",
+        field: "corner_radius",
+        value: "CornerRadius",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
         clearable: true,
         feedback: None,
         feedback_contract: None,
@@ -20159,6 +20642,28 @@ const PROGRESS_BAR_PROPERTIES: &[PropertyDescriptor] = &[
         feedback_contract: None,
         observes_feedback: false,
     },
+    PropertyDescriptor {
+        id: PropertyId::ProgressBarResources,
+        name: "Resources",
+        field: "resource_overrides",
+        value: "ResourceOverrides",
+        interface: "Microsoft.UI.Xaml.IFrameworkElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ProgressBarCornerRadius,
+        name: "CornerRadius",
+        field: "corner_radius",
+        value: "CornerRadius",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
 ];
 const PROGRESS_BAR_EVENTS: &[EventDescriptor] = &[];
 const PROGRESS_BAR_SLOTS: &[SlotDescriptor] = &[];
@@ -20179,6 +20684,28 @@ const TOGGLE_SWITCH_PROPERTIES: &[PropertyDescriptor] = &[
         name: "IsEnabled",
         field: "is_enabled",
         value: "Bool",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ToggleSwitchResources,
+        name: "Resources",
+        field: "resource_overrides",
+        value: "ResourceOverrides",
+        interface: "Microsoft.UI.Xaml.IFrameworkElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ToggleSwitchCornerRadius,
+        name: "CornerRadius",
+        field: "corner_radius",
+        value: "CornerRadius",
         interface: "Microsoft.UI.Xaml.Controls.IControl",
         clearable: true,
         feedback: None,
@@ -20234,6 +20761,17 @@ const CHECK_BOX_PROPERTIES: &[PropertyDescriptor] = &[
         field: "is_enabled",
         value: "Bool",
         interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::CheckBoxResources,
+        name: "Resources",
+        field: "resource_overrides",
+        value: "ResourceOverrides",
+        interface: "Microsoft.UI.Xaml.IFrameworkElement",
         clearable: true,
         feedback: None,
         feedback_contract: None,
@@ -21154,6 +21692,28 @@ const COMBO_BOX_PROPERTIES: &[PropertyDescriptor] = &[
         name: "IsEnabled",
         field: "is_enabled",
         value: "Bool",
+        interface: "Microsoft.UI.Xaml.Controls.IControl",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ComboBoxResources,
+        name: "Resources",
+        field: "resource_overrides",
+        value: "ResourceOverrides",
+        interface: "Microsoft.UI.Xaml.IFrameworkElement",
+        clearable: true,
+        feedback: None,
+        feedback_contract: None,
+        observes_feedback: false,
+    },
+    PropertyDescriptor {
+        id: PropertyId::ComboBoxCornerRadius,
+        name: "CornerRadius",
+        field: "corner_radius",
+        value: "CornerRadius",
         interface: "Microsoft.UI.Xaml.Controls.IControl",
         clearable: true,
         feedback: None,

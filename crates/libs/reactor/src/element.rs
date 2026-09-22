@@ -7,6 +7,21 @@ use std::time::Duration;
 use super::*;
 use crate::core::{ComponentToken, ComponentView, ContextProvision, DeferredMessage};
 
+/// 三维向量（DIP）：`Translation` 等组合属性的位移量。
+pub use windows_numerics::Vector3;
+
+/// 只含垂直分量的位移量（DIP）。
+///
+/// 手势驱动的位移（下拉刷新、上滑加载、拖拽跟手）几乎都只要这一个方向，
+/// 而 [`Vector3`] 的分量是 `f32`——用这个构造器就不必在每个调用点写 `as f32`。
+pub fn translation_y(value: f64) -> Vector3 {
+    Vector3 {
+        x: 0.0,
+        y: value as f32,
+        z: 0.0,
+    }
+}
+
 pub(crate) fn validate_image_uri(value: &str) -> windows_core::Result<()> {
     native::validate_native_image_uri(value)
 }
@@ -268,6 +283,38 @@ impl Color {
 pub enum Brush {
     Theme(ThemeBrush),
     Solid(Color),
+    /// 亚克力（毛玻璃）材质，见 [`Acrylic`]。
+    Acrylic(Acrylic),
+}
+
+/// 亚克力（毛玻璃）材质：半透明着色 + 系统合成器对背后内容做模糊。
+///
+/// 适合"浮在内容之上"的小面积元素（提示条、浮窗、工具条）；大面积铺开会影响
+/// 性能，那种场景用不透明的 [`ThemeBrush`] 更合适。
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct Acrylic {
+    /// 着色：材质整体偏向的颜色（alpha 由 [`Acrylic::tint_opacity`] 控制）。
+    pub tint: Color,
+    /// 着色不透明度，百分比 0..=100（越大越接近实心）。
+    pub tint_opacity: u8,
+    /// 亮度不透明度，百分比 0..=100；`None` = 交给系统按当前主题决定
+    /// （暗色主题下系统给的亮度刚好，通常不用自己设）。
+    pub luminosity_opacity: Option<u8>,
+}
+
+impl Acrylic {
+    /// 以 `tint` 为主色的亚克力材质，`tint_opacity` 是着色百分比 0..=100。
+    pub const fn new(tint: Color, tint_opacity: u8) -> Self {
+        Self {
+            tint: Color::argb(255, tint.r, tint.g, tint.b),
+            tint_opacity: if tint_opacity > 100 {
+                100
+            } else {
+                tint_opacity
+            },
+            luminosity_opacity: None,
+        }
+    }
 }
 
 /// Pointer state in element-local and window-relative device-independent pixels.
@@ -305,7 +352,8 @@ impl Brush {
     pub(crate) const fn theme(self) -> Option<ThemeBrush> {
         match self {
             Self::Theme(value) => Some(value),
-            Self::Solid(_) => None,
+            // 纯色与亚克力都是固定值刷，不走主题资源路径（直接设属性）。
+            Self::Solid(_) | Self::Acrylic(_) => None,
         }
     }
 }
@@ -1671,6 +1719,22 @@ impl ResourceOverrides {
         self
     }
 
+    /// 设置控件圆角 token `ControlCornerRadius`（WinUI 默认 4）。
+    ///
+    /// 作为应用级资源（[`App::theme_resources`]）注入时，WinUI 各控件模板隐式样式里的
+    /// `{ThemeResource ControlCornerRadius}` 会统一读到这个值，因此 Button、TextBox、
+    /// ComboBox、Slider、ToggleButton 等控件一次对齐——不需要逐个控件设 `corner_radius`。
+    pub fn control_corner_radius(self, radius: impl Into<CornerRadius>) -> Self {
+        self.set("ControlCornerRadius", radius.into())
+    }
+
+    /// 设置浮层圆角 token `OverlayCornerRadius`（WinUI 默认 8）。
+    ///
+    /// 影响 Flyout、ToolTip、ContentDialog 等浮层的圆角。
+    pub fn overlay_corner_radius(self, radius: impl Into<CornerRadius>) -> Self {
+        self.set("OverlayCornerRadius", radius.into())
+    }
+
     pub(crate) fn values(&self) -> impl Iterator<Item = (&str, &ResourceValue)> {
         self.values.iter().map(|(key, value)| (key.as_str(), value))
     }
@@ -1967,6 +2031,22 @@ pub enum WindowPresenter {
     FullScreen,
 }
 
+/// 窗口位置声明：窗口该出现在哪里。
+///
+/// [`WindowVisuals::client_position`] 与 [`WindowVisuals::centered`] 写的是同一个字段，因此
+/// 两者互斥——不会出现"既指定坐标又要求居中"这种没法解释的组合，**后调用的那个生效**。
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(crate) enum WindowPlacement {
+    /// 不声明位置：窗口由系统放在哪儿就留在哪儿，reactor 不移动它（默认，也是不声明位置时
+    /// 与旧版本行为完全一致的原因）。
+    #[default]
+    Unspecified,
+    /// 窗口**外框**左上角在虚拟屏幕坐标系里的坐标，单位 DIP。
+    Position { x: f64, y: f64 },
+    /// 窗口**外框**居中到它所在显示器的工作区。
+    Centered,
+}
+
 /// Window appearance and client sizing requested by a component publication.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct WindowVisuals {
@@ -1974,12 +2054,11 @@ pub struct WindowVisuals {
     pub(crate) backdrop_tuning: WindowBackdropTuning,
     pub(crate) border: WindowBorder,
     pub(crate) client_size: Option<(f64, f64)>,
-    /// Client-area origin in DIPs, relative to the virtual screen's top-left.
+    /// 窗口该出现在哪里，见 [`WindowPlacement`]。
     ///
-    /// Companion to `client_size`: the two together are "the geometry the window had when
-    /// it last closed". Only ever applied when the **value changes**, so declaring the same
-    /// position every frame does not fight the user dragging the window around.
-    pub(crate) client_position: Option<(f64, f64)>,
+    /// 与 `client_size` 是一对：两者合起来就是"窗口上次关闭时的几何信息"。位置只在**声明值
+    /// 变化**时应用一次，所以每帧声明同一个位置不会跟用户拖动窗口较劲。
+    pub(crate) placement: WindowPlacement,
     pub(crate) constraints: Option<WindowConstraints>,
     pub(crate) corner: WindowCorner,
     pub(crate) icon: Option<&'static str>,
@@ -2034,12 +2113,16 @@ impl WindowVisuals {
         self
     }
 
-    /// Sets the initial client position in DIPs, relative to the virtual screen's top-left.
+    /// 设置初始窗口位置：窗口**外框**（含边框与标题栏）左上角在虚拟屏幕坐标系里的坐标，
+    /// 单位 DIP。
     ///
-    /// This is what "remember where the window was" is built on: an application stores the
-    /// geometry it observes on close and declares it back here at startup. Like
-    /// [`client_size`](Self::client_size) it is applied **only when the value changes**, so
-    /// re-declaring it every frame never fights the user moving the window.
+    /// 这是"记住窗口上次在哪"的基础：应用关闭时记下位置，启动时用这里的值还原。和
+    /// [`client_size`](Self::client_size) 一样只在**声明值变化**时应用一次，所以每帧声明同一个
+    /// 值不会跟用户拖动窗口较劲。
+    ///
+    /// 落点是**外框**而不是客户区（`SetWindowPos` 对齐的是外框，Win32 没有"移动客户区"的
+    /// 原语），坐标按窗口所在显示器的 DPI 换算成物理像素。要让窗口落在屏幕正中直接写
+    /// [`centered`](Self::centered)，不需要自己算坐标。
     ///
     /// # Panics
     ///
@@ -2049,7 +2132,22 @@ impl WindowVisuals {
             x.is_finite() && y.is_finite(),
             "window client position must be finite"
         );
-        self.client_position = Some((x, y));
+        self.placement = WindowPlacement::Position { x, y };
+        self
+    }
+
+    /// 让窗口居中到它所在显示器的工作区（屏幕区域减去任务栏等系统保留区）。
+    ///
+    /// "启动时窗口在屏幕正中"的一行写法：显示器、工作区、DPI 缩放与窗口外框尺寸都由 reactor
+    /// 在应用时实测，宿主不必自己换算，多显示器和任务栏也不会算错。内部只移动不缩放，也不
+    /// 改变 Z 序、不抢焦点。
+    ///
+    /// 与 [`client_position`](Self::client_position) 互斥：两者写同一个位置声明，后调用的那个
+    /// 生效。和它一样只在**声明值变化**时应用一次——每帧声明 `.centered()` 不会把用户拖走之后
+    /// 的窗口拽回正中。也正因为如此，"把已经开着的窗口重新居中到另一块显示器"需要让声明值
+    /// 真的变化一次（例如先声明一个坐标、再声明 `.centered()`）。
+    pub fn centered(mut self) -> Self {
+        self.placement = WindowPlacement::Centered;
         self
     }
 

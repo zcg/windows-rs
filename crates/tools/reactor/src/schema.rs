@@ -121,6 +121,8 @@ pub(crate) enum PropertyAdapter {
     ImplicitOpacityTransition,
     ImplicitScale,
     ImplicitScaleTransition,
+    ImplicitTranslation,
+    ImplicitTranslationTransition,
     KeyAccelerators,
     KeyEvent,
     ItemTag,
@@ -209,7 +211,9 @@ impl PropertyAdapter {
             },
             Self::ImplicitOpacityTransition
             | Self::ImplicitScale
-            | Self::ImplicitScaleTransition => PropertyAdapterCapabilities {
+            | Self::ImplicitScaleTransition
+            | Self::ImplicitTranslation
+            | Self::ImplicitTranslationTransition => PropertyAdapterCapabilities {
                 uses_dependency_property: false,
                 uses_property_setter: true,
             },
@@ -253,6 +257,8 @@ impl PropertyAdapter {
 
         const BORDER: &str = "Microsoft.UI.Xaml.Controls.Border";
         const BUTTON: &str = "Microsoft.UI.Xaml.Controls.Button";
+        const CHECK_BOX: &str = "Microsoft.UI.Xaml.Controls.CheckBox";
+        const COMBO_BOX: &str = "Microsoft.UI.Xaml.Controls.ComboBox";
         const GRID: &str = "Microsoft.UI.Xaml.Controls.Grid";
         const IMAGE: &str = "Microsoft.UI.Xaml.Controls.Image";
         const IMAGE_ICON: &str = "Microsoft.UI.Xaml.Controls.ImageIcon";
@@ -262,12 +268,16 @@ impl PropertyAdapter {
         const NAVIGATION_VIEW: &str = "Microsoft.UI.Xaml.Controls.NavigationView";
         const NUMBER_BOX: &str = "Microsoft.UI.Xaml.Controls.NumberBox";
         const PATH_ICON: &str = "Microsoft.UI.Xaml.Controls.PathIcon";
+        const PROGRESS_BAR: &str = "Microsoft.UI.Xaml.Controls.ProgressBar";
         const RATING_CONTROL: &str = "Microsoft.UI.Xaml.Controls.RatingControl";
         const RICH_EDIT_BOX: &str = "Microsoft.UI.Xaml.Controls.RichEditBox";
         const RICH_TEXT_BLOCK: &str = "Microsoft.UI.Xaml.Controls.RichTextBlock";
+        const SLIDER: &str = "Microsoft.UI.Xaml.Controls.Slider";
         const TEXT_BLOCK: &str = "Microsoft.UI.Xaml.Controls.TextBlock";
+        const TEXT_BOX: &str = "Microsoft.UI.Xaml.Controls.TextBox";
         const TIME_PICKER: &str = "Microsoft.UI.Xaml.Controls.TimePicker";
         const TOGGLE_BUTTON: &str = "Microsoft.UI.Xaml.Controls.Primitives.ToggleButton";
+        const TOGGLE_SWITCH: &str = "Microsoft.UI.Xaml.Controls.ToggleSwitch";
 
         let property = |targets, metadata, value, copy, requirement| {
             PropertyAdapterKind::Property(PropertyAdapterContract {
@@ -334,6 +344,20 @@ impl PropertyAdapter {
                 "Duration",
                 false,
                 "implicit_scale_transition requires Border.ScaleTransition",
+            ),
+            Self::ImplicitTranslation => property(
+                OneOf(&[(BORDER, "Translation")]),
+                None,
+                "Vector3",
+                true,
+                "implicit_translation requires Border.Translation",
+            ),
+            Self::ImplicitTranslationTransition => property(
+                OneOf(&[(BORDER, "TranslationTransition")]),
+                None,
+                "Duration",
+                false,
+                "implicit_translation_transition requires Border.TranslationTransition",
             ),
             Self::KeyAccelerators => property(
                 OneOf(&[
@@ -425,13 +449,21 @@ impl PropertyAdapter {
             Self::ResourceOverrides => property(
                 OneOf(&[
                     (BUTTON, "Resources"),
+                    (CHECK_BOX, "Resources"),
+                    (COMBO_BOX, "Resources"),
                     (NAVIGATION_VIEW, "Resources"),
+                    (NUMBER_BOX, "Resources"),
+                    (PROGRESS_BAR, "Resources"),
+                    (SLIDER, "Resources"),
+                    (TEXT_BOX, "Resources"),
                     (TOGGLE_BUTTON, "Resources"),
+                    (TOGGLE_SWITCH, "Resources"),
                 ]),
                 None,
                 "ResourceOverrides",
                 false,
-                "resource_overrides requires Button, NavigationView or ToggleButton Resources",
+                "resource_overrides requires Button, CheckBox, ComboBox, NavigationView, \
+                 NumberBox, ProgressBar, Slider, TextBox, ToggleButton or ToggleSwitch Resources",
             ),
             Self::Uri => property(
                 Any,

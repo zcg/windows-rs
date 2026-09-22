@@ -13,6 +13,60 @@ windows_core::link!("user32.dll" "system" fn SetWindowPos(hwnd : HWND, hwndinser
 windows_core::link!("shell32.dll" "system" fn ShellExecuteW(hwnd : HWND, lpoperation : windows_core::PCWSTR, lpfile : windows_core::PCWSTR, lpparameters : windows_core::PCWSTR, lpdirectory : windows_core::PCWSTR, nshowcmd : i32) -> HINSTANCE);
 windows_core::link!("api-ms-win-appmodel-runtime-l1-1-5.dll" "system" fn TryCreatePackageDependency(user : PSID, packagefamilyname : windows_core::PCWSTR, minversion : PACKAGE_VERSION, packagedependencyprocessorarchitectures : PackageDependencyProcessorArchitectures, lifetimekind : PackageDependencyLifetimeKind, lifetimeartifact : windows_core::PCWSTR, options : CreatePackageDependencyOptions, packagedependencyid : *mut windows_core::PWSTR) -> windows_core::HRESULT);
 pub const APPMODEL_ERROR_NO_PACKAGE: i32 = 15700;
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AcrylicBrush(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    AcrylicBrush,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(
+    AcrylicBrush,
+    XamlCompositionBrushBase,
+    Brush,
+    DependencyObject
+);
+impl AcrylicBrush {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::IAcrylicBrushFactory(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).CreateInstance)(
+                windows_core::Interface::as_raw(this),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &mut result__,
+            )
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
+        })
+    }
+    fn IAcrylicBrushFactory<R, F: FnOnce(&IAcrylicBrushFactory) -> windows_core::Result<R>>(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<AcrylicBrush, IAcrylicBrushFactory> =
+            windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
+impl windows_core::RuntimeType for AcrylicBrush {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IAcrylicBrush>();
+}
+unsafe impl windows_core::Interface for AcrylicBrush {
+    type Vtable = <IAcrylicBrush as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IAcrylicBrush as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for AcrylicBrush {
+    type Target = IAcrylicBrush;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for AcrylicBrush {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Media.AcrylicBrush";
+}
+unsafe impl Send for AcrylicBrush {}
+unsafe impl Sync for AcrylicBrush {}
 pub type AddPackageDependencyOptions = u32;
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -894,6 +948,35 @@ impl windows_core::RuntimeName for AutoSuggestBox {
 }
 unsafe impl Send for AutoSuggestBox {}
 unsafe impl Sync for AutoSuggestBox {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AutoSuggestBoxQuerySubmittedEventArgs(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    AutoSuggestBoxQuerySubmittedEventArgs,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(AutoSuggestBoxQuerySubmittedEventArgs, DependencyObject);
+impl windows_core::RuntimeType for AutoSuggestBoxQuerySubmittedEventArgs {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IAutoSuggestBoxQuerySubmittedEventArgs>();
+}
+unsafe impl windows_core::Interface for AutoSuggestBoxQuerySubmittedEventArgs {
+    type Vtable = <IAutoSuggestBoxQuerySubmittedEventArgs as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID =
+        <IAutoSuggestBoxQuerySubmittedEventArgs as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for AutoSuggestBoxQuerySubmittedEventArgs {
+    type Target = IAutoSuggestBoxQuerySubmittedEventArgs;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for AutoSuggestBoxQuerySubmittedEventArgs {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Controls.AutoSuggestBoxQuerySubmittedEventArgs";
+}
+unsafe impl Send for AutoSuggestBoxQuerySubmittedEventArgs {}
+unsafe impl Sync for AutoSuggestBoxQuerySubmittedEventArgs {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AutoSuggestBoxSuggestionChosenEventArgs(windows_core::IUnknown);
@@ -5396,6 +5479,94 @@ impl windows_core::RuntimeName for HyperlinkButton {
 unsafe impl Send for HyperlinkButton {}
 unsafe impl Sync for HyperlinkButton {}
 windows_core::imp::define_interface!(
+    IAcrylicBrush,
+    IAcrylicBrush_Vtbl,
+    0x3a8c760a_941f_58bc_a6d4_aa7a0dd1d036
+);
+impl windows_core::RuntimeType for IAcrylicBrush {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+impl IAcrylicBrush {
+    pub(crate) fn SetTintColor(&self, value: Color) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetTintColor)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn SetTintOpacity(&self, value: f64) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetTintOpacity)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+}
+#[repr(C)]
+pub struct IAcrylicBrush_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    TintColor: usize,
+    pub SetTintColor:
+        unsafe extern "system" fn(*mut core::ffi::c_void, Color) -> windows_core::HRESULT,
+    TintOpacity: usize,
+    pub SetTintOpacity:
+        unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    IAcrylicBrush2,
+    IAcrylicBrush2_Vtbl,
+    0x23fad570_43ed_5a73_9de7_a303553d5414
+);
+impl windows_core::RuntimeType for IAcrylicBrush2 {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+impl IAcrylicBrush2 {
+    pub(crate) fn SetTintLuminosityOpacity(&self, value: Option<f64>) -> windows_core::Result<()> {
+        let value__ = value.map(<windows_reference::IReference<f64> as From<_>>::from);
+        unsafe {
+            (windows_core::Interface::vtable(self).SetTintLuminosityOpacity)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Param::param(value__.as_ref()).abi(),
+            )
+            .ok()
+        }
+    }
+}
+#[repr(C)]
+pub struct IAcrylicBrush2_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    TintLuminosityOpacity: usize,
+    pub SetTintLuminosityOpacity: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    IAcrylicBrushFactory,
+    IAcrylicBrushFactory_Vtbl,
+    0x80173353_611d_5a02_8864_1aaa279dff1c
+);
+impl windows_core::RuntimeType for IAcrylicBrushFactory {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IAcrylicBrushFactory_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub CreateInstance: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
     IAnimatedIcon,
     IAnimatedIcon_Vtbl,
     0xf705dfda_8196_56d0_8dcf_2b66c2aed791
@@ -6294,6 +6465,35 @@ impl IAutoSuggestBox {
             ))
         }
     }
+    pub(crate) fn QuerySubmitted<F>(
+        &self,
+        handler: F,
+    ) -> windows_core::Result<windows_core::EventRevoker>
+    where
+        F: Fn(
+                windows_core::Ref<AutoSuggestBox>,
+                windows_core::Ref<AutoSuggestBoxQuerySubmittedEventArgs>,
+            ) + 'static,
+    {
+        let handler: TypedEventHandler<AutoSuggestBox, AutoSuggestBoxQuerySubmittedEventArgs> = {
+            let com = windows_core::imp::DelegateBox::< TypedEventHandler < AutoSuggestBox , AutoSuggestBoxQuerySubmittedEventArgs > , F >::new (& TypedEventHandlerBox::< AutoSuggestBox , AutoSuggestBoxQuerySubmittedEventArgs , F >::VTABLE , handler) ;
+            unsafe { core::mem::transmute(windows_core::imp::box_new(com)) }
+        };
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            let token__ = (windows_core::Interface::vtable(self).QuerySubmitted)(
+                windows_core::Interface::as_raw(self),
+                windows_core::Interface::as_raw(&handler),
+                &mut result__,
+            )
+            .map(|| result__)?;
+            Ok(windows_core::EventRevoker::new(
+                self.clone(),
+                token__,
+                windows_core::Interface::vtable(self).RemoveQuerySubmitted,
+            ))
+        }
+    }
 }
 #[repr(C)]
 pub struct IAutoSuggestBox_Vtbl {
@@ -6348,6 +6548,45 @@ pub struct IAutoSuggestBox_Vtbl {
     ) -> windows_core::HRESULT,
     pub RemoveTextChanged:
         unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+    pub QuerySubmitted: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut i64,
+    ) -> windows_core::HRESULT,
+    pub RemoveQuerySubmitted:
+        unsafe extern "system" fn(*mut core::ffi::c_void, i64) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    IAutoSuggestBoxQuerySubmittedEventArgs,
+    IAutoSuggestBoxQuerySubmittedEventArgs_Vtbl,
+    0x26da5de4_57a6_57bf_acc9_aac599c0b22b
+);
+impl windows_core::RuntimeType for IAutoSuggestBoxQuerySubmittedEventArgs {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+impl IAutoSuggestBoxQuerySubmittedEventArgs {
+    pub(crate) fn QueryText(&self) -> windows_core::Result<String> {
+        unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(self).QueryText)(
+                windows_core::Interface::as_raw(self),
+                &mut result__,
+            )
+            .map(|| {
+                let hstring: windows_core::HSTRING = core::mem::transmute(result__);
+                hstring.to_string_lossy()
+            })
+        }
+    }
+}
+#[repr(C)]
+pub struct IAutoSuggestBoxQuerySubmittedEventArgs_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub QueryText: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
     IAutoSuggestBoxStatics,
@@ -23324,6 +23563,30 @@ impl IUIElement {
             .ok()
         }
     }
+    pub(crate) fn SetTranslation(
+        &self,
+        value: windows_numerics::Vector3,
+    ) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetTranslation)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+    pub(crate) fn SetTranslationTransition<P0>(&self, value: P0) -> windows_core::Result<()>
+    where
+        P0: windows_core::Param<Vector3Transition>,
+    {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetTranslationTransition)(
+                windows_core::Interface::as_raw(self),
+                value.param().abi(),
+            )
+            .ok()
+        }
+    }
     pub(crate) fn SetScale(&self, value: windows_numerics::Vector3) -> windows_core::Result<()> {
         unsafe {
             (windows_core::Interface::vtable(self).SetScale)(
@@ -24097,9 +24360,15 @@ pub struct IUIElement_Vtbl {
         *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
     Translation: usize,
-    SetTranslation: usize,
+    pub SetTranslation: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        windows_numerics::Vector3,
+    ) -> windows_core::HRESULT,
     TranslationTransition: usize,
-    SetTranslationTransition: usize,
+    pub SetTranslationTransition: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
     Rotation: usize,
     SetRotation: usize,
     RotationTransition: usize,
@@ -25383,6 +25652,19 @@ pub struct IXamlBindingHelperStatics_Vtbl {
         *mut core::ffi::c_void,
         *mut *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    IXamlCompositionBrushBase,
+    IXamlCompositionBrushBase_Vtbl,
+    0xfeaead28_5cd0_5e58_bcea_8670f832aca9
+);
+impl windows_core::RuntimeType for IXamlCompositionBrushBase {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IXamlCompositionBrushBase_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
 }
 windows_core::imp::define_interface!(
     IXamlControlsResources,
@@ -36789,6 +37071,34 @@ impl windows_core::RuntimeName for XamlBindingHelper {
 }
 unsafe impl Send for XamlBindingHelper {}
 unsafe impl Sync for XamlBindingHelper {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct XamlCompositionBrushBase(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    XamlCompositionBrushBase,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(XamlCompositionBrushBase, Brush, DependencyObject);
+impl windows_core::RuntimeType for XamlCompositionBrushBase {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IXamlCompositionBrushBase>();
+}
+unsafe impl windows_core::Interface for XamlCompositionBrushBase {
+    type Vtable = <IXamlCompositionBrushBase as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IXamlCompositionBrushBase as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for XamlCompositionBrushBase {
+    type Target = IXamlCompositionBrushBase;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for XamlCompositionBrushBase {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Media.XamlCompositionBrushBase";
+}
+unsafe impl Send for XamlCompositionBrushBase {}
+unsafe impl Sync for XamlCompositionBrushBase {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct XamlControlsResources(windows_core::IUnknown);

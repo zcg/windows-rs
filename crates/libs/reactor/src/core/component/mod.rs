@@ -866,6 +866,25 @@ struct ComponentQueue {
     wake: Option<Rc<dyn Fn()>>,
 }
 
+impl ComponentQueue {
+    /// Whether `scope` still has a receiver: the store has not closed the queue and the scope is
+    /// still in the active set.
+    ///
+    /// This is deliberately *not* the same question as "can another envelope be queued" — see
+    /// [`ComponentQueue::is_full`]. Callers must not retry a liveness question through
+    /// [`LocalSender::send`], whose `false` conflates retirement, closure, and backpressure.
+    fn is_open(&self, scope: ScopeId) -> bool {
+        self.open && self.active.contains(&scope)
+    }
+
+    /// Whether the bounded local queue has no room for another envelope.
+    ///
+    /// A full queue drops the message; it never means the receiver is gone.
+    fn is_full(&self) -> bool {
+        self.envelopes.len() >= LOCAL_MESSAGE_QUEUE_CAPACITY
+    }
+}
+
 pub(crate) struct DeferredMessage {
     queue: Rc<RefCell<ComponentQueue>>,
     envelope: Option<MessageEnvelope>,
@@ -884,10 +903,10 @@ impl DeferredMessage {
             let Some(envelope) = self.envelope.as_ref() else {
                 return DeferredEnqueue::Rejected;
             };
-            if !queue.open || !queue.active.contains(&envelope.token.scope) {
+            if !queue.is_open(envelope.token.scope) {
                 return DeferredEnqueue::Rejected;
             }
-            if queue.envelopes.len() >= LOCAL_MESSAGE_QUEUE_CAPACITY {
+            if queue.is_full() {
                 return DeferredEnqueue::Full;
             }
             let wake = queue
@@ -909,6 +928,10 @@ impl DeferredMessage {
 ///
 /// Delivery never calls [`Component::update`] inline. A send returns `false` when the component
 /// is retired, the queue is closed, or the bounded local queue is full.
+///
+/// That `false` is therefore *not* a liveness answer: a temporarily full queue makes a live
+/// component look dead. Ask [`LocalSender::is_alive`] whether the receiver still exists, and read
+/// this result as "this message was dropped".
 pub struct LocalSender<M> {
     queue: Rc<RefCell<ComponentQueue>>,
     token: ComponentToken,
@@ -926,6 +949,22 @@ impl<M> Clone for LocalSender<M> {
 }
 
 impl<M: 'static> LocalSender<M> {
+    /// Whether the receiving component still exists.
+    ///
+    /// This answers one question only: the receiver is still there. It is `true` while the queue
+    /// is open and this token's scope is still active, and `false` once the component is retired
+    /// or its queue is closed.
+    ///
+    /// Do **not** use [`LocalSender::send`] as a liveness probe. `send` returns `false` for three
+    /// different reasons (the component is retired, the queue is closed, *or the bounded queue is
+    /// full*), and a momentary full queue would make a live component look dead. A subscriber
+    /// list that retires entries on `send`'s `false` silently drops a window that is still open,
+    /// which shows up as "this window stopped following appearance changes until it is reopened".
+    /// Retire on `is_alive`, and treat `send`'s result as "this one message was dropped".
+    pub fn is_alive(&self) -> bool {
+        self.queue.borrow().is_open(self.token.scope)
+    }
+
     /// Queues a message for later delivery.
     pub fn send(&self, message: M) -> bool {
         self.send_inner(message, None)
@@ -935,13 +974,17 @@ impl<M: 'static> LocalSender<M> {
         self.send_inner(message, Some(control))
     }
 
+    /// Queues a message unless the receiver is gone or its bounded queue is full.
+    ///
+    /// `false` therefore has three distinct causes — the component is retired, the queue is
+    /// closed, or the queue is full — and they are not interchangeable. Only the first two mean
+    /// the receiver is gone; use [`LocalSender::is_alive`] when that is the question being asked.
+    /// Backpressure is expressed by each of the three paths separately: retirement and closure
+    /// reject, a full queue drops outside the message loop.
     fn send_inner(&self, message: M, control: Option<Arc<TaskControl>>) -> bool {
         let wake = {
             let mut queue = self.queue.borrow_mut();
-            if !queue.open
-                || !queue.active.contains(&self.token.scope)
-                || queue.envelopes.len() >= LOCAL_MESSAGE_QUEUE_CAPACITY
-            {
+            if !queue.is_open(self.token.scope) || queue.is_full() {
                 return false;
             }
             let wake = queue
@@ -965,10 +1008,7 @@ impl<M: 'static> LocalSender<M> {
     pub(crate) fn defer(&self, message: M) -> Option<DeferredMessage> {
         {
             let queue = self.queue.borrow();
-            if !queue.open
-                || !queue.active.contains(&self.token.scope)
-                || queue.envelopes.len() >= LOCAL_MESSAGE_QUEUE_CAPACITY
-            {
+            if !queue.is_open(self.token.scope) || queue.is_full() {
                 return None;
             }
         }
