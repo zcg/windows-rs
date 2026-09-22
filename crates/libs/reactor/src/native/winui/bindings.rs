@@ -3615,6 +3615,60 @@ impl<F: Fn(windows_core::Ref<DependencyObject>, windows_core::Ref<DependencyProp
 }
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DesktopAcrylicBackdrop(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    DesktopAcrylicBackdrop,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(DesktopAcrylicBackdrop, SystemBackdrop, DependencyObject);
+impl DesktopAcrylicBackdrop {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::IDesktopAcrylicBackdropFactory(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).CreateInstance)(
+                windows_core::Interface::as_raw(this),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &mut result__,
+            )
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
+        })
+    }
+    fn IDesktopAcrylicBackdropFactory<
+        R,
+        F: FnOnce(&IDesktopAcrylicBackdropFactory) -> windows_core::Result<R>,
+    >(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<
+            DesktopAcrylicBackdrop,
+            IDesktopAcrylicBackdropFactory,
+        > = windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
+impl windows_core::RuntimeType for DesktopAcrylicBackdrop {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IDesktopAcrylicBackdrop>();
+}
+unsafe impl windows_core::Interface for DesktopAcrylicBackdrop {
+    type Vtable = <IDesktopAcrylicBackdrop as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IDesktopAcrylicBackdrop as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for DesktopAcrylicBackdrop {
+    type Target = IDesktopAcrylicBackdrop;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for DesktopAcrylicBackdrop {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop";
+}
+unsafe impl Send for DesktopAcrylicBackdrop {}
+unsafe impl Sync for DesktopAcrylicBackdrop {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DesktopAcrylicController(windows_core::IUnknown);
 windows_core::imp::interface_hierarchy!(
     DesktopAcrylicController,
@@ -10134,6 +10188,38 @@ pub struct IDependencyProperty_Vtbl {
     pub base__: windows_core::IInspectable_Vtbl,
 }
 windows_core::imp::define_interface!(
+    IDesktopAcrylicBackdrop,
+    IDesktopAcrylicBackdrop_Vtbl,
+    0xbfd9915b_82a6_5df6_aff0_a4824ddc1143
+);
+impl windows_core::RuntimeType for IDesktopAcrylicBackdrop {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IDesktopAcrylicBackdrop_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+}
+windows_core::imp::define_interface!(
+    IDesktopAcrylicBackdropFactory,
+    IDesktopAcrylicBackdropFactory_Vtbl,
+    0x00922e6d_ae51_564a_bce2_1973d5e463dd
+);
+impl windows_core::RuntimeType for IDesktopAcrylicBackdropFactory {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IDesktopAcrylicBackdropFactory_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub CreateInstance: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
     IDesktopAcrylicController,
     IDesktopAcrylicController_Vtbl,
     0x7c20a6af_8eb3_5f08_bdfc_6d35e35dfe45
@@ -14777,6 +14863,52 @@ pub struct IMenuFlyoutSubItem_Vtbl {
     ) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
+    IMicaBackdrop,
+    IMicaBackdrop_Vtbl,
+    0xc156a404_3dac_593a_b1f3_7a33c289dc83
+);
+impl windows_core::RuntimeType for IMicaBackdrop {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+impl IMicaBackdrop {
+    pub(crate) fn SetKind(&self, value: MicaKind) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetKind)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+}
+#[repr(C)]
+pub struct IMicaBackdrop_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    Kind: usize,
+    pub SetKind:
+        unsafe extern "system" fn(*mut core::ffi::c_void, MicaKind) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
+    IMicaBackdropFactory,
+    IMicaBackdropFactory_Vtbl,
+    0x774379ce_74bd_59d4_849d_d99c4184d838
+);
+impl windows_core::RuntimeType for IMicaBackdropFactory {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_interface::<Self>();
+}
+#[repr(C)]
+pub struct IMicaBackdropFactory_Vtbl {
+    pub base__: windows_core::IInspectable_Vtbl,
+    pub CreateInstance: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
+}
+windows_core::imp::define_interface!(
     IMicaController,
     IMicaController_Vtbl,
     0x2de996a9_0a2a_5889_a89c_1f84060a8cab
@@ -17039,16 +17171,6 @@ impl IPointerPointProperties {
             .map(|| result__)
         }
     }
-    pub(crate) fn MouseWheelDelta(&self) -> windows_core::Result<i32> {
-        unsafe {
-            let mut result__ = core::mem::zeroed();
-            (windows_core::Interface::vtable(self).MouseWheelDelta)(
-                windows_core::Interface::as_raw(self),
-                &mut result__,
-            )
-            .map(|| result__)
-        }
-    }
 }
 #[repr(C)]
 pub struct IPointerPointProperties_Vtbl {
@@ -17067,10 +17189,6 @@ pub struct IPointerPointProperties_Vtbl {
     IsPrimary: usize,
     pub IsRightButtonPressed:
         unsafe extern "system" fn(*mut core::ffi::c_void, *mut bool) -> windows_core::HRESULT,
-    IsXButton1Pressed: usize,
-    IsXButton2Pressed: usize,
-    pub MouseWheelDelta:
-        unsafe extern "system" fn(*mut core::ffi::c_void, *mut i32) -> windows_core::HRESULT,
 }
 windows_core::imp::define_interface!(
     IPointerRoutedEventArgs,
@@ -29260,6 +29378,55 @@ impl windows_core::RuntimeName for MenuFlyoutSubItem {
 }
 unsafe impl Send for MenuFlyoutSubItem {}
 unsafe impl Sync for MenuFlyoutSubItem {}
+#[repr(transparent)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MicaBackdrop(windows_core::IUnknown);
+windows_core::imp::interface_hierarchy!(
+    MicaBackdrop,
+    windows_core::IUnknown,
+    windows_core::IInspectable
+);
+windows_core::imp::required_hierarchy!(MicaBackdrop, SystemBackdrop, DependencyObject);
+impl MicaBackdrop {
+    pub(crate) fn new() -> windows_core::Result<Self> {
+        Self::IMicaBackdropFactory(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).CreateInstance)(
+                windows_core::Interface::as_raw(this),
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &mut result__,
+            )
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
+        })
+    }
+    fn IMicaBackdropFactory<R, F: FnOnce(&IMicaBackdropFactory) -> windows_core::Result<R>>(
+        callback: F,
+    ) -> windows_core::Result<R> {
+        static SHARED: windows_core::imp::FactoryCache<MicaBackdrop, IMicaBackdropFactory> =
+            windows_core::imp::FactoryCache::new();
+        SHARED.call(callback)
+    }
+}
+impl windows_core::RuntimeType for MicaBackdrop {
+    const SIGNATURE: windows_core::imp::ConstBuffer =
+        windows_core::imp::ConstBuffer::for_class::<Self, IMicaBackdrop>();
+}
+unsafe impl windows_core::Interface for MicaBackdrop {
+    type Vtable = <IMicaBackdrop as windows_core::Interface>::Vtable;
+    const IID: windows_core::GUID = <IMicaBackdrop as windows_core::Interface>::IID;
+}
+impl core::ops::Deref for MicaBackdrop {
+    type Target = IMicaBackdrop;
+    fn deref(&self) -> &Self::Target {
+        unsafe { core::mem::transmute(self) }
+    }
+}
+impl windows_core::RuntimeName for MicaBackdrop {
+    const NAME: &'static str = "Microsoft.UI.Xaml.Media.MicaBackdrop";
+}
+unsafe impl Send for MicaBackdrop {}
+unsafe impl Sync for MicaBackdrop {}
 #[repr(transparent)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MicaController(windows_core::IUnknown);

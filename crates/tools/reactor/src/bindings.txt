@@ -6,7 +6,7 @@ Microsoft::UI::Dispatching::IDispatcherQueue::CreateTimer
 Microsoft::UI::Dispatching::IDispatcherQueue::TryEnqueueWithPriority
 Microsoft::UI::Dispatching::IDispatcherQueueTimer::{put_Interval, put_IsRepeating, add_Tick, remove_Tick, Start, Stop}
 Microsoft::UI::Input::IPointerPoint::{get_Position, get_Properties}
-Microsoft::UI::Input::IPointerPointProperties::{get_IsLeftButtonPressed, get_IsMiddleButtonPressed, get_IsRightButtonPressed, get_MouseWheelDelta}
+Microsoft::UI::Input::IPointerPointProperties::{get_IsLeftButtonPressed, get_IsMiddleButtonPressed, get_IsRightButtonPressed}
 Microsoft::UI::Input::InputKeyboardSource::{add_KeyDown, remove_KeyDown, GetForIsland}
 Microsoft::UI::Xaml::UIElement::get_XamlRoot
 Microsoft::UI::Xaml::Window::get_Content
@@ -130,6 +130,9 @@ Microsoft::UI::Xaml::Media::Animation::Transition::{}
 Microsoft::UI::Xaml::Media::Animation::TransitionCollection::CreateInstance
 Microsoft::UI::Xaml::IWindow2::{get_AppWindow, put_SystemBackdrop}
 Microsoft::UI::Xaml::IWindow::{Activate, Close, Closed, put_Content, put_Title}
+Microsoft::UI::Xaml::Media::DesktopAcrylicBackdrop::CreateInstance
+Microsoft::UI::Xaml::Media::IMicaBackdrop::put_Kind
+Microsoft::UI::Xaml::Media::MicaBackdrop::CreateInstance
 Microsoft::UI::Xaml::IWindow::{put_ExtendsContentIntoTitleBar, SetTitleBar}
 Microsoft::UI::Xaml::IXamlRoot::{get_RasterizationScale, add_Changed, remove_Changed}
 Microsoft::UI::Xaml::Input::IPointerRoutedEventArgs::{GetCurrentPoint, get_Pointer}
