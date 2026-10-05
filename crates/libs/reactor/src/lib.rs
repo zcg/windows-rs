@@ -18,6 +18,10 @@ pub use generated::public::*;
 /// 系统能力查询（背景材质是否可渲染）。应用拿它决定"内容区要不要让材质透出来"，
 /// 详见 [`backdrop_is_supported`]。
 pub use native::backdrop_is_supported;
+/// 全局字号缩放（宿主设置页的"字号"滑块）：`set_font_scale` 设定系数，
+/// 之后所有 `TextBlock` / `TextBox` / `RichTextBlock` 的字号与显式行高都会乘上它。
+/// 详见 [`native::font_scale`] 的文档（含"固定 DIP 布局不会自动跟着缩"的提醒）。
+pub use native::{font_scale, set_font_scale};
 /// 窗口几何查询（显示器工作区、窗口当前落点），以及把工作区换算成 DIP 的助手。
 ///
 /// 声明位置的正路是 [`WindowVisuals::client_position`]（记住上次的位置）或

@@ -532,6 +532,7 @@ pub mod public {
         font_family: Property<String>,
         is_text_selection_enabled: Property<bool>,
         max_lines: Property<i32>,
+        line_height: Property<f64>,
         text_trimming: Property<TextTrimming>,
         foreground: Property<Brush>,
         is_hit_test_visible: Property<bool>,
@@ -597,6 +598,20 @@ pub mod public {
                 "TextBlock MaxLines must be non-negative"
             );
             self.max_lines = Property::from(value);
+            self
+        }
+        /// Sets the line height in DIP. `None` leaves it to the platform default.
+        ///
+        /// The WinUI default is font-metric driven and reads tight for CJK body text.
+        /// Callers rendering long-form text in a narrow column raise it to roughly
+        /// `font_size * 1.4..1.6` so consecutive lines stay separable.
+        pub fn line_height(mut self, value: impl Into<Option<f64>>) -> Self {
+            let value = value.into();
+            assert!(
+                value.as_ref().is_none_or(|value| value.is_finite() && *value >= 0.0),
+                "TextBlock LineHeight must be a finite non-negative number"
+            );
+            self.line_height = Property::from(value);
             self
         }
         pub fn text_trimming(mut self, value: impl Into<Option<TextTrimming>>) -> Self {
@@ -2019,6 +2034,8 @@ pub mod public {
         value: Property<f64>,
         is_enabled: Property<bool>,
         step_frequency: Property<f64>,
+        small_change: Property<f64>,
+        large_change: Property<f64>,
         orientation: Property<Orientation>,
         is_thumb_tool_tip_enabled: Property<bool>,
         resource_overrides: Property<ResourceOverrides>,
@@ -7898,6 +7915,7 @@ pub mod public {
                         font_family,
                         is_text_selection_enabled,
                         max_lines,
+                        line_height,
                         text_trimming,
                         foreground,
                         is_hit_test_visible,
@@ -7914,6 +7932,7 @@ pub mod public {
                             font_family,
                             is_text_selection_enabled,
                             max_lines,
+                            line_height,
                             text_trimming,
                             foreground,
                             is_hit_test_visible,
@@ -8310,6 +8329,8 @@ pub mod public {
                         value,
                         is_enabled,
                         step_frequency,
+                        small_change,
+                        large_change,
                         orientation,
                         is_thumb_tool_tip_enabled,
                         resource_overrides,
@@ -8327,6 +8348,8 @@ pub mod public {
                             value,
                             is_enabled,
                             step_frequency,
+                            small_change,
+                            large_change,
                             orientation,
                             is_thumb_tool_tip_enabled,
                             resource_overrides,
@@ -11812,6 +11835,13 @@ impl MountedPropsExt for MountedProps {
                     match &values.max_lines {
                         Property::Inherited => None,
                         Property::Set(value) => Some(PropertyValueRef::I32(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::TextBlockLineHeight,
+                    match &values.line_height {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::F64(*value)),
                     },
                 );
                 visit(
@@ -15777,6 +15807,7 @@ pub(crate) struct TextBlockMountedProps {
     font_family: Property<String>,
     is_text_selection_enabled: Property<bool>,
     max_lines: Property<i32>,
+    line_height: Property<f64>,
     text_trimming: Property<TextTrimming>,
     foreground: Property<Brush>,
     is_hit_test_visible: Property<bool>,
@@ -15791,6 +15822,7 @@ impl PartialEq for TextBlockMountedProps {
             && self.font_family == other.font_family
             && self.is_text_selection_enabled == other.is_text_selection_enabled
             && self.max_lines == other.max_lines
+            && f64_property_eq(&self.line_height, &other.line_height)
             && self.text_trimming == other.text_trimming
             && self.foreground == other.foreground
             && self.is_hit_test_visible == other.is_hit_test_visible
@@ -16053,6 +16085,8 @@ pub(crate) struct SliderMountedProps {
     value: Property<f64>,
     is_enabled: Property<bool>,
     step_frequency: Property<f64>,
+    small_change: Property<f64>,
+    large_change: Property<f64>,
     orientation: Property<Orientation>,
     is_thumb_tool_tip_enabled: Property<bool>,
     resource_overrides: Property<ResourceOverrides>,
@@ -16066,6 +16100,8 @@ impl PartialEq for SliderMountedProps {
             && f64_property_eq(&self.value, &other.value)
             && self.is_enabled == other.is_enabled
             && f64_property_eq(&self.step_frequency, &other.step_frequency)
+            && f64_property_eq(&self.small_change, &other.small_change)
+            && f64_property_eq(&self.large_change, &other.large_change)
             && self.orientation == other.orientation
             && self.is_thumb_tool_tip_enabled == other.is_thumb_tool_tip_enabled
             && self.resource_overrides == other.resource_overrides
@@ -17325,6 +17361,7 @@ pub enum PropertyId {
     TextBlockFontFamily,
     TextBlockIsTextSelectionEnabled,
     TextBlockMaxLines,
+    TextBlockLineHeight,
     TextBlockTextTrimming,
     TextBlockForeground,
     TextBlockIsHitTestVisible,

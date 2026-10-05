@@ -769,7 +769,12 @@ pub fn set_property(
             })
             .map_err(native_error),
         (Handle::TextBlock(control), PropertyId::TextBlockFontSize, PropertyValue::F64(value)) => {
-            control.SetFontSize(*value).map_err(native_error)
+            // 乘全局字号系数（`set_font_scale`）。理由见 `native/mod.rs` 的
+            // "全局字号缩放"一节 —— 应用里到处显式写 `.font_size(..)`，逐元素改
+            // 不现实，而 WinUI 没有宿主可设的全局默认字号。
+            control
+                .SetFontSize(*value * crate::native::font_scale())
+                .map_err(native_error)
         }
         (
             Handle::TextBlock(control),
@@ -798,6 +803,16 @@ pub fn set_property(
         (Handle::TextBlock(control), PropertyId::TextBlockMaxLines, PropertyValue::I32(value)) => {
             control.SetMaxLines(*value).map_err(native_error)
         }
+        (
+            Handle::TextBlock(control),
+            PropertyId::TextBlockLineHeight,
+            PropertyValue::F64(value),
+            // 行高**也**乘全局系数（见 `native/mod.rs`）：只放大字号、不放行距的话
+            // 多行文字会挤成一团（行距小于字高时后一行压住前一行）。宿主显式给的
+            // 行高本来就是"按字号配好的比例"，跟着缩放才是用户要的"整体变大"。
+        ) => control
+            .SetLineHeight(*value * crate::native::font_scale())
+            .map_err(native_error),
         (
             Handle::TextBlock(control),
             PropertyId::TextBlockTextTrimming,
@@ -1483,7 +1498,8 @@ pub fn set_property(
             control
                 .cast::<IControl>()
                 .map_err(native_error)?
-                .SetFontSize(*value)
+                // 乘全局字号系数，同 TextBlock（见 `native/mod.rs`）。
+                .SetFontSize(*value * crate::native::font_scale())
                 .map_err(native_error)
         }
         (Handle::TextBox(control), PropertyId::TextBoxPadding, PropertyValue::Thickness(value)) => {
@@ -3720,7 +3736,10 @@ pub fn set_property(
             Handle::RichTextBlock(control),
             PropertyId::RichTextBlockFontSize,
             PropertyValue::F64(value),
-        ) => control.SetFontSize(*value).map_err(native_error),
+            // 乘全局字号系数，同 TextBlock（见 `native/mod.rs`）。
+        ) => control
+            .SetFontSize(*value * crate::native::font_scale())
+            .map_err(native_error),
         (
             Handle::RichTextBlock(control),
             PropertyId::RichTextBlockFontFamily,

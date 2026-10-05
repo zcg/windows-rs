@@ -22463,6 +22463,19 @@ impl ITextBlock {
             .ok()
         }
     }
+    /// `TextBlock.LineHeight` in DIP.
+    ///
+    /// The vtable offset constant is generated (`SetLineHeight`) but the accessor
+    /// was not emitted, so it is provided here to match the sibling setters.
+    pub(crate) fn SetLineHeight(&self, value: f64) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetLineHeight)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
 }
 #[repr(C)]
 pub struct ITextBlock_Vtbl {
@@ -22506,7 +22519,8 @@ pub struct ITextBlock_Vtbl {
     Padding: usize,
     SetPadding: usize,
     LineHeight: usize,
-    SetLineHeight: usize,
+    pub SetLineHeight:
+        unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
     LineStackingStrategy: usize,
     SetLineStackingStrategy: usize,
     IsTextSelectionEnabled: usize,
