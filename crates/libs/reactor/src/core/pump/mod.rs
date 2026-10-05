@@ -263,8 +263,23 @@ impl<R: NativeRuntime> Pump<R> {
         Ok(())
     }
 
-    #[cfg(any(test, feature = "test"))]
-    pub fn update_view(&mut self, view: View) -> Result<(), PumpError> {
+    /// **就地替换窗口的根视图**（生产路径）。
+    ///
+    /// 此前这段逻辑只挂在 `#[cfg(any(test, feature = "test"))]` 下 ——
+    /// 生产里"窗口挂载后整棵树固定、只重渲染各组件"是唯一模型，没有换根的入口。
+    /// [`WindowRef::replace_root`](crate::WindowRef::replace_root) 需要它，因此
+    /// 提升为生产可用。
+    ///
+    /// 为什么它对"根组件换 input"是安全的：它走的是 reconciler 的**标准入口**
+    /// `reconcile_planned_view` —— 与组件级重渲染同一个出口、同一套
+    /// `apply_component_candidate` 提交路径。同类型组件换 input 时
+    /// `factory.equals()` 失败 → `apply_input` → `input_changed`，**状态保留**；
+    /// 树结构相同的部分走增量 diff，不做无谓重建。
+    ///
+    /// 唯一的额外约束在下面 `candidate.children(window)`：窗口的**直接子节点
+    /// 必须恰好一个**（根视图就是它）。多于一个说明调用方塞了非法的根,返回
+    /// `StructureUnsupported` 而不是悄悄渲染出半棵树。
+    pub fn replace_root_view(&mut self, view: View) -> Result<(), PumpError> {
         if self.poisoned {
             return Err(PumpError::Poisoned);
         }
@@ -298,6 +313,27 @@ impl<R: NativeRuntime> Pump<R> {
             return Err(PumpError::StructureUnsupported);
         };
         self.apply_component_candidate(candidate, candidate_root, plan, changes, next_version)
+    }
+
+    /// 取出本拍待处理的**换根**请求（若已排入）。
+    ///
+    /// 由 pump 主循环在每次 dispatch 前调用；返回的 `View` 交给
+    /// [`Self::replace_root_view`]。放在这里而不是让 `plan_host_requests` 顺带
+    /// 处理，是因为换根必须赶在**本拍的规划之前**注入新根 ——
+    /// `plan_host_requests` 跑在规划阶段，那时树已经 reconcile 完了。
+    pub(crate) fn take_staged_root_replace(&mut self) -> Option<View> {
+        self.components
+            .take_host_requests()
+            .into_iter()
+            .find_map(|request| match request {
+                HostRequest::Replace { root, .. } => Some(root),
+                _ => None,
+            })
+    }
+
+    #[cfg(any(test, feature = "test"))]
+    pub fn update_view(&mut self, view: View) -> Result<(), PumpError> {
+        self.replace_root_view(view)
     }
 
     #[cfg(test)]
@@ -747,6 +783,19 @@ impl<R: NativeRuntime> Pump<R> {
                 HostRequest::Close { identity } if identity == plan.identity => close = true,
                 HostRequest::Open { identity, root } if identity == plan.identity => {
                     plan.post_publish_windows.push(root);
+                }
+                // `Replace` 由 pump 主循环在**规划之前**消费
+                // （`take_staged_root_replace` → `replace_root_view`）。走到这里
+                // 说明它没被主循环取走 —— 那就不能静默丢弃，必须显式断言失败：
+                // 悄悄吞掉会让"我请求了换片但界面没变"变成无迹可查的幽灵行为。
+                //
+                // 唯一的合法来源是测试：`take_staged_root_replace` 会把列表里
+                // **所有** Replace 都取走，所以非测试路径不该再有残留。
+                HostRequest::Replace { identity, .. } => {
+                    panic!(
+                        "Replace request for window {identity:?} reached the planning stage; \
+                         it must be consumed by take_staged_root_replace before planning"
+                    );
                 }
                 HostRequest::Run {
                     identity,

@@ -1121,3 +1121,132 @@ fn committed_close_rejects_later_window_open() {
     assert!(!input.accepted.get());
     assert_eq!(pump.runtime().opened_windows().len(), 1);
 }
+
+// ============================================================================
+// 换根（`WindowRef::replace_root`）
+//
+// 这条路径此前只存在于 `#[cfg(test)]` 的 `update_view` 里，且**从未测过**
+// 「根组件换 input」这个用法 —— 而它正是 `replace_root` 全部价值的前提：
+// 同类型组件走 `apply_input` → `input_changed` → **状态保留**。
+// 如果这个前提不成立，宿主复用窗口换片就会把组件状态全丢掉（等于重建），
+// 而症状只表现为"位置/偏好被重置"，非常容易误判成宿主自己的 bug。
+// ============================================================================
+
+/// 会累积计数的组件：用来证明换根之后**组件实例没有被重建**。
+#[derive(Clone, PartialEq)]
+struct CountInput {
+    /// 当前 input 的标记；换根后应变成新值。
+    tag: String,
+    /// `create` / `input_changed` 的调用记录。
+    log: Rc<RefCell<Vec<String>>>,
+    /// `create` 跑过的次数（**外部**计数，放组件字段里就看不出重建）。
+    creates: Rc<Cell<u32>>,
+}
+
+struct CountingComponent {
+    creates: Rc<Cell<u32>>,
+    /// `input_changed` 见过的所有 tag（顺序）。
+    seen: Rc<RefCell<Vec<String>>>,
+}
+
+impl Component for CountingComponent {
+    type Message = ();
+    type Input = CountInput;
+
+    fn create(input: &Self::Input, _context: &ComponentContext<Self>) -> Self {
+        input.log.borrow_mut().push(format!("create:{}", input.tag));
+        input.creates.set(input.creates.get() + 1);
+        // `create` 次数挂在**外部**计数上（`CountInput::creates`）：只有组件被
+        // 重建才会 +1，放进组件自己的字段则重建后归 1，看不出差别。
+        Self {
+            creates: input.creates.clone(),
+            seen: Rc::new(RefCell::new(vec![input.tag.clone()])),
+        }
+    }
+
+    fn input_changed(&mut self, input: &Self::Input, _context: &ComponentContext<Self>) {
+        input
+            .log
+            .borrow_mut()
+            .push(format!("changed:{}", input.tag));
+        self.seen.borrow_mut().push(input.tag.clone());
+    }
+
+    fn update(&mut self, _message: (), _context: &ComponentContext<Self>) {}
+
+    fn view(&self, input: &Self::Input, _context: &mut ViewContext<Self>) -> View {
+        TextBlock::new()
+            .text(format!("{}#{}", input.tag, self.creates.get()))
+            .into()
+    }
+}
+
+#[test]
+fn replace_root_keeps_component_state_for_same_component_type() {
+    let log = Rc::new(RefCell::new(Vec::new()));
+    let creates = Rc::new(Cell::new(0u32));
+    let mut pump = Pump::new(RecordingRuntime::default());
+    pump.mount_view(View::component::<CountingComponent>(CountInput {
+        tag: "first".to_string(),
+        log: log.clone(),
+        creates: creates.clone(),
+    }))
+    .unwrap();
+    assert_eq!(creates.get(), 1, "挂载后应 create 一次");
+
+    // 同类型换根 —— 这就是 `replace_root` 的目标用法
+    pump.replace_root_view(View::component::<CountingComponent>(CountInput {
+        tag: "second".to_string(),
+        log: log.clone(),
+        creates: creates.clone(),
+    }))
+    .unwrap();
+
+    assert_eq!(
+        creates.get(),
+        1,
+        "同类型换根**不应**重建组件（这正是 replace_root 的全部价值）"
+    );
+    assert!(
+        log.borrow().iter().any(|line| line == "changed:second"),
+        "input_changed 未被调用 —— 宿主的换片逻辑挂在这里，实际：{:?}",
+        log.borrow()
+    );
+}
+
+#[test]
+fn replace_root_rejects_a_root_with_multiple_children() {
+    // 窗口的直接子节点必须**恰好一个**。塞两个会让 `candidate.children(window)`
+    // 的单元素解构失败 —— 而静默渲染半棵树比明确报错糟糕得多。
+    let mut pump = Pump::new(RecordingRuntime::default());
+    let fresh = |tag: &str| {
+        View::component::<CountingComponent>(CountInput {
+            tag: tag.to_string(),
+            log: Rc::new(RefCell::new(Vec::new())),
+            creates: Rc::new(Cell::new(0)),
+        })
+    };
+    pump.mount_view(fresh("first")).unwrap();
+
+    assert_eq!(
+        pump.replace_root_view(View::fragment([fresh("a"), fresh("b")])),
+        Err(PumpError::StructureUnsupported),
+        "多子节点根必须被拒绝"
+    );
+}
+
+#[test]
+fn window_ref_rejects_replace_outside_component_turn() {
+    // 与 activate/close 同一条门槛：视图构建期与后台线程都不能换根。
+    // 调用方拿到 false 必须回退到"开新窗"，不能当成"已排上"。
+    let seed = input();
+    let mut pump = Pump::new(RecordingRuntime::default());
+    pump.mount_view(View::component::<ClosingComponent>(seed.clone()))
+        .unwrap();
+    let window = seed.window.borrow().clone().unwrap();
+    assert!(
+        !window.replace_root(View::component::<ClosingComponent>(seed.clone())),
+        "组件 turn 之外必须拒绝换根"
+    );
+}
+

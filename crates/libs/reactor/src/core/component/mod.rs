@@ -1081,6 +1081,31 @@ impl<C: Component> ComponentContext<C> {
         self.window.request_open(root)
     }
 
+    /// **就地替换本窗口的根视图**（窗口不关、不新开）。
+    ///
+    /// 详见 [`WindowRef::replace_root`]。最常见的宿主用法是"复用已存在的窗口，
+    /// 没有才开新的"：
+    ///
+    /// ```ignore
+    /// // 别的组件已经开过同类型的窗 → 原地换片，状态保留
+    /// if let Some(window) = existing_window_of_same_kind {
+    ///     if window.replace_root(View::component::<Player>(bvid)) {
+    ///         return;
+    ///     }
+    /// }
+    /// ctx.open_window(View::component::<Player>(bvid));
+    /// ```
+    ///
+    /// 换片时**组件状态保留**（同类型 → `input_changed`，不是重建），所以播放
+    /// 位置、画质偏好这类"窗口级"状态不需要宿主自己搬运。
+    ///
+    /// 要操作**别的**组件所属的窗口，用 [`Self::window`] 取句柄存起来 ——
+    /// 它返回克隆，句柄可跨组件使用。
+    #[must_use = "false means there is no active component publication"]
+    pub fn replace_root(&self, root: View) -> bool {
+        self.window.replace_root(root)
+    }
+
     /// Returns a sender bound to this component instance.
     pub fn sender(&self) -> LocalSender<C::Message> {
         self.sender.clone()

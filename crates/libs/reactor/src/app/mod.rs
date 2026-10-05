@@ -455,6 +455,20 @@ impl LivePump for ComponentLoop {
     }
 
     fn dispatch_events(&mut self) -> Result<(), PumpError> {
+        // **换根请求必须赶在其它一切之前处理**。
+        //
+        // `WindowRef::replace_root` 把新根排进本窗口的请求槽，而根视图的替换要
+        // 发生在本拍 reconcile 之前 —— 否则这一帧会用**旧根**去规划，新根要等到
+        // 下一帧才生效，表现为"点一下没反应，过一帧才换"（延迟可见）。
+        //
+        // 失败即终止：换根失败意味着树处于 reconcile 失败后的 rearm 状态，继续
+        // 跑下去只会渲染一棵不确定的树。`PumpError` 会被上层当作致命错误处理
+        // （`dispatch_events` 的调用方在 `reject_pending_window` /
+        // `record_fault` 路径上），这是与 `process_window_operations` 同一档的
+        // 失败语义 —— 换根不是可选优化，它改变的是这棵树是什么。
+        if let Some(root) = self.pump.take_staged_root_replace() {
+            self.pump.replace_root_view(root)?;
+        }
         self.pump.process_window_operations()?;
         self.pump.dispatch_events()?;
         self.pump.dispatch_components(64)?;

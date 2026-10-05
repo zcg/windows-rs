@@ -24,6 +24,11 @@ pub(crate) enum HostRequest {
         identity: WindowToken,
         root: View,
     },
+    /// Replace the window's **root view** in place (see [`WindowRef::replace_root`]).
+    Replace {
+        identity: WindowToken,
+        root: View,
+    },
     Run {
         identity: WindowToken,
         operation: WindowOperation,
@@ -86,6 +91,12 @@ struct WindowRequestData {
     staged_activate: bool,
     staged_close: bool,
     staged_opens: Vec<View>,
+    /// 待处理的**换根**请求（见 [`WindowRef::replace_root`]）。
+    ///
+    /// `Option` 而非 `Vec`：同一拍里只有最后一个换根请求有意义 —— 换根是
+    /// "把整棵树换成这个"，连着换两次等于没换第一次。保留"最后一个"与
+    /// `staged_operation` 的处理一致（后者也是 `Option` + 断言唯一）。
+    staged_replace: Option<View>,
     staged_operation: Option<WindowOperation>,
 }
 
@@ -94,6 +105,7 @@ struct ActiveWindowRequests {
     activate: bool,
     close: bool,
     opens: Vec<View>,
+    replace: Option<View>,
     operation: Option<WindowOperation>,
 }
 
@@ -123,6 +135,7 @@ impl WindowEndpoint {
                     staged_activate: false,
                     staged_close: false,
                     staged_opens: Vec::new(),
+                    staged_replace: None,
                     staged_operation: None,
                 }),
             }),
@@ -147,6 +160,11 @@ impl WindowEndpoint {
         state.staged_activate |= active.activate;
         state.staged_close |= active.close;
         state.staged_opens.extend(active.opens);
+        // 换根请求：同一组件 turn 里发多次时**最后一个胜出**（连换两次等于
+        // 没换第一次），且**覆盖**本 turn 之前已 staged 的那个。
+        if let Some(root) = active.replace {
+            state.staged_replace = Some(root);
+        }
         if let Some(operation) = active.operation {
             assert!(state.staged_operation.is_none());
             state.staged_operation = Some(operation);
@@ -172,14 +190,24 @@ impl WindowEndpoint {
         if state.staged_close {
             state.staged_close = false;
             state.staged_operation = None;
+            // 关窗与换根互斥：关窗之后那棵树不存在了，再换根没有意义。
+            state.staged_replace = None;
             requests.push(HostRequest::Close {
                 identity: self.identity,
             });
-        } else if let Some(operation) = state.staged_operation.take() {
-            requests.push(HostRequest::Run {
-                identity: self.identity,
-                operation,
-            });
+        } else {
+            if let Some(root) = state.staged_replace.take() {
+                requests.push(HostRequest::Replace {
+                    identity: self.identity,
+                    root,
+                });
+            }
+            if let Some(operation) = state.staged_operation.take() {
+                requests.push(HostRequest::Run {
+                    identity: self.identity,
+                    operation,
+                });
+            }
         }
         requests
     }
@@ -198,6 +226,7 @@ impl WindowEndpoint {
         state.staged_activate = false;
         state.staged_close = false;
         state.staged_opens.clear();
+        state.staged_replace = None;
         state.staged_operation = None;
     }
 
@@ -241,6 +270,23 @@ impl WindowEndpoint {
             return false;
         };
         active.activate = true;
+        true
+    }
+
+    /// 换根请求（`WindowRef::replace_root` 的实现体）。
+    ///
+    /// 与 `request_open` 的门槛完全一致：必须在 `create`/`input_changed`/`update`
+    /// 期间（即 `state.active` 存在）才接受 —— 因为"当前组件 turn"是唯一能安全
+    /// 改动树的时机。视图外调用返回 `false`，调用方据此回退到"开新窗"。
+    fn request_replace(&self, root: View) -> bool {
+        let mut state = self.state.data.borrow_mut();
+        if state.lifecycle != WindowRequestLifecycle::Open {
+            return false;
+        }
+        let Some(active) = state.active.as_mut() else {
+            return false;
+        };
+        active.replace = Some(root);
         true
     }
 
@@ -291,6 +337,47 @@ impl WindowRef {
         };
         active.close = true;
         true
+    }
+
+    /// **就地替换本窗口的根视图** —— 窗口本身不关、不新开,整棵树被换成 `root`。
+    ///
+    /// # 解决什么问题
+    ///
+    /// 此前"把已打开的窗口换成另一个内容"只有一条路:关掉旧的、开一个新的。
+    /// 于是每个播放视频都开一个窗口 —— 而新版 WinUI 上**每个窗口一套独立的
+    /// Pump / 解码器 / 缓冲**,内存随窗口数线性涨(实测每个播放窗约 250MB),
+    /// 而且进程级的诊断槽会被多实例共享,数据互相覆盖。
+    ///
+    /// # 语义
+    ///
+    /// - **同类型组件**换新 `input` → reconciler 走 `apply_input` →
+    ///   [`Component::input_changed`](crate::Component::input_changed),
+    ///   **组件状态全部保留**。这正是"同一个播放器换片"需要的:
+    ///   播放位置、画质偏好、面板开关等都不必重丢。
+    /// - **不同类型** → 旧组件被移除、新组件创建（等同于换根,but 窗口保留）。
+    ///
+    /// # 什么时候用
+    ///
+    /// 宿主侧的典型模式是"复用已存在的窗口,没有才开新的":
+    ///
+    /// ```ignore
+    /// if let Some(window) = existing_player_window() {
+    ///     if window.replace_root(View::component::<Player>(bvid)) {
+    ///         return; // 复用成功,不新开窗
+    ///     }
+    /// }
+    /// ctx.open_window(View::component::<Player>(bvid));
+    /// ```
+    ///
+    /// # 约束
+    ///
+    /// 和 `request_activate` / `request_close` 一样，**只在组件生命周期调用
+    /// 期间**(`create` / `input_changed` / `update`)受理；视图构建中或从后台线程
+    /// 调用返回 `false`。`false` 的含义是"这一刻不能换",调用方应回退到开新窗,
+    /// 而**不是**认为替换已经排上。
+    #[must_use = "false means there is no active component publication"]
+    pub fn replace_root(&self, root: View) -> bool {
+        self.endpoint.request_replace(root)
     }
 
     #[cfg(test)]
