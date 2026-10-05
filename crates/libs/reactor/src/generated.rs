@@ -2067,6 +2067,34 @@ pub mod public {
             self.step_frequency = Property::from(value);
             self
         }
+        /// 键盘方向键 / 滚轮一步的幅度（`RangeBase::SmallChange`）。
+        ///
+        /// 不设的话 WinUI 默认取 `range / 10` —— 宿主把 range 定成"档位号"
+        /// （0~85）时，方向键一下就跳 8.5 档，只能靠反复按方向键微调。
+        /// 设成 1 就是"一格一格走"。
+        pub fn small_change(mut self, value: impl Into<Option<f64>>) -> Self {
+            let value = value.into();
+            assert!(
+                value
+                    .as_ref()
+                    .is_none_or(|value| value.is_finite() && *value > 0.0),
+                "Slider SmallChange must be finite and positive",
+            );
+            self.small_change = Property::from(value);
+            self
+        }
+        /// PageUp / PageDown 与点击轨道空白处的幅度（`RangeBase::LargeChange`）。
+        pub fn large_change(mut self, value: impl Into<Option<f64>>) -> Self {
+            let value = value.into();
+            assert!(
+                value
+                    .as_ref()
+                    .is_none_or(|value| value.is_finite() && *value > 0.0),
+                "Slider LargeChange must be finite and positive",
+            );
+            self.large_change = Property::from(value);
+            self
+        }
         pub fn orientation(mut self, value: impl Into<Option<Orientation>>) -> Self {
             let value = value.into();
             self.orientation = Property::from(value);
@@ -12409,6 +12437,20 @@ impl MountedPropsExt for MountedProps {
                     },
                 );
                 visit(
+                    PropertyId::SliderSmallChange,
+                    match &values.small_change {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::F64(*value)),
+                    },
+                );
+                visit(
+                    PropertyId::SliderLargeChange,
+                    match &values.large_change {
+                        Property::Inherited => None,
+                        Property::Set(value) => Some(PropertyValueRef::F64(*value)),
+                    },
+                );
+                visit(
                     PropertyId::SliderOrientation,
                     match &values.orientation {
                         Property::Inherited => None,
@@ -17361,6 +17403,8 @@ pub enum PropertyId {
     SliderValue,
     SliderIsEnabled,
     SliderStepFrequency,
+    SliderSmallChange,
+    SliderLargeChange,
     SliderOrientation,
     SliderIsThumbToolTipEnabled,
     SliderResources,

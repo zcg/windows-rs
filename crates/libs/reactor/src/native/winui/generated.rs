@@ -1747,6 +1747,24 @@ pub fn set_property(
         }
         (
             Handle::Slider(control),
+            PropertyId::SliderSmallChange,
+            PropertyValue::F64(value),
+        ) => control
+            .cast::<IRangeBase>()
+            .map_err(native_error)?
+            .SetSmallChange(*value)
+            .map_err(native_error),
+        (
+            Handle::Slider(control),
+            PropertyId::SliderLargeChange,
+            PropertyValue::F64(value),
+        ) => control
+            .cast::<IRangeBase>()
+            .map_err(native_error)?
+            .SetLargeChange(*value)
+            .map_err(native_error),
+        (
+            Handle::Slider(control),
             PropertyId::SliderOrientation,
             PropertyValue::Orientation(value),
         ) => control

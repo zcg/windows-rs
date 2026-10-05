@@ -17866,6 +17866,29 @@ impl IRangeBase {
             .ok()
         }
     }
+    /// 键盘方向键 / 滚轮一步的幅度。
+    ///
+    /// vtbl 里这个槽位一直存在（生成器只是没给它生成 wrapper），所以直接按槽位调。
+    /// 不设的话 WinUI 取 `range / 10` 作为默认值。
+    pub(crate) fn SetSmallChange(&self, value: f64) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetSmallChange)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
+    /// PageUp / PageDown 与点击轨道空白处的幅度。
+    pub(crate) fn SetLargeChange(&self, value: f64) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetLargeChange)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
     pub(crate) fn Value(&self) -> windows_core::Result<f64> {
         unsafe {
             let mut result__ = core::mem::zeroed();
@@ -17926,9 +17949,9 @@ pub struct IRangeBase_Vtbl {
     Maximum: usize,
     pub SetMaximum: unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
     SmallChange: usize,
-    SetSmallChange: usize,
+    pub SetSmallChange: unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
     LargeChange: usize,
-    SetLargeChange: usize,
+    pub SetLargeChange: unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
     pub Value: unsafe extern "system" fn(*mut core::ffi::c_void, *mut f64) -> windows_core::HRESULT,
     pub SetValue: unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
     pub ValueChanged: unsafe extern "system" fn(
