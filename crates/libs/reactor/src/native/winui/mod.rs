@@ -4818,7 +4818,14 @@ impl EventSink {
             match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| invoke(&callback))) {
                 Ok(Some(dispatch)) => dispatch,
                 Ok(None) => return false,
-                Err(_) => std::process::abort(),
+                Err(_) => {
+                    // 同上：路由事件回调 panic → 静默 abort 会抹掉现场。
+                    eprintln!(
+                        "windows-reactor fatal: routed event callback panicked \
+                         (node={node:?} event={event:?} rev={revision}), aborting"
+                    );
+                    std::process::abort();
+                }
             };
         if let Some(message) = dispatch.message {
             self.queue.borrow_mut().push(NativeWork {
@@ -5959,6 +5966,10 @@ fn native_error(error: windows_core::Error) -> RuntimeError {
 
 fn invoke_callback<T>(callback: &Callback<T>, value: T) {
     if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| callback.call(value))).is_err() {
+        // 静默 abort 会让现场彻底消失（进程直接 __fastfail，WER 只记
+        // StackHash12/E_FAIL，既没有 Rust panic 日志也没有访问违规转储）。
+        // 留一行 stderr 才有机会事后定位。
+        eprintln!("windows-reactor fatal: callback panicked, aborting");
         std::process::abort();
     }
 }
@@ -6109,6 +6120,20 @@ pub fn exit_application() -> windows_core::Result<()> {
 }
 
 pub fn exit_ui_thread() {
+    // 落盘：调用方的上下文（哪个 PumpError / 哪个窗口）才是关键信息，而这里
+    // 只知道"要退出了"。写一行让事后能把两侧对上。
+    {
+        use std::io::Write;
+        let path = std::env::temp_dir().join("windows-reactor-fault.log");
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+        {
+            let _ = writeln!(file, "exit_ui_thread 被调用");
+            let _ = file.flush();
+        }
+    }
     let handler = DispatcherQueueHandler::new(|| {
         _ = exit_application();
     });

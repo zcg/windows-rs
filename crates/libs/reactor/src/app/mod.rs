@@ -1420,6 +1420,7 @@ fn reject_pending_window(mut pump: Box<dyn LivePump>, error: PumpError) {
         eprintln!("windows-reactor rejected a runtime window: {error:?}");
     } else {
         eprintln!("windows-reactor runtime window fault: {error:?}");
+        record_fault(&format!("运行期窗口故障 → exit_ui_thread: {error:?}"));
         exit_ui_thread();
     }
     if should_exit {
@@ -1451,6 +1452,7 @@ pub(crate) fn dispatch_native_events(token: WindowToken) {
             Err(error) => {
                 let error = pump_error(error);
                 eprintln!("windows-reactor fault: {error}");
+                record_fault(&format!("dispatch_events 失败 → shutdown + exit_ui_thread: {error}"));
                 fault = Some(error);
                 live.shutdown();
                 exit_ui_thread();
@@ -1603,13 +1605,46 @@ fn is_packaged_process() -> windows_core::Result<bool> {
     }
 }
 
+/// 崩溃现场的**唯一可靠落点**：append 一行到 `%TEMP%\windows-reactor-fault.log`。
+///
+/// 为什么不用 stderr：这些调用点都在"马上要终止进程"的路径上
+/// （`abort()` / `exit_ui_thread()`）。GUI 进程里 stderr 既可能没有控制台、
+/// 也可能在进程被快速终止时来不及让 OS 把缓冲写盘——实测就是这样：崩溃发生了，
+/// `bili-rs-stderr.log` 里却一行线索都没有。写文件是同步的、进程内完成的，
+/// 不依赖任何进程退出时的收尾。
+///
+/// 独立文件（而不是复用宿主日志）也是刻意的：reactor 不该知道宿主的日志路径。
+fn record_fault(message: &str) {
+    use std::io::Write;
+    let path = std::env::temp_dir().join("windows-reactor-fault.log");
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+    {
+        let ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_millis() as u64);
+        let _ = writeln!(file, "[{ms}] {message}");
+        let _ = file.flush();
+    }
+}
+
 fn pump_error(error: PumpError) -> windows_core::Error {
+    // **在做任何事之前先落盘**：这条路径的终点可能是 `exit_ui_thread()` 或
+    // `abort()`，两者都会让 stderr 来不及落盘（GUI 进程 + 进程级快速终止），
+    // 结果就是"崩溃了但什么线索都没有"。写一个独立文件是唯一可靠的办法。
+    record_fault(&format!("pump_error: {error:?}"));
     match error {
         PumpError::NativeApplyFailed(error) => {
             eprintln!(
                 "windows-reactor fatal native command failure at {}: {:?}",
                 error.command, error.error
             );
+            record_fault(&format!(
+                "  native command={} error={:?}",
+                error.command, error.error
+            ));
             std::process::abort();
         }
         error => windows_core::Error::new(E_FAIL, format!("{error:?}")),
