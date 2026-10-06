@@ -1229,12 +1229,227 @@ fn window_visual_changes(
     }
 }
 
+/// Maps the window theme onto the material's own theme.
+///
+/// The material is a composition layer of its own: it does not inherit
+/// `RequestedTheme` from the XAML content, so a theme change has to reach it
+/// through [`SystemBackdropConfiguration`] as well.
+fn backdrop_theme(theme: WindowTheme) -> SystemBackdropTheme {
+    match theme {
+        WindowTheme::Light => SystemBackdropTheme::Light,
+        WindowTheme::Dark => SystemBackdropTheme::Dark,
+        // `Default` 让框架跟着内容根的 `RequestedTheme` 走（`apply_window_theme`
+        // 把它设成 `ElementTheme::Default`）。系统明暗因此不需要这个库再轮询
+        // 一次注册表——问一次系统的是 `SystemBackdropTheme::Default` 自己。
+        WindowTheme::System => SystemBackdropTheme::Default,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 为什么这里重新用 Composition controllers
+// ---------------------------------------------------------------------------
+//
+// XAML 的 `MicaBackdrop` / `DesktopAcrylicBackdrop` 在 WinUI 内部就是这两组
+// controller 的薄封装：它们同样调 `SetKind` / `SetTintColor` / `SetTintOpacity`
+// / `SetLuminosityOpacity`，同样把一个 `SystemBackdropConfiguration` 装到窗口
+// 上。所以"控制器路径"不是另一条渲染管线，只是同一个管线的内层——而它的参数
+// 是可下发的，XAML 那层没有对外的旋钮。放弃它等于放弃
+// `WindowBackdropTuning` 的全部四项。
+//
+// 决策注释点名的那三个"手搓"部件，逐个处理如下。
+//
+// (1) **主题传播。** 材质是不继承 `RequestedTheme` 的独立合成层，明暗切换必须
+//     单独下发一次。两个入口：
+//     - 主题变了 → [`BackdropHost::apply_theme`] 就地改 configuration。configuration
+//       是**常驻**的（随 controller 装上、随 controller 释放），所以这一下只是
+//       重画，不重建任何东西。
+//     - 参数变了 → 调用方重算 tint/luminosity 后通过 `backdrop_tuning` 传进来，
+//       走 [`apply_window_backdrop`] 的就地下发。库**不猜**调用方的插值曲线，
+//       那是调用方自己的数据来源；库负责的是"改了就一定落到已装的材质上"。
+//
+// (2) **input-activation。** 失焦窗口的材质要走失焦外观，这是这条路径上唯一
+//     必须自己接的一根线：`Window::Activated` → `configuration.SetIsInputActive`。
+//     这不算"手搓框架已有的东西"——XAML 那侧之所以不用写，是因为它在 C++ 里
+//     订阅了同一个事件，这里只是把订阅搬到了能看见的表面上。`EventRevoker`
+//     存在 [`BackdropHost`] 里，跟 controller 同生共死。
+//
+// (3) **材质自身的 opacity 默认值。** 做法是**根本不下发默认值**：
+//     [`apply_material_tuning`] 对每个 setter 都只在调用方给了 `Some(_)` 时才调用，
+//     `None` 就让 controller 自带的默认值留着（与 XAML 侧内部同一套：Mica/Acrylic
+//     的 TintOpacity 0.8、LuminosityOpacity 1.0）。
+//     决策注释里"深色下一块平板"的真正来源是**自己挑了默认值**——早期版本在
+//     `Solid` 上写死 `TintOpacity(1.0)` + `LuminosityOpacity(0.0)`，那是把模糊层
+//     和亮度层一起压掉，不是 controller 路径本身的问题。`Solid` 现在画在内容根上，
+//     根本不装 controller，那条路也就不会回来了。
+
+/// The material setters that [`IMicaController`] and
+/// [`IDesktopAcrylicController`] have in common.
+///
+/// Both WinRT interfaces declare the same four setters with the same signatures,
+/// but the generated bindings are two unrelated types. This trait exists so the
+/// rule that matters — *forward a value only when the caller supplied one* — is
+/// written down once, in [`apply_material_tuning`], instead of twice.
+trait MaterialTuning {
+    fn set_tint_opacity(&self, value: f32) -> windows_core::Result<()>;
+    fn set_luminosity_opacity(&self, value: f32) -> windows_core::Result<()>;
+    fn set_tint_color(&self, value: bindings::Color) -> windows_core::Result<()>;
+    fn set_fallback_color(&self, value: bindings::Color) -> windows_core::Result<()>;
+}
+
+impl MaterialTuning for IMicaController {
+    fn set_tint_opacity(&self, value: f32) -> windows_core::Result<()> {
+        Self::SetTintOpacity(self, value)
+    }
+
+    fn set_luminosity_opacity(&self, value: f32) -> windows_core::Result<()> {
+        Self::SetLuminosityOpacity(self, value)
+    }
+
+    fn set_tint_color(&self, value: bindings::Color) -> windows_core::Result<()> {
+        Self::SetTintColor(self, value)
+    }
+
+    fn set_fallback_color(&self, value: bindings::Color) -> windows_core::Result<()> {
+        Self::SetFallbackColor(self, value)
+    }
+}
+
+impl MaterialTuning for IDesktopAcrylicController {
+    fn set_tint_opacity(&self, value: f32) -> windows_core::Result<()> {
+        Self::SetTintOpacity(self, value)
+    }
+
+    fn set_luminosity_opacity(&self, value: f32) -> windows_core::Result<()> {
+        Self::SetLuminosityOpacity(self, value)
+    }
+
+    fn set_tint_color(&self, value: bindings::Color) -> windows_core::Result<()> {
+        Self::SetTintColor(self, value)
+    }
+
+    fn set_fallback_color(&self, value: bindings::Color) -> windows_core::Result<()> {
+        Self::SetFallbackColor(self, value)
+    }
+}
+
+/// Forwards `tuning` onto the material's own setters.
+///
+/// **Only `Some(_)` fields are pushed.** A `None` field must leave the controller's
+/// own default alone rather than be replaced by a value this crate made up — that
+/// is the whole of note (3) above: `None` means "the system default", and the
+/// system default is exactly what the XAML backdrop types would have used.
+///
+/// `SetKind` is deliberately *not* applied here. It has to run before the tint
+/// setters (setting the kind resets them to that kind's defaults) and it only
+/// changes when the declared material changes, so it belongs to
+/// [`create_backdrop_controller`].
+fn apply_material_tuning<T: MaterialTuning + ?Sized>(
+    controller: &T,
+    tuning: WindowBackdropTuning,
+) -> Result<(), RuntimeError> {
+    if let Some(value) = tuning.tint_opacity {
+        controller
+            .set_tint_opacity(value as f32)
+            .map_err(native_error)?;
+    }
+    if let Some(value) = tuning.luminosity_opacity {
+        controller
+            .set_luminosity_opacity(value as f32)
+            .map_err(native_error)?;
+    }
+    if let Some(color) = tuning.tint_color {
+        controller
+            .set_tint_color(native_color(color))
+            .map_err(native_error)?;
+    }
+    if let Some(color) = tuning.fallback_color {
+        controller
+            .set_fallback_color(native_color(color))
+            .map_err(native_error)?;
+    }
+    Ok(())
+}
+
+/// An installed material controller, typed so parameter changes can be pushed
+/// onto it without rebuilding the composition layer.
+///
+/// Holding a typed interface here is not redundant with
+/// [`BackdropHost::controller`]: the `IUnknown` field documents the lifetime
+/// rule ("releasing the controller tears the material out"), this one exists to
+/// make [`BackdropMaterial::apply_tuning`] callable.
+enum BackdropMaterial {
+    Mica(IMicaController),
+    Acrylic(IDesktopAcrylicController),
+}
+
+impl BackdropMaterial {
+    /// Selects the material's `Kind`.
+    ///
+    /// `SetKind` lives on a late-added interface (`IMicaController2` /
+    /// `IDesktopAcrylicController3`), so the cast can fail on older systems. That
+    /// is **not** fatal: the material still renders, it just keeps the base kind.
+    /// Failing the whole call instead would trade one missing distinction for a
+    /// window with no background at all, so the failure is logged and swallowed.
+    ///
+    /// Must run before the tint setters — `SetKind` resets them to the defaults of
+    /// the kind it selects.
+    fn set_kind(&self, backdrop: WindowBackdrop) -> Result<(), RuntimeError> {
+        let result = match self {
+            Self::Mica(controller) => controller
+                .cast::<IMicaController2>()
+                .and_then(|kind| kind.SetKind(mica_kind(backdrop))),
+            Self::Acrylic(controller) => controller
+                .cast::<IDesktopAcrylicController3>()
+                .and_then(|kind| kind.SetKind(acrylic_kind(backdrop))),
+        };
+        if let Err(error) = result {
+            eprintln!(
+                "windows-reactor: backdrop `SetKind` rejected: {error}; \
+                 the material falls back to its base kind"
+            );
+        }
+        Ok(())
+    }
+
+    /// Pushes new parameters onto the already-installed material.
+    fn apply_tuning(&self, tuning: WindowBackdropTuning) -> Result<(), RuntimeError> {
+        match self {
+            Self::Mica(controller) => apply_material_tuning(controller, tuning),
+            Self::Acrylic(controller) => apply_material_tuning(controller, tuning),
+        }
+    }
+}
+
+fn mica_kind(backdrop: WindowBackdrop) -> MicaKind {
+    match backdrop {
+        WindowBackdrop::MicaAlt => MicaKind::BaseAlt,
+        _ => MicaKind::Base,
+    }
+}
+
+fn acrylic_kind(backdrop: WindowBackdrop) -> DesktopAcrylicKind {
+    match backdrop {
+        WindowBackdrop::AcrylicThin => DesktopAcrylicKind::Thin,
+        _ => DesktopAcrylicKind::Base,
+    }
+}
+
+/// A freshly built controller, before it is attached to a window.
+struct BackdropController {
+    /// Keeps the controller object alive; releasing it tears the material out.
+    controller: windows_core::IUnknown,
+    targets: ISystemBackdropControllerWithTargets,
+    /// Typed view of `controller`, used to push later parameter changes in place.
+    material: BackdropMaterial,
+}
+
 /// Live backdrop state for one window.
 ///
 /// The controller has to outlive the call that installs it — dropping it
-/// detaches the material — so changing a material parameter means building a
-/// fresh controller rather than mutating the installed one. The theme is the exception: it
-/// lives on `SystemBackdropConfiguration`, which stays installed for the window's lifetime.
+/// detaches the material — so [`BackdropHost`] keeps it for the window's
+/// lifetime and pushes parameter changes onto the installed controller rather
+/// than building a new one. The theme is the exception: it lives on
+/// `SystemBackdropConfiguration`, which is also installed for the window's lifetime.
 struct BackdropHost {
     /// Keeps the controller object alive; releasing it tears the material out.
     controller: Option<windows_core::IUnknown>,
@@ -1243,9 +1458,28 @@ struct BackdropHost {
     /// Live material configuration. `SetTheme` on it repaints the installed material without
     /// rebuilding the controller.
     configuration: Option<SystemBackdropConfiguration>,
+    /// Typed controller, so a `backdrop_tuning` change does not rebuild the layer.
+    material: Option<BackdropMaterial>,
+    /// Which material `material` holds. `None` when no material is installed.
+    backdrop: Option<WindowBackdrop>,
 }
 
 impl BackdropHost {
+    /// Re-pushes the material's theme onto the live configuration.
+    ///
+    /// This is note (1) of the block comment above: the material does not inherit
+    /// `RequestedTheme` from the content root, so the window's theme change has to
+    /// reach it separately. Repainting is all it takes — the configuration stays
+    /// installed for the window's lifetime.
+    fn apply_theme(&self, theme: WindowTheme) -> Result<(), RuntimeError> {
+        let Some(configuration) = self.configuration.as_ref() else {
+            return Ok(());
+        };
+        configuration
+            .SetTheme(backdrop_theme(theme))
+            .map_err(native_error)
+    }
+
     /// Releases the COM references **while the XAML runtime is still alive**.
     ///
     /// The timing is the whole point. On the process-exit path WinUI has already
@@ -1258,6 +1492,8 @@ impl BackdropHost {
             activated.into_token();
         }
         self.configuration = None;
+        self.material = None;
+        self.backdrop = None;
         self.targets = None;
         self.controller = None;
     }
@@ -1270,6 +1506,7 @@ impl Drop for BackdropHost {
         // reference counts, and leaking beats crashing on the way out.
         std::mem::forget(self.activated.take());
         std::mem::forget(self.configuration.take());
+        std::mem::forget(self.material.take());
         std::mem::forget(self.targets.take());
         std::mem::forget(self.controller.take());
     }
@@ -1277,8 +1514,12 @@ impl Drop for BackdropHost {
 
 /// Installs (or removes) the window material.
 ///
-/// Returns `Ok(None)` because this path keeps no state alive for the caller: the
-/// XAML `SystemBackdrop` types own their own lifetime.
+/// Returns `Ok(None)` when the window should carry no *system* material: the
+/// caller asked for [`WindowBackdrop::None`] or [`WindowBackdrop::Solid`] (both
+/// paint the content root instead), or this system cannot render the requested
+/// material (in which case [`WindowBackdropTuning::fallback_color`] is painted
+/// in its place). Otherwise it returns the [`BackdropHost`] holding the
+/// controller that has to stay alive.
 fn apply_window_backdrop(
     window: &Window,
     visuals: WindowVisuals,
@@ -1286,72 +1527,196 @@ fn apply_window_backdrop(
 ) -> Result<Option<BackdropHost>, RuntimeError> {
     let window_2 = window.cast::<IWindow2>().map_err(native_error)?;
 
-    // Earlier revisions drove the material through the Composition controllers
-    // (`MicaController` / `DesktopAcrylicController`). That meant hand-rolling the
-    // pieces the framework already owns -- theme propagation, input-activation
-    // state, and the material's own opacity defaults -- and each hand-rolled piece
-    // was a source of wrong-looking output (a flat plate in dark mode, a bright
-    // plate in light mode). The XAML `SystemBackdrop` types used here carry no
-    // controller to keep alive and no configuration to repaint, so none of that
-    // state exists. This mirrors how the reactor crate applies a backdrop upstream.
-    //
-    // `previous` still has to be dropped here, while the XAML session is live: a
-    // material left installed keeps its controller's render resources alive.
-    drop(previous);
+    // The XAML `SystemBackdrop` type and a Composition controller both drive the
+    // same surface; holding both paints the material twice. Clearing it up front
+    // also means `None` / `Solid` do not have to remember to clear it themselves.
+    window_2
+        .SetSystemBackdrop(None::<&SystemBackdrop>)
+        .map_err(native_error)?;
 
-    match visuals.backdrop {
-        WindowBackdrop::None => {
-            // No system material, but the window still needs an opaque surface:
-            // removing the material alone leaves the window's own background
-            // showing through, which reads as a black plate in either theme.
-            window_2
-                .SetSystemBackdrop(None::<&SystemBackdrop>)
-                .map_err(native_error)?;
-            apply_solid_backdrop(window, visuals, false)?;
+    // Wipe whatever layer is on the content root: the `Solid` colour of a previous
+    // declaration, or the `fallback_color` painted for a material this system
+    // could not render. Leaving either behind would cover the material chosen next.
+    clear_content_backdrop(window)?;
+
+    // The window object is itself the composition target a material attaches to.
+    // Only the material path needs it, so a failure here is not fatal yet — it is
+    // reported below, once we know a material was actually requested.
+    let target = window.cast::<ICompositionSupportsSystemBackdrop>().ok();
+
+    // Parameters alone do not need a new controller: the installed material is a
+    // live composition target, so pushing the new values onto it repaints without
+    // detaching and re-attaching the layer. Rebuilding here would make every frame
+    // of a slider drag flicker. A changed material, or no previous material, still
+    // goes through the full path below.
+    let mut previous = previous;
+    if let Some(host) = previous.as_ref()
+        && host.backdrop == Some(visuals.backdrop)
+        && let Some(material) = host.material.as_ref()
+    {
+        // A failure here is released rather than left to `Drop`, which deliberately
+        // leaks: this runs inside a live session, where the COM references *can*
+        // go, and a dropped-on-error host would take the material with it anyway.
+        if let Err(error) = material.apply_tuning(visuals.backdrop_tuning) {
+            if let Some(mut host) = previous.take() {
+                host.release();
+            }
+            return Err(error);
         }
-        WindowBackdrop::Mica | WindowBackdrop::MicaAlt => {
-            let mica = MicaBackdrop::new().map_err(native_error)?;
-            mica.SetKind(match visuals.backdrop {
-                WindowBackdrop::Mica => MicaKind::Base,
-                _ => MicaKind::BaseAlt,
-            })
-            .map_err(native_error)?;
-            let backdrop: SystemBackdrop = mica.cast().map_err(native_error)?;
-            window_2
-                .SetSystemBackdrop(&backdrop)
-                .map_err(native_error)?;
-        }
-        // `AcrylicThin` currently resolves to the same XAML backdrop: the XAML
-        // `DesktopAcrylicBackdrop` exposes no kind or opacity knob, so the thin
-        // variant has no distinct preset to request.
-        WindowBackdrop::Acrylic | WindowBackdrop::AcrylicThin => {
-            let backdrop: SystemBackdrop = DesktopAcrylicBackdrop::new()
-                .and_then(|backdrop| backdrop.cast())
-                .map_err(native_error)?;
-            window_2
-                .SetSystemBackdrop(&backdrop)
-                .map_err(native_error)?;
-        }
-        WindowBackdrop::Solid => {
-            // A solid backdrop does not sample the desktop, so it does not need a
-            // system material at all; the flat colour lives on the content root.
-            window_2
-                .SetSystemBackdrop(None::<&SystemBackdrop>)
-                .map_err(native_error)?;
-            apply_solid_backdrop(window, visuals, true)?;
-        }
+        return Ok(previous);
     }
 
-    // `None` and `Solid` paint the content root rather than a system material;
-    // leaving that layer behind would cover whatever material is chosen next.
-    if !matches!(
+    if let Some(previous) = previous.take() {
+        // Detach the outgoing target *before* releasing: the window's composition
+        // layer outlives the controller handle, and leaving the target attached
+        // keeps it rendering into a released controller.
+        if let (Some(targets), Some(target)) = (previous.targets.as_ref(), target.as_ref()) {
+            let _ = targets.RemoveSystemBackdropTarget(target);
+        }
+        let mut previous = previous;
+        // Released here rather than left to `Drop`, which deliberately leaks: this
+        // runs inside a live UI session, so the COM references can go immediately
+        // instead of accumulating one per rebuilt material.
+        previous.release();
+    }
+
+    // `None` and `Solid` paint the content root rather than a system material.
+    if matches!(
         visuals.backdrop,
         WindowBackdrop::None | WindowBackdrop::Solid
     ) {
-        clear_content_backdrop(window)?;
+        apply_solid_backdrop(window, visuals, visuals.backdrop == WindowBackdrop::Solid)?;
+        return Ok(None);
     }
 
-    Ok(None)
+    let Some(target) = target else {
+        eprintln!(
+            "windows-reactor: this window is not a system backdrop target; \
+             painting the fallback colour instead of {:?}",
+            visuals.backdrop
+        );
+        apply_backdrop_fallback(window, visuals.backdrop_tuning)?;
+        return Ok(None);
+    };
+
+    let Some(built) = create_backdrop_controller(visuals.backdrop, visuals.backdrop_tuning)? else {
+        // This system cannot render the requested material at all.
+        apply_backdrop_fallback(window, visuals.backdrop_tuning)?;
+        return Ok(None);
+    };
+    let BackdropController {
+        controller,
+        targets,
+        material,
+    } = built;
+
+    let configuration = SystemBackdropConfiguration::new().map_err(native_error)?;
+    configuration
+        .SetTheme(backdrop_theme(visuals.theme))
+        .map_err(native_error)?;
+    // Note (2): an inactive window renders its material in the lost-focus
+    // appearance. `Activated` is the only feed for that flag on this path.
+    configuration.SetIsInputActive(true).map_err(native_error)?;
+
+    targets
+        .AddSystemBackdropTarget(&target)
+        .map_err(native_error)?;
+    targets
+        .SetSystemBackdropConfiguration(&configuration)
+        .map_err(native_error)?;
+
+    let live_configuration = configuration.clone();
+    let activated = window
+        .Activated(move |_, args| {
+            if let Some(args) = args.as_ref()
+                && let Ok(state) = args.WindowActivationState()
+            {
+                let _ = live_configuration
+                    .SetIsInputActive(state != WindowActivationState::Deactivated);
+            }
+        })
+        .map_err(native_error)?;
+
+    Ok(Some(BackdropHost {
+        controller: Some(controller),
+        targets: Some(targets),
+        activated: Some(activated),
+        configuration: Some(configuration),
+        material: Some(material),
+        backdrop: Some(visuals.backdrop),
+    }))
+}
+
+/// Builds the Composition controller for `backdrop` and forwards `tuning` onto it.
+///
+/// `Ok(None)` means this system cannot render the material; the caller then paints
+/// [`WindowBackdropTuning::fallback_color`] instead. The capability probe uses the
+/// same predicate as the public [`backdrop_is_supported`] — and swallows a failing
+/// probe as "unsupported" rather than failing the whole visuals pass, because the
+/// degradation to a flat colour is strictly better than an error that leaves the
+/// window with nothing painted underneath its content.
+fn create_backdrop_controller(
+    backdrop: WindowBackdrop,
+    tuning: WindowBackdropTuning,
+) -> Result<Option<BackdropController>, RuntimeError> {
+    let (controller, material): (windows_core::IUnknown, BackdropMaterial) = match backdrop {
+        WindowBackdrop::Mica | WindowBackdrop::MicaAlt => {
+            if !MicaController::IsSupported().unwrap_or(false) {
+                return Ok(None);
+            }
+            let controller = MicaController::new().map_err(native_error)?;
+            let mica: IMicaController = controller.cast().map_err(native_error)?;
+            let material = BackdropMaterial::Mica(mica.clone());
+            // `Kind` before the tint setters: selecting a kind resets them.
+            material.set_kind(backdrop)?;
+            apply_material_tuning(&mica, tuning)?;
+            (mica.cast().map_err(native_error)?, material)
+        }
+        WindowBackdrop::Acrylic | WindowBackdrop::AcrylicThin => {
+            if !DesktopAcrylicController::IsSupported().unwrap_or(false) {
+                return Ok(None);
+            }
+            let controller = DesktopAcrylicController::new().map_err(native_error)?;
+            let acrylic: IDesktopAcrylicController = controller.cast().map_err(native_error)?;
+            let material = BackdropMaterial::Acrylic(acrylic.clone());
+            material.set_kind(backdrop)?;
+            apply_material_tuning(&acrylic, tuning)?;
+            (acrylic.cast().map_err(native_error)?, material)
+        }
+        // `None` and `Solid` paint the content root; they never build a controller.
+        WindowBackdrop::None | WindowBackdrop::Solid => return Ok(None),
+    };
+
+    let targets: ISystemBackdropControllerWithTargets = controller.cast().map_err(native_error)?;
+    Ok(Some(BackdropController {
+        controller,
+        targets,
+        material,
+    }))
+}
+
+/// 系统渲染不了请求的材质时，用 `fallback_color` 铺一层纯色。
+///
+/// `WindowBackdropTuning::fallback_color` 的文档承诺它会在"the system cannot render
+/// the requested material"时被画出来。装不上材质有三条路——控制器的
+/// `IsSupported()` 为假、窗口拿不到 backdrop target、材质本身建不出来——三条都
+/// 收敛到这里。
+///
+/// 铺在窗口内容根上（`Window.Content` 的 `Panel` 背景）：材质画在窗口最底层，
+/// 内容根的不透明背景正好遮住整块客户区，观感就是一块纯色底。只在这条早退
+/// 路径上写，材质可用时绝不碰应用自己的背景；换走材质时由
+/// [`clear_content_backdrop`] 擦掉。
+fn apply_backdrop_fallback(
+    window: &Window,
+    tuning: WindowBackdropTuning,
+) -> Result<(), RuntimeError> {
+    let Some(color) = tuning.fallback_color else {
+        // 调用方没提供回落色 → 保持"什么都不画"，底色由应用自己负责。
+        return Ok(());
+    };
+    // 全不透明，不套 `tint_opacity`：`fallback_color` 的契约是"顶替整块材质"，
+    // 半透明的话露出来的是窗口自己的底色，而不是这块回落色。
+    set_content_background(window, Some(color))
 }
 
 /// 当前系统能否渲染指定的背景材质。
@@ -1569,6 +1934,26 @@ mod window_visual_tests {
                 theme: true,
             }
         );
+    }
+
+    #[test]
+    fn acrylic_thin_and_acrylic_request_distinct_kinds() {
+        // `AcrylicThin` used to resolve to the same XAML backdrop as `Acrylic`,
+        // so the thin preset did not exist pixel-wise. It has to stay distinct.
+        assert_ne!(
+            acrylic_kind(WindowBackdrop::AcrylicThin),
+            acrylic_kind(WindowBackdrop::Acrylic)
+        );
+        assert_eq!(
+            acrylic_kind(WindowBackdrop::Acrylic),
+            DesktopAcrylicKind::Base
+        );
+        assert_eq!(
+            acrylic_kind(WindowBackdrop::AcrylicThin),
+            DesktopAcrylicKind::Thin
+        );
+        assert_eq!(mica_kind(WindowBackdrop::Mica), MicaKind::Base);
+        assert_eq!(mica_kind(WindowBackdrop::MicaAlt), MicaKind::BaseAlt);
     }
 
     #[test]
@@ -1906,6 +2291,16 @@ impl WinUiRuntime {
                     visuals,
                     visuals.backdrop == WindowBackdrop::Solid,
                 )?;
+            }
+
+            // A material is its own composition layer and does not inherit
+            // `RequestedTheme` from the content root, so the window's theme change
+            // has to reach it as well — otherwise the material keeps the old
+            // theme while everything else in the window has already repainted.
+            // The configuration is installed for the window's lifetime, so this
+            // repaints the material instead of rebuilding the controller.
+            if let Some(host) = self.window_backdrops.borrow().get(&node) {
+                host.apply_theme(visuals.theme)?;
             }
         }
 
