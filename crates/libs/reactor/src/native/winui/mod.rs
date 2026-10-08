@@ -630,13 +630,6 @@ pub struct WinUiRuntime {
     window_title_bars: HashMap<NodeId, (NodeId, WindowTitleBarHeight)>,
     window_title_revisions: Rc<RefCell<HashMap<NodeId, u64>>>,
     window_visuals: HashMap<NodeId, WindowVisuals>,
-    /// 已经"跳过过一次首帧视觉下发"的窗口（见 [`Self::apply_window_visuals`]）。
-    ///
-    /// 单独记一份而不是复用 `window_visuals`：跳过的那一帧**不能**写视觉快照
-    /// （否则 `window_visual_changes` 会认为"已经同步过"，之后再也不重试），
-    /// 而"第一帧"本身又只能由"没有快照"来判定 —— 会自锁成永不下发。用独立的
-    /// 集合记录"已经让过一次"，第二帧就一定走到真正的下发路径。
-    window_visuals_warmed: HashSet<NodeId>,
     webview_initializations: Rc<RefCell<HashMap<NodeId, WebViewInitialization>>>,
     windows: HashMap<NodeId, Window>,
     pending_application: Option<Application>,
@@ -2239,44 +2232,6 @@ impl WinUiRuntime {
         node: NodeId,
         visuals: WindowVisuals,
     ) -> Result<(), RuntimeError> {
-        // ── 首帧让行：窗口刚创建的那一帧完全不下发视觉 ────────────────────────
-        //
-        // # 这是什么
-        //
-        // 窗口创建后的**第一次** reconcile 里，content root、合成目标、标题栏
-        // 都还没就绪。往它们上面设 `FrameworkElement.SetRequestedTheme` /
-        // `AppWindowTitleBar.SetPreferredTheme` / `SystemBackdrop`，会让 XAML
-        // 内部状态进入不一致 —— 那一帧**不立刻报错**，而是在之后的窗口消息
-        // 处理里 failfast：
-        //
-        //   KERNELBASE!RaiseFailFastException
-        //   combase!RoFailFastWithErrorContextInternal2      (0x80004005 E_FAIL)
-        //   Microsoft_ui_xaml!…+0x3a9dbd
-        //     ← user32!CallWindowProcW ← NtUserGetMessage
-        //   → 退出码 0xc000027b (STATUS_STOWED_EXCEPTION)
-        //
-        // （真实 dump 分析，不是推断：栈里没有 Rust 帧，崩在 XAML 内部。）
-        //
-        // # 为什么主窗口不崩、播放窗口崩
-        //
-        // 主窗口在显示前已经跑过若干帧，content root 早就就绪；而播放窗口是
-        // **创建后同帧就下发视觉**（日志里能看见它连交换链都还是 1×1：
-        // `[surface] resize 1x1`），正好落在这个坑里。
-        //
-        // # 为什么代价可以忽略
-        //
-        // 这是声明式 UI：不写 `window_visuals` 快照，下一帧
-        // `window_visual_changes` 仍会判定"有变化"，视觉会在**下一帧**（≈16ms）
-        // 完整下发。窗口刚出现的那 1 帧没有亚克力与主题，肉眼不可见。
-        //
-        // `window_visuals_warmed` 而不是 `window_visuals` 来判"首帧"：跳过的那
-        // 帧不能写视觉快照（否则会自锁成永不下发），而"没有快照"又会永远是首帧。
-        if self.windows.get(&node).is_some()
-            && !self.window_visuals_warmed.contains(&node)
-        {
-            self.window_visuals_warmed.insert(node);
-            return Ok(());
-        }
         let window = self
             .windows
             .get(&node)
@@ -5762,7 +5717,6 @@ impl NativeRuntime for WinUiRuntime {
         self.window_title_bars.clear();
         self.window_title_revisions.borrow_mut().clear();
         self.window_visuals.clear();
-        self.window_visuals_warmed.clear();
         self.theme_styles.clear();
         self.handles.clear();
         self.virtuals.clear();
@@ -6215,7 +6169,6 @@ impl WinUiRuntime {
         self.window_title_bars.remove(&node);
         self.window_title_revisions.borrow_mut().remove(&node);
         self.window_visuals.remove(&node);
-        self.window_visuals_warmed.remove(&node);
         complete_webview_initialization(
             &self.webview_initializations,
             node,
