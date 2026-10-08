@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::cell::{Cell, RefCell};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::borrow::Cow;
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::fmt::Write;
 use std::marker::PhantomData;
 use std::rc::Rc;
@@ -586,6 +587,24 @@ pub struct WinUiRuntime {
     pointer_policies: Rc<RefCell<HashMap<NodeId, PointerInteractionPolicy>>>,
     routed_callbacks: Rc<RefCell<HashMap<(NodeId, EventId), RoutedEventCallback>>>,
     resource_override_keys: HashMap<NodeId, HashSet<String>>,
+    /// 每个节点**上一次真正下发**的资源覆盖值（键 → 值）。
+    ///
+    /// # 为什么需要它（2026-10-07 加）
+    ///
+    /// [`set_resource_overrides`] 之前只记"下过哪些键"，于是**每帧无条件
+    /// `Insert` 全部键**。`resource_overrides` 是**声明式**属性（每帧由
+    /// `view()` 重新构造并比对），绝大多数帧的值与上一帧完全相同——这些重复
+    /// `Insert` 是纯浪费，而且**每次 `Insert` 都会让 WinUI 失效化该子树的资源
+    /// 解析**，代价与控件数×键数成正比。
+    ///
+    /// 典型触发：给一排控件（按钮/ToggleButton/Slider 各十几个模板资源键）挂同一
+    /// 份 `ResourceOverrides` 时，每帧几十个控件 × 三十几个键 = 上千次 COM 插入，
+    /// UI 线程被淹没——用户侧表现是"界面卡住不转圈"，久而久之 XAML 抛
+    /// `STATUS_STOWED_EXCEPTION`（`0xc000027b`）导致闪退。
+    ///
+    /// 存下**值**（而不是只存键）才能判"这次真的变了没有"，从而跳过 no-op 的
+    /// `Insert`。键集合仍由 `resource_override_keys` 负责（删除与"是否设过"的判定）。
+    resource_override_values: HashMap<NodeId, BTreeMap<Cow<'static, str>, ResourceValue>>,
     command_bar_flyouts: HashMap<NodeId, NativeCommandBarFlyout>,
     swipe_attachments: HashMap<NodeId, NativeSwipeItems>,
     identity: Rc<Cell<Option<WindowToken>>>,
@@ -611,6 +630,13 @@ pub struct WinUiRuntime {
     window_title_bars: HashMap<NodeId, (NodeId, WindowTitleBarHeight)>,
     window_title_revisions: Rc<RefCell<HashMap<NodeId, u64>>>,
     window_visuals: HashMap<NodeId, WindowVisuals>,
+    /// 已经"跳过过一次首帧视觉下发"的窗口（见 [`Self::apply_window_visuals`]）。
+    ///
+    /// 单独记一份而不是复用 `window_visuals`：跳过的那一帧**不能**写视觉快照
+    /// （否则 `window_visual_changes` 会认为"已经同步过"，之后再也不重试），
+    /// 而"第一帧"本身又只能由"没有快照"来判定 —— 会自锁成永不下发。用独立的
+    /// 集合记录"已经让过一次"，第二帧就一定走到真正的下发路径。
+    window_visuals_warmed: HashSet<NodeId>,
     webview_initializations: Rc<RefCell<HashMap<NodeId, WebViewInitialization>>>,
     windows: HashMap<NodeId, Window>,
     pending_application: Option<Application>,
@@ -2213,6 +2239,44 @@ impl WinUiRuntime {
         node: NodeId,
         visuals: WindowVisuals,
     ) -> Result<(), RuntimeError> {
+        // ── 首帧让行：窗口刚创建的那一帧完全不下发视觉 ────────────────────────
+        //
+        // # 这是什么
+        //
+        // 窗口创建后的**第一次** reconcile 里，content root、合成目标、标题栏
+        // 都还没就绪。往它们上面设 `FrameworkElement.SetRequestedTheme` /
+        // `AppWindowTitleBar.SetPreferredTheme` / `SystemBackdrop`，会让 XAML
+        // 内部状态进入不一致 —— 那一帧**不立刻报错**，而是在之后的窗口消息
+        // 处理里 failfast：
+        //
+        //   KERNELBASE!RaiseFailFastException
+        //   combase!RoFailFastWithErrorContextInternal2      (0x80004005 E_FAIL)
+        //   Microsoft_ui_xaml!…+0x3a9dbd
+        //     ← user32!CallWindowProcW ← NtUserGetMessage
+        //   → 退出码 0xc000027b (STATUS_STOWED_EXCEPTION)
+        //
+        // （真实 dump 分析，不是推断：栈里没有 Rust 帧，崩在 XAML 内部。）
+        //
+        // # 为什么主窗口不崩、播放窗口崩
+        //
+        // 主窗口在显示前已经跑过若干帧，content root 早就就绪；而播放窗口是
+        // **创建后同帧就下发视觉**（日志里能看见它连交换链都还是 1×1：
+        // `[surface] resize 1x1`），正好落在这个坑里。
+        //
+        // # 为什么代价可以忽略
+        //
+        // 这是声明式 UI：不写 `window_visuals` 快照，下一帧
+        // `window_visual_changes` 仍会判定"有变化"，视觉会在**下一帧**（≈16ms）
+        // 完整下发。窗口刚出现的那 1 帧没有亚克力与主题，肉眼不可见。
+        //
+        // `window_visuals_warmed` 而不是 `window_visuals` 来判"首帧"：跳过的那
+        // 帧不能写视觉快照（否则会自锁成永不下发），而"没有快照"又会永远是首帧。
+        if self.windows.get(&node).is_some()
+            && !self.window_visuals_warmed.contains(&node)
+        {
+            self.window_visuals_warmed.insert(node);
+            return Ok(());
+        }
         let window = self
             .windows
             .get(&node)
@@ -2638,16 +2702,36 @@ impl WinUiRuntime {
             }
         }
 
+        // 值没变的键**跳过 Insert**（见 `resource_override_values` 的字段说明：
+        // 无条件 Insert 会每帧失效化整棵子树的资源解析，几十个控件 × 三十几个键
+        // 就是上千次/帧，UI 线程被淹没 → 界面卡死 → XAML stowed exception）。
+        //
+        // 注意"上一次的值"必须在**删除键之后**才整体替换：被 `Remove` 掉的键不应
+        // 留在快照里，否则下次同键同值会被误判成"没变"而跳过 `Insert`（键已被删，
+        // 资源就永远缺失了）。
+        let previous_values = self.resource_override_values.get(&node);
+        let mut next_values: BTreeMap<Cow<'static, str>, ResourceValue> = BTreeMap::new();
         for (key, value) in resources.values() {
-            let key = windows_reference::IReference::from(key);
-            let value = resource_value(value).map_err(native_error)?;
-            map.Insert(&key, &value).map_err(native_error)?;
+            // `ResourceValue: PartialEq`（reactor 自己的枚举，见 element.rs）。
+            if previous_values.is_some_and(|prev| prev.get(key) == Some(value)) {
+                next_values.insert(key.clone(), value.clone());
+                continue;
+            }
+            let key_ref = windows_reference::IReference::from(key.as_ref());
+            let boxed = resource_value(value).map_err(native_error)?;
+            map.Insert(&key_ref, &boxed).map_err(native_error)?;
+            next_values.insert(key.clone(), value.clone());
         }
 
         if desired_keys.is_empty() {
             self.resource_override_keys.remove(&node);
         } else {
             self.resource_override_keys.insert(node, desired_keys);
+        }
+        if next_values.is_empty() {
+            self.resource_override_values.remove(&node);
+        } else {
+            self.resource_override_values.insert(node, next_values);
         }
         Ok(())
     }
@@ -5678,6 +5762,7 @@ impl NativeRuntime for WinUiRuntime {
         self.window_title_bars.clear();
         self.window_title_revisions.borrow_mut().clear();
         self.window_visuals.clear();
+        self.window_visuals_warmed.clear();
         self.theme_styles.clear();
         self.handles.clear();
         self.virtuals.clear();
@@ -5693,6 +5778,7 @@ impl NativeRuntime for WinUiRuntime {
         self.pointer_policies.borrow_mut().clear();
         self.routed_callbacks.borrow_mut().clear();
         self.resource_override_keys.clear();
+        self.resource_override_values.clear();
         self.controlled_collection_indices.clear();
         self.selection_owners.clear();
         self.selection_items.borrow_mut().clear();
@@ -6129,6 +6215,7 @@ impl WinUiRuntime {
         self.window_title_bars.remove(&node);
         self.window_title_revisions.borrow_mut().remove(&node);
         self.window_visuals.remove(&node);
+        self.window_visuals_warmed.remove(&node);
         complete_webview_initialization(
             &self.webview_initializations,
             node,
@@ -6146,6 +6233,10 @@ impl WinUiRuntime {
         if self.resource_override_keys.contains_key(&node) {
             self.clear_resource_overrides(node)?;
         }
+        // 清覆盖时也要清"上一次的值"：否则同一节点被复用（keyed diff 的元素
+        // 重建）后，新挂载的控件会把"上一次的值"当成自己的历史，从此不再
+        // `Insert` —— 资源全部缺失（控件退回模板默认色）。
+        self.resource_override_values.remove(&node);
         content_dialog::retire(&self.content_dialogs, node);
         self.selection_owners
             .retain(|child, (parent, _)| *child != node && *parent != node);

@@ -86,7 +86,7 @@ pub fn install_theme_resources(
         .Resources()?
         .cast::<windows_collections::IMap<IInspectable, IInspectable>>()?;
     for (key, value) in resources.values() {
-        let key = windows_reference::IReference::from(key);
+        let key = windows_reference::IReference::from(key.as_ref());
         let value = resource_value(value)?;
         map.Insert(&key, &value)?;
     }

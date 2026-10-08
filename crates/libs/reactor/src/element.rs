@@ -1,4 +1,6 @@
 use std::any::Any;
+use std::borrow::Cow;
+use std::collections::BTreeMap;
 use std::fmt;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -1760,9 +1762,20 @@ impl From<CornerRadius> for ResourceValue {
 }
 
 /// Theme resource values applied to a control subtree.
+///
+/// # 为什么键是 `Cow<'static, str>` 而不是 `String`（2026-10-07）
+///
+/// 几乎所有调用方写的都是**字面量**键（`set("ButtonBackground", ..)`），
+/// 而 `ResourceOverrides` 是**声明式属性**——每帧 `view()` 重新构造、重新比对。
+/// 键是 `String` 时，`set()` 里的 `key.into()` 就是一次实打实的堆分配：
+/// 一份 30 键的覆盖挂在 16 个控件上 = **每帧 480 次 `String` 分配 + 480 次
+/// BTreeMap 节点分配**，而这些结果每帧都会被整份丢弃。
+///
+/// 换成 `Cow` 之后，字面量键走 `Cow::Borrowed`：**构造与 `clone()` 都零堆分配**。
+/// 确实需要动态键的调用方传 `String` 即可（`Cow::Owned`），代价与之前相同。
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ResourceOverrides {
-    values: std::collections::BTreeMap<String, ResourceValue>,
+    values: BTreeMap<Cow<'static, str>, ResourceValue>,
 }
 
 impl ResourceOverrides {
@@ -1772,10 +1785,16 @@ impl ResourceOverrides {
 
     /// Adds or replaces a resource value.
     ///
+    /// `key` 接受 `&'static str`（零分配，推荐）与 `String`（每次分配）两种。
+    ///
     /// # Panics
     ///
     /// Panics if the key is empty, or if a thickness or radius is negative or non-finite.
-    pub fn set(mut self, key: impl Into<String>, value: impl Into<ResourceValue>) -> Self {
+    pub fn set(
+        mut self,
+        key: impl Into<Cow<'static, str>>,
+        value: impl Into<ResourceValue>,
+    ) -> Self {
         let key = key.into();
         assert!(!key.is_empty(), "resource override key must not be empty");
         let value = value.into();
@@ -1814,8 +1833,13 @@ impl ResourceOverrides {
         self.set("OverlayCornerRadius", radius.into())
     }
 
-    pub(crate) fn values(&self) -> impl Iterator<Item = (&str, &ResourceValue)> {
-        self.values.iter().map(|(key, value)| (key.as_str(), value))
+    /// 遍历 `(键, 值)`。
+///
+/// 键以 `&Cow<'static, str>` 返回（而不是 `&str`）：调用方要把它存进"上一次
+/// 下发的值"快照里做差分，保留 `Cow` 才能**零分配**地克隆（字面量键走
+/// `Borrowed`，`clone()` 只是加一个引用计数）。
+pub(crate) fn values(&self) -> impl Iterator<Item = (&Cow<'static, str>, &ResourceValue)> {
+        self.values.iter().map(|(key, value)| (key, value))
     }
 }
 

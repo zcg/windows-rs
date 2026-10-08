@@ -47,7 +47,12 @@ fn shape_tokens_use_winui_corner_radius_keys() {
         .control_corner_radius(6.0)
         .overlay_corner_radius(10.0);
     assert_eq!(
-        resources.values().collect::<Vec<_>>(),
+        resources
+            .values()
+            // 键是 `Cow<'static, str>`（见 `ResourceOverrides` 的字段说明：字面量键
+            // 零分配）。这里投影成 `&str` 比较，断言里仍然直接写字面量键名。
+            .map(|(key, value)| (key.as_ref(), value))
+            .collect::<Vec<_>>(),
         vec![
             (
                 "ControlCornerRadius",
@@ -64,6 +69,7 @@ fn shape_tokens_use_winui_corner_radius_keys() {
         ResourceOverrides::new()
             .control_corner_radius(8.0)
             .values()
+            .map(|(key, value)| (key.as_ref(), value))
             .collect::<Vec<_>>(),
         vec![(
             "ControlCornerRadius",
