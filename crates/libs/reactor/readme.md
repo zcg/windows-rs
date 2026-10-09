@@ -1,47 +1,75 @@
 ## windows-reactor
 
-Windows Reactor is a declarative WinUI 3 library for Rust. A `Component` owns state, receives
-parent-owned input, handles typed messages, and returns a `View`. Reactor reconciles each new view
-with the native UI tree and applies the required WinUI changes.
+Windows Reactor is a typed declarative UI library for building native WinUI 3 applications in
+Rust. Components own Rust state, describe the current view, and receive typed messages from
+controls.
+
+Applications use the default features. The `test` feature exposes headless hosts, runtime
+protocols, schema metadata, and diagnostics for framework tests and benchmarks; it is not needed
+to build a UI. Applications use typed control builders, callbacks, and reference integration
+methods rather than generic property/event records or imperative requests.
+
+Components can declare `WindowVisuals::initial_position` or restore `initial_placement` before a
+window first appears. `ViewContext::on_window_placement` reports restored outer bounds in physical
+screen pixels and maximized state; applications own persistence. Initial placement is not replayed
+on later renders.
+
+`App::run_application` hosts application state independently of windows. Its `ApplicationView`
+declares reopenable component windows and notification icons with Reactor menus. Closing a window
+does not remove its notification icon, and removing the icon does not close a window. The
+application exits when both are gone, after pending lifecycle work finishes. Notification menus
+automatically follow the Windows taskbar's light or dark theme. See the
+[notification icon sample](../../samples/reactor/notifyicon).
 
 * [Getting
   started](https://github.com/microsoft/windows-rs/blob/master/docs/crates/windows-reactor.md)
 
-Add Reactor:
+Start by adding the following to your Cargo.toml file:
 
 ```toml
-[dependencies]
-windows-reactor = "0.100"
+[dependencies.windows-reactor]
+version = "0.100"
 ```
-
-This counter shows the Component/View model:
 
 ```rust,no_run
 use windows_reactor::*;
 
+#[derive(Clone, Copy)]
+enum Message {
+    Increment,
+    Reset,
+}
+
 struct Counter {
-    count: u32,
+    count: i32,
 }
 
 impl Component for Counter {
     type Input = ();
-    type Message = ();
+    type Message = Message;
 
     fn create(_input: &(), _context: &ComponentContext<Self>) -> Self {
         Self { count: 0 }
     }
 
-    fn update(&mut self, _message: (), _context: &ComponentContext<Self>) {
-        self.count += 1;
+    fn update(&mut self, message: Message, _context: &ComponentContext<Self>) {
+        match message {
+            Message::Increment => self.count += 1,
+            Message::Reset => self.count = 0,
+        }
     }
 
     fn view(&self, _input: &(), context: &mut ViewContext<Self>) -> View {
         let content = StackPanel::new().spacing(8.0).children((
-            TextBlock::new().text(format!("Count: {}", self.count)),
+            format!("Count: {}", self.count),
             Button::new()
-                .on_click(context.forward())
+                .on_click(context.message(Message::Increment))
                 .content("Increment"),
+            Button::new()
+                .on_click(context.message(Message::Reset))
+                .content("Reset"),
         ));
+
         context.window_frame("Counter", content)
     }
 }
@@ -51,71 +79,11 @@ fn main() {
 }
 ```
 
-Applications whose resources outlive any one window can use `App::run_with`.
+Ordinary unpackaged applications use an installed Windows App SDK framework package. For a
+self-contained application, add `windows-reactor-setup` as a build dependency and call
+`windows_reactor_setup::as_self_contained()` from `build.rs`.
 
-```rust,ignore
-context.window_visuals(WindowVisuals::new().backdrop(WindowBackdrop::Acrylic));
-context.window_frame("Canvas keyboard input", content)
-```
-
-Use `ViewContext::window_title` directly when the window should retain the system title bar.
-
-`WindowVisuals::centered` places a new window in the middle of its display's work area (the taskbar
-is already excluded), and `WindowVisuals::client_position` declares an explicit position instead -
-for example one remembered from a previous session. Both are applied once, when the declared value
-changes.
-
-Focusable custom surfaces can make synchronous WinUI routing decisions without running component
-updates inside native callbacks:
-
-```rust,no_run
-use windows_reactor::*;
-
-fn keyboard_surface<C: Component<Message = Message>>(
-    context: &mut ViewContext<C>,
-    content: impl Into<View>,
-) -> View {
-    Border::new()
-        .is_tab_stop(true)
-        .focus_on_pointer_release(true)
-        .on_preview_key_down(context.routed_callback(|info: KeyEventInfo| {
-            if info.key == VirtualKey::LEFT {
-                RoutedMessage::handled(Message::MoveLeft)
-            } else {
-                RoutedMessage::bubble_without_message()
-            }
-        }))
-        .content(content)
-}
-
-enum Message {
-    MoveLeft,
-}
-```
-
-Native operations that need the owning HWND can be staged from a component update:
-
-```rust,ignore
-let accepted = context.run_window(move |window| {
-    let answer = unsafe {
-        MessageBoxW(
-            window.as_raw(),
-            w!("Continue with this operation?"),
-            w!("Confirm"),
-            (MB_YESNO | MB_ICONQUESTION) as u32,
-        )
-    };
-    Message::Answered(answer)
-});
-```
-
-The operation runs on the UI thread in the next host dispatch after the current view publishes,
-and its returned message is queued for a later update. Work is discarded if publication fails,
-the component retires, or the window starts closing. Component dispatch for that window is
-suspended until the operation returns, so use this for native modal UI rather than slow non-UI
-work. Each window accepts one pending operation at a time. The
-[`reactor-message-box`](../../samples/reactor/message-box) sample contains the complete component.
-
-Use `ThemeTransition::Reposition` with `LayoutControl::transitions` to animate retained elements
-between layout-driven positions. The
-[`theme-transition`](../../samples/reactor/theme-transition) sample demonstrates the effect.
+Control icon slots accept the shared `Icon` content value. Reactor realizes it as the native
+`IconElement` or `IconSource` required by each control, so the same value works with APIs such as
+`AutoSuggestBox::query_icon`, `AppBarButton::icon`, and `TitleBar::icon`. Standalone visual icons
+continue to use `SymbolIcon`, `FontIcon`, `BitmapIcon`, `ImageIcon`, and `PathIcon`.

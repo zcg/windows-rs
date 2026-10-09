@@ -3,17 +3,15 @@ name = "test-reactor-selftest"
 version = "0.0.0"
 edition = "2024"
 publish = false
+default-run = "test-reactor-selftest"
 
 [features]
-self-contained = ["dep:windows-webview"]
+self-contained = []
 
 [dependencies]
-windows-canvas = { workspace = true, features = ["composition", "reactor"] }
-windows-composition = { workspace = true, features = ["reactor"] }
-windows-collections = { workspace = true }
 windows-core = { workspace = true }
+windows-collections = { workspace = true }
 windows-reactor = { workspace = true, features = ["test"] }
-windows-webview = { workspace = true, features = ["reactor"], optional = true }
 windows = { workspace = true, features = ["UI_Input_Preview_Injection", "winuser"] }
 
 [build-dependencies]

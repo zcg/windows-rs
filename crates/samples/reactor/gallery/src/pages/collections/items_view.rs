@@ -6,7 +6,6 @@ const FRUITS: [&str; 6] = ["Apple", "Banana", "Cherry", "Date", "Fig", "Grape"];
 pub struct ItemsViewPage {
     invoked: String,
     selection: ItemsViewSelectionMode,
-    layout: ItemsViewLayout,
 }
 
 #[derive(Clone)]
@@ -14,9 +13,6 @@ pub enum Message {
     Invoked(String),
     Single,
     Multiple,
-    Stack,
-    Grid,
-    Lined,
 }
 
 impl Component for ItemsViewPage {
@@ -27,7 +23,6 @@ impl Component for ItemsViewPage {
         Self {
             invoked: String::from("(none)"),
             selection: ItemsViewSelectionMode::Single,
-            layout: ItemsViewLayout::Stack,
         }
     }
 
@@ -36,16 +31,13 @@ impl Component for ItemsViewPage {
             Message::Invoked(item) => self.invoked = item,
             Message::Single => self.selection = ItemsViewSelectionMode::Single,
             Message::Multiple => self.selection = ItemsViewSelectionMode::Multiple,
-            Message::Stack => self.layout = ItemsViewLayout::Stack,
-            Message::Grid => self.layout = ItemsViewLayout::Grid,
-            Message::Lined => self.layout = ItemsViewLayout::Lined,
         }
     }
 
     fn view(&self, _: &(), context: &mut ViewContext<Self>) -> View {
         page_content(
             "ItemsView",
-            "A data-driven list with layout and selection.",
+            "A data-driven list with selection.",
             [KeyedView::new(
                 "basic",
                 sample_card(
@@ -53,9 +45,10 @@ impl Component for ItemsViewPage {
                     StackPanel::new().spacing(8.0).children((
                         ItemsView::new()
                             .items_source(FRUITS)
-                            .layout(self.layout)
                             .selection_mode(self.selection)
-                            .on_item_invoked(context.callback(Message::Invoked))
+                            .on_item_invoked(context.callback(|value: std::rc::Rc<str>| {
+                                Message::Invoked(value.to_string())
+                            }))
                             .height(220.0),
                         StackPanel::new()
                             .orientation(Orientation::Horizontal)
@@ -67,15 +60,6 @@ impl Component for ItemsViewPage {
                                 Button::new()
                                     .on_click(context.message(Message::Multiple))
                                     .content("Multiple"),
-                                Button::new()
-                                    .on_click(context.message(Message::Stack))
-                                    .content("Stack layout"),
-                                Button::new()
-                                    .on_click(context.message(Message::Grid))
-                                    .content("Grid layout"),
-                                Button::new()
-                                    .on_click(context.message(Message::Lined))
-                                    .content("Lined layout"),
                                 TextBlock::new()
                                     .text(format!("Invoked: {}", self.invoked))
                                     .opacity(0.6),

@@ -1,23 +1,19 @@
 use crate::controls::*;
 use std::cell::RefCell;
 use std::rc::Rc;
-use windows::Media::Capture::Frames::{MediaFrameSourceGroup, MediaFrameSourceKind};
+use windows::Media::Capture::Frames::MediaFrameSourceGroup;
 use windows::Media::Capture::{
     MediaCapture, MediaCaptureInitializationSettings, MediaCaptureMemoryPreference,
-    MediaCaptureSharingMode, MediaStreamType, StreamingCaptureMode,
+    MediaCaptureSharingMode, StreamingCaptureMode,
 };
-use windows::Media::Core::MediaSource;
 use windows::Media::MediaProperties::ImageEncodingProperties;
-use windows_core::{HSTRING, IUnknown, Interface};
+use windows_core::HSTRING;
 use windows_reactor::*;
 
 pub struct CameraPage {
-    /// Kept alive for the lifetime of the page: the preview stops when the
+    /// Kept alive for the lifetime of the page: capture stops when the
     /// `MediaCapture` is released.
     capture: Rc<RefCell<Option<MediaCapture>>>,
-    /// Playback source for the preview, published through the declarative
-    /// `MediaPlayerElement::source` property.
-    preview_source: Rc<RefCell<Option<IUnknown>>>,
     viewing: String,
     status: String,
     snapshot: Option<String>,
@@ -30,15 +26,14 @@ pub enum Message {
     Capture,
 }
 
-/// Starts a shared camera preview and returns the capture object, the playback
-/// source for `MediaPlayerElement`, and the device name.
+/// Starts a shared camera capture session and returns the capture object and
+/// the device name.
 ///
 /// This mirrors the WinUI 3 Gallery camera page: a `MediaCapture` initialized in
-/// shared-readonly video mode, whose preview frame source is wrapped by
-/// `MediaSource::CreateFromMediaFrameSource`. Camera access follows the packaged
-/// app privacy settings; the first use raises the per-app desktop prompt on
-/// Windows 11 builds that have it.
-fn start_preview() -> windows::core::Result<(MediaCapture, IUnknown, String)> {
+/// shared-readonly video mode. Camera access follows the packaged app privacy
+/// settings; the first use raises the per-app desktop prompt on Windows 11 builds
+/// that have it.
+fn start_capture() -> windows::core::Result<(MediaCapture, String)> {
     let groups = MediaFrameSourceGroup::FindAllAsync()?.join()?;
     if groups.Size()? == 0 {
         return Err(windows::core::Error::new(
@@ -58,32 +53,7 @@ fn start_preview() -> windows::core::Result<(MediaCapture, IUnknown, String)> {
     settings.SetMemoryPreference(MediaCaptureMemoryPreference::Cpu)?;
     capture.InitializeWithSettingsAsync(&settings)?.join()?;
 
-    // Prefer the color preview stream. The first source info of a group can be
-    // an infrared or depth stream, which renders as an empty preview.
-    let source_infos = group.SourceInfos()?;
-    let mut chosen = None;
-    for index in 0..source_infos.Size()? {
-        let info = source_infos.GetAt(index)?;
-        if info.MediaStreamType()? == MediaStreamType::VideoPreview {
-            chosen = Some(info.Id()?);
-            break;
-        }
-        if chosen.is_none() && info.SourceKind()? == MediaFrameSourceKind::Color {
-            chosen = Some(info.Id()?);
-        }
-    }
-
-    let Some(id) = chosen else {
-        return Err(windows::core::Error::new(
-            windows::core::HRESULT(0x80070490u32 as i32),
-            "No color preview source on this camera.",
-        ));
-    };
-
-    let frame_source = capture.FrameSources()?.Lookup(&id)?;
-    let media_source = MediaSource::CreateFromMediaFrameSource(&frame_source)?;
-
-    Ok((capture, media_source.cast()?, name))
+    Ok((capture, name))
 }
 
 /// Grabs one frame as a JPEG into the process temp directory and returns its path.
@@ -109,7 +79,6 @@ impl Component for CameraPage {
     fn create(_: &(), _: &ComponentContext<Self>) -> Self {
         Self {
             capture: Rc::new(RefCell::new(None)),
-            preview_source: Rc::new(RefCell::new(None)),
             viewing: String::from("Starting camera..."),
             status: String::from("Ready."),
             snapshot: None,
@@ -139,34 +108,21 @@ impl Component for CameraPage {
 
     fn view(&self, _: &(), context: &mut ViewContext<Self>) -> View {
         let slot = Rc::clone(&self.capture);
-        let source_slot = Rc::clone(&self.preview_source);
         let sender = context.sender();
-        context.use_effect("camera-preview", (), move || match start_preview() {
-            Ok((capture, source, name)) => {
+        context.use_effect("camera-preview", (), move || match start_capture() {
+            Ok((capture, name)) => {
                 *slot.borrow_mut() = Some(capture);
-                *source_slot.borrow_mut() = Some(source);
-                sender.send(Message::Ready(name));
+                _ = sender.send(Message::Ready(name));
                 let slot = Rc::clone(&slot);
-                let source_slot = Rc::clone(&source_slot);
                 Some(Box::new(move || {
                     *slot.borrow_mut() = None;
-                    *source_slot.borrow_mut() = None;
                 }))
             }
             Err(error) => {
-                sender.send(Message::Failed(error.to_string()));
+                _ = sender.send(Message::Failed(error.to_string()));
                 None
             }
         });
-
-        let preview = match self.preview_source.borrow().as_ref() {
-            Some(source) => MediaPlayerElement::new().source(source.clone()),
-            None => MediaPlayerElement::new(),
-        };
-        let preview = preview
-            .auto_play(true)
-            .stretch(Stretch::Uniform)
-            .height(300.0);
 
         let snapshot: View = match self
             .snapshot
@@ -182,15 +138,14 @@ impl Component for CameraPage {
 
         page_content(
             "Camera",
-            "Preview the camera and capture a photo with MediaCapture.",
+            "Capture a photo from the camera with MediaCapture.",
             [
                 KeyedView::new(
                     "preview",
                     sample_card(
-                        "Capture Element / Camera Preview",
+                        "Capture Element / Camera",
                         StackPanel::new().spacing(8.0).children((
                             TextBlock::new().text(self.viewing.clone()),
-                            preview,
                             StackPanel::new()
                                 .orientation(Orientation::Horizontal)
                                 .spacing(8.0)
@@ -201,8 +156,7 @@ impl Component for CameraPage {
                                     TextBlock::new().text(self.status.clone()).opacity(0.6),
                                 )),
                         )),
-                        "MediaCapture::new()?; InitializeWithSettingsAsync(&settings)?.join()?; \
-                         MediaSource::CreateFromMediaFrameSource(&frameSource)?",
+                        "MediaCapture::new()?; InitializeWithSettingsAsync(&settings)?.join()?",
                     ),
                 ),
                 KeyedView::new(

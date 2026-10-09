@@ -31,8 +31,7 @@ impl Component for SemanticZoomPage {
             ListView::new()
                 .height(240.0)
                 .items(["Apple", "Broccoli", "Rice"].into_iter().map(|item| {
-                    KeyedView::new(
-                        item,
+                    DataItem::new(item, item).content(
                         ListViewItem::new()
                             .tag(item)
                             .content(TextBlock::new().text(item)),
@@ -41,8 +40,7 @@ impl Component for SemanticZoomPage {
         let zoomed_out = ListView::new()
             .height(240.0)
             .items(GROUPS.into_iter().map(|group| {
-                KeyedView::new(
-                    group,
+                DataItem::new(group, group).content(
                     ListViewItem::new()
                         .tag(group)
                         .content(TextBlock::new().text(group)),

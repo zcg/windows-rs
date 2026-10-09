@@ -1,11 +1,6 @@
 use crate::controls::*;
 use windows_reactor::*;
 
-const DELETE_RED: Color = Color::rgb(197, 15, 31);
-const PIN_GREEN: Color = Color::rgb(16, 124, 16);
-const FLAG_BLUE: Color = Color::rgb(0, 90, 158);
-const WHITE: Color = Color::rgb(255, 255, 255);
-
 const MESSAGES: [(&str, &str); 4] = [
     ("Team Standup", "Daily sync moved to 9:30 in room 4B."),
     (
@@ -19,32 +14,17 @@ const MESSAGES: [(&str, &str); 4] = [
     ("Weekend Plans", "Hiking on Saturday if the weather holds."),
 ];
 
-pub struct SwipeControlPage {
-    status: String,
-}
-
-#[derive(Clone)]
-pub enum Message {
-    Invoked(String),
-}
+pub struct SwipeControlPage;
 
 impl Component for SwipeControlPage {
-    type Message = Message;
+    type Message = ();
     type Input = ();
 
     fn create(_: &(), _: &ComponentContext<Self>) -> Self {
-        Self {
-            status: String::from("Swipe a row to reveal actions"),
-        }
+        Self
     }
 
-    fn update(&mut self, message: Message, _: &ComponentContext<Self>) {
-        match message {
-            Message::Invoked(text) => self.status = format!("Action: {text}"),
-        }
-    }
-
-    fn view(&self, _: &(), context: &mut ViewContext<Self>) -> View {
+    fn view(&self, _: &(), _: &mut ViewContext<Self>) -> View {
         let row = |(sender, subject): &(&str, &str)| {
             Border::new()
                 .padding(12.0)
@@ -53,47 +33,19 @@ impl Component for SwipeControlPage {
                     TextBlock::new().text(*subject).opacity(0.6),
                 )))
         };
-        let swipes = || {
-            SwipeItems::new(
-                [
-                    SwipeItem::new("pin", "Pin")
-                        .background(PIN_GREEN)
-                        .foreground(WHITE),
-                    SwipeItem::new("flag", "Flag")
-                        .background(FLAG_BLUE)
-                        .foreground(WHITE),
-                ],
-                [
-                    SwipeItem::new("delete", "Delete")
-                        .background(DELETE_RED)
-                        .foreground(WHITE),
-                    SwipeItem::new("archive", "Archive"),
-                ],
-                context.callback(Message::Invoked),
-            )
-        };
         page_content(
             "SwipeControl",
-            "Reveal contextual actions on an item by swiping left or right.",
+            "Hosts swipe interactions for an item in a list.",
             [KeyedView::new(
                 "inbox",
                 sample_card(
                     "Inbox",
-                    StackPanel::new().spacing(8.0).children((
-                        ListView::new().items(MESSAGES.iter().map(|message| {
-                            let (sender, _) = *message;
-                            KeyedView::new(
-                                sender,
-                                ListViewItem::new().content(
-                                    SwipeControl::new()
-                                        .content(row(message))
-                                        .swipe_items(swipes()),
-                                ),
-                            )
-                        })),
-                        TextBlock::new().text(self.status.clone()).opacity(0.6),
-                    )),
-                    "SwipeControl::new().swipe_items(SwipeItems::new(left, right, handler))",
+                    ListView::new().items(MESSAGES.iter().map(|message| {
+                        let (sender, _) = *message;
+                        DataItem::new(sender, sender)
+                            .content(SwipeControl::new().content(row(message)))
+                    })),
+                    "SwipeControl::new().content(view)",
                 ),
             )],
         )

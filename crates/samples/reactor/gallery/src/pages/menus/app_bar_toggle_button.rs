@@ -28,18 +28,18 @@ impl Component for AppBarToggleButtonPage {
         page_content(
             "AppBarToggleButton",
             "A command-bar toggle button with a checked state.",
-            [Keyed::new(
+            [KeyedView::new(
                 "basic",
                 sample_card(
                     "Basic AppBarToggleButton",
                     StackPanel::new().spacing(8.0).children((
-                        CommandBar::new().primary_commands([Keyed::new(
+                        CommandBar::new().keyed_primary_commands([KeyedView::new(
                             "shuffle",
                             AppBarToggleButton::new()
                                 .label("Shuffle")
                                 .is_checked(self.checked)
                                 .on_click(context.message(Message::Clicked))
-                                .icon(SymbolIcon::new().symbol(Symbol::Shuffle)),
+                                .icon(Symbol::Shuffle),
                         )]),
                         TextBlock::new()
                             .text(if self.checked {

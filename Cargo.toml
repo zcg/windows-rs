@@ -27,6 +27,7 @@ unused_qualifications = "warn"
 [workspace.lints.clippy]
 type_complexity = "allow"
 manual_c_str_literals = "allow" # windows-bindgen needs to switch to signed char for this to work
+try_from_instead_of_from_str = "allow" # `GUID: TryFrom<&str>` is public API; switching to `FromStr` is a breaking change
 semicolon_if_nothing_returned = "warn"
 map_unwrap_or = "warn"
 manual_let_else = "warn"
@@ -47,7 +48,6 @@ proc-macro2 = { version = "1.0", default-features = false }
 quote = { version = "1.0", default-features = false }
 serde = { version = "1.0", default-features = false }
 syn = { version = "2.0", default-features = false }
-rustc-hash = { version = "2" }
 # generated dependencies
 cppwinrt = { version = "0.100.0", path = "crates/libs/cppwinrt", default-features = false }
 windows = { version = "0.100.0", path = "crates/libs/windows", default-features = false }
@@ -64,7 +64,6 @@ windows-implement = { version = "0.100.0", path = "crates/libs/implement", defau
 windows-interface = { version = "0.100.0", path = "crates/libs/interface", default-features = false }
 windows-link = { version = "0.100.0", path = "crates/libs/link", default-features = false }
 windows-metadata = { version = "0.100.0", path = "crates/libs/metadata", default-features = false }
-windows-notifyicon = { version = "0.100.0", path = "crates/libs/notifyicon", default-features = false }
 windows-numerics = { version = "0.100.0", path = "crates/libs/numerics", default-features = false }
 windows-pickers = { version = "0.100.0", path = "crates/libs/pickers", default-features = false }
 windows-rdl = { version = "0.100.0", path = "crates/libs/rdl", default-features = false }

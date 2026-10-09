@@ -18,8 +18,7 @@ impl Component for ParallaxViewPage {
             .content(TextBlock::new().text("Parallax background").font_size(32.0));
         let foreground = ListView::new().height(300.0).items((0..30).map(|index| {
             let label = format!("Row {index}");
-            KeyedView::new(
-                label.clone(),
+            DataItem::new(label.clone(), label.clone()).content(
                 ListViewItem::new().tag(label.clone()).content(
                     Border::new()
                         .padding(8.0)

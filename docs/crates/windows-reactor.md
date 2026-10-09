@@ -4,61 +4,40 @@
 
 - 📦 [crates.io](https://crates.io/crates/windows-reactor)
 - 📖 [docs.rs](https://docs.rs/windows-reactor)
-- 🚀 [Getting started](../../crates/libs/reactor/readme.md)
 - 🧩 [Samples](https://github.com/microsoft/windows-rs/tree/master/crates/samples/reactor)
 - 📁 [Source](https://github.com/microsoft/windows-rs/tree/master/crates/libs/reactor)
-- [Self-contained deployment](windows-reactor-setup.md)
-- [Canvas integration](windows-canvas.md)
-- [Composition integration](windows-composition.md)
-- [Notification icon integration](windows-notifyicon.md)
 
-## When to use it
+Windows Reactor lets Rust state drive native WinUI 3 controls. This guide builds a counter
+and then points to focused samples for the rest of the API.
 
-Use Reactor when an application needs native WinUI 3 controls and you would rather describe what
-the UI should look like than manually keep a control tree in sync with application state. It is a
-good fit for forms, navigation, data-driven views, and apps that combine WinUI controls with
-Canvas, Composition, or WebView2.
+Reactor is currently a preview, so releases may still refine public APIs.
 
-Use [`windows-window`](windows-window.md) instead when you need an HWND and message loop without
-WinUI. Use [`windows-composition`](windows-composition.md) directly for a retained visual tree
-without XAML controls.
+## Create a project
 
-## The basic idea
-
-A Reactor app is built from components. A component owns some state and has a `view` method that
-describes the controls currently on screen. Controls send typed messages back to the component,
-the component updates its state, and Reactor refreshes the parts of the native WinUI tree that
-changed.
+Create a binary crate and add Reactor:
 
 ```text
-event -> message -> update state -> build a new view -> update WinUI
+cargo new counter
+cd counter
+cargo add windows-reactor@0.100
 ```
 
-This is the main pattern to learn. Component fields are the normal place for state, and imperative
-control references are not needed for everyday UI code.
+For a GUI executable that should not open a console window, add this to the top of `main.rs`:
 
-For a static window, getting text on screen can be this small:
+```rust,ignore
+#![windows_subsystem = "windows"]
+```
+
+Leave it out while diagnosing startup problems so console output remains visible.
+
+## Add a component
+
+Replace `main.rs` with:
 
 ```rust,no_run
 use windows_reactor::*;
 
-fn main() {
-    App::run("Hello, Windows!".into()).unwrap();
-}
-```
-
-Strings convert to a `View` containing a `TextBlock`. Create a `TextBlock` yourself only when its
-properties need to be changed.
-
-## Your first component
-
-After adding the dependency shown in the
-[crate README](../../crates/libs/reactor/readme.md), the following is a complete counter app:
-
-```rust,no_run
-use windows_reactor::*;
-
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 enum Message {
     Increment,
     Reset,
@@ -93,6 +72,7 @@ impl Component for Counter {
                 .on_click(context.message(Message::Reset))
                 .content("Reset"),
         ));
+
         context.window_frame("Counter", content)
     }
 }
@@ -102,337 +82,256 @@ fn main() {
 }
 ```
 
-The four component methods have straightforward jobs:
+Run it:
+
+```text
+cargo run
+```
+
+The component loop is:
+
+```text
+native event -> typed message -> update state -> describe the next view
+```
 
 | Method | Purpose |
 | --- | --- |
-| `create` | Make the initial component state |
-| `update` | Handle a message and change that state |
-| `view` | Describe the UI for the current state |
-| `input_changed` | Optionally react when a parent changes this component's input |
+| `create` | Build the initial state |
+| `update` | Handle a message and change the state |
+| `view` | Describe the controls for the current state |
 
-`Input` is `()` because the root component has no parent-owned data. `Message` is an enum because
-the component can receive two kinds of event. The button callbacks enqueue those messages; they do
-not mutate the component directly.
+`view` uses typed builders. `StackPanel::children` accepts a tuple of different control types, and
+strings convert directly to text views. The button callbacks enqueue messages for `update`; they
+do not mutate state inside the native event callback.
 
-`App::run_component` creates the WinUI application and first window, mounts `Counter`, and runs the
-UI loop.
+`context.window_frame` publishes the window title and returns the standard title-bar layout. For a
+static view with no state or events, call `App::run(view)` instead.
 
-## Application lifetime
+## Application state and notification icons
 
-`App::run`, `App::run_windows`, and `App::run_component` exit after the last Reactor window closes.
-This is convenient when windows define the complete application lifetime.
+Use `App::run_application::<A>(input)` for application state that must survive closing individual
+windows. Implement `Application` with `create`, `update`, and `view`, using typed messages and
+callbacks as with `Component`. `ApplicationContext` supplies commands and a local message sender;
+`ApplicationViewContext` supplies callbacks while describing resources.
 
-Use `App::run_with` when notification icons, services, or other process resources are peers of the
-Reactor windows:
+`ApplicationView` is a nonvisual declaration. It does not create an invisible component window.
 
-```rust,ignore
-App::run_with(|app| {
-    let exit = app.proxy();
-    let icon = NotifyIcon::new("app.ico")
-        .on_event(move |event| {
-            if matches!(event, NotifyIconEvent::ContextMenu { .. }) {
-                _ = exit.exit();
-            }
-        })
-        .build()?;
+| Declaration or command | Behavior |
+| --- | --- |
+| `view.window::<C>("main", input)` | Registers a reopenable window without opening it. |
+| `context.show_window("main")` | Opens, restores, or activates that window; repeated requests coalesce. |
+| Updated window input | Reaches the existing component without recreating its state. |
+| User closes a window | Drops its component state; the declaration remains available to reopen. |
+| Omit a window key | Closes its instance and removes its declaration. |
+| `view.notify_icon("tray", icon)` | Creates or updates the keyed Shell registration. |
+| Omit an icon key | Removes its registration and dismisses its menu. |
+| `context.exit()` | Ends the application and releases all owned resources. |
 
-    Ok(icon)
-})
-```
+Keys must be unique within each resource kind. A live window key must retain its component type.
+Show requests resolve after the current application view commits; an undeclared key is an error.
+Requests received during closure wait for the retiring instance before reopening.
+Window inputs join the component's ordered message drain after pending native work. Repeated
+unprocessed inputs coalesce to the latest value. Application, window, and component drivers defer
+nested dispatcher wakes until the active driver returns, including during synchronous native dialogs.
 
-The startup closure runs on the UI thread. It may call `AppContext::open_window` immediately or
-later from work posted through `AppProxy::dispatch`. Its return value remains owned by the
-application until explicit exit, so the example keeps the notification icon alive even while no
-Reactor window exists.
+Construct a notification declaration with `NotifyIcon::new(path)`, then attach `tooltip`,
+`on_activate`, and `menu`. The icon path names an `.ico` file. Activation callbacks receive a
+`ScreenPoint`; attaching a `Menu` handles both mouse and keyboard context-menu positioning without
+application-side coordinate conversion. Use captureless `context.callback` mappings when possible
+so callback identity remains stable across renders.
 
-`AppContext` is UI-thread-bound and may be cloned into callbacks on that thread. `AppProxy` is
-`Send + Sync` and may be cloned into worker threads. Closing the last Reactor window in this mode
-does not exit the process; call `AppContext::exit` on the UI thread or `AppProxy::exit` from
-another thread.
+A menu uses the latest committed declaration. Changing or removing that menu dismisses its popup;
+callbacks from retired registrations and dismissed menu generations are discarded. Repeated
+requests for the same open menu do not create additional popups.
 
-The [`reactor-notifyicon`](../../crates/samples/reactor/notifyicon) sample demonstrates this
-lifetime model. It uses `AppContext::show_menu_at` to show a WinUI `MenuFlyout` at the physical
-screen coordinates supplied by the notification icon. Reactor creates the required WinUI host
-lazily, keeps it outside the Reactor window count, and hides it when the menu closes. Only one
-application menu may be open at a time.
+The application keeps running while any user window or declared notification icon remains. It
+exits after both are gone and pending lifecycle work and messages have settled. Registered but
+closed window slots, internal callback windows, and menu hosts do not keep it alive. Temporary
+Shell unavailability during Explorer recovery does not remove an icon declaration.
 
-Use `WindowRef::request_activate` when an external resource needs to restore and foreground an
-existing Reactor window.
+The [notification icon sample](../../crates/samples/reactor/notifyicon) demonstrates independent
+window and icon lifetimes. Its application state drives the window's toggle button through typed
+inputs and callbacks, without retaining a native window or notification handle.
+The [basic sample](../../crates/samples/reactor/notifyicon-basic) contains only an icon and Exit menu.
 
-## Window title bars
+### Notification implementation and migration
 
-`window_frame` gives a Reactor window an integrated WinUI title bar. It creates the required
-two-row layout, uses the same text for the native and visible window titles, and places the
-component's content below the title bar:
+Notification registration is private to Reactor in `src/native/notifyicon.rs`. Each icon owns one
+Shell callback window and its loaded icon, and uses `NOTIFYICON_VERSION_4`. The window procedure
+only enqueues interactions and `TaskbarCreated` recovery requests. Reactor's guarded application
+drain handles them after the active application or component callback returns, and rejects events
+from removed registrations. Recovery uses the current icon and tooltip. Creation, update, and
+failed Shell recovery use Reactor's application error path and are returned by
+`App::run_application`. Native icon and tooltip replacement retain the preceding resource on
+failure.
 
-```rust,ignore
-context.window_visuals(WindowVisuals::new().backdrop(WindowBackdrop::Acrylic));
-context.window_frame("Canvas keyboard input", content)
-```
+Bindings are generated by `tool-bindings` from `notifyicon.txt` and `notifyicon_test.txt`. Backend
+unit and live Shell tests reside alongside the private implementation. Public application
+lifecycle coverage resides in `test-reactor-integration`'s `application_resources` binary.
+The `application_dispatch` fixture exercises nested application/component dispatch, native closure
+during a component update, and queued notification interactions and recovery during nested message
+loops. `application_menus` uses UI Automation scoped to its own process to select actual menu items
+and check popup replacement, owner switching, removal, and reopening.
+It requires an interactive foreground desktop and sends no global mouse or keyboard input.
 
-Call `window_frame` from the component that supplies the window's native root so the frame fills
-the window. The title-bar container is not a tab stop.
+Applications migrating from `windows-notifyicon` use `windows-reactor` and an application
+declaration instead of constructing a registration with `.build()`. Replace imperative icon and
+tooltip setters with updated declarations, attach a Reactor menu directly, and omit the icon's
+key to remove it. Hidden callback HWNDs and raw message-loop management are implementation details.
+This requires the same Windows App Runtime as other Reactor applications.
 
-`window_title` and `window_visuals` remain available for windows that use the system title bar.
-They declare native window state without adding title-bar content to the view. Material backdrops
-do not extend through the system title bar, so use `window_frame` when Mica or Acrylic should cover
-the complete window.
+`App::run`, `App::run_component`, and `App::run_with` retain their existing lifecycle behavior.
 
-## Place the window
+## Application menus
 
-`WindowVisuals` also controls where the window lands. `centered` puts the window in the middle of
-the work area of the display it opens on. The work area already excludes the taskbar, and the
-calculation uses the window's own display, frame size, and scale, so multi-monitor setups and
-display scaling need no host-side arithmetic:
+Notification declarations attach a `Menu` directly. `AppContext::show_menu_at` also opens a `Menu`
+at physical screen coordinates without requiring a component window. Both paths use a transparent
+Win32 window with a `DesktopWindowXamlSource`.
+The island disables work-area popup constraints so notification menus can extend over the taskbar;
+the flyout also disables root-bounds constraints. The island is released before its parent window.
+Host creation and positioning share the window-placement DPI guard, which temporarily selects
+Per-Monitor V2 awareness and restores the caller's thread context. This keeps screen coordinates
+physical even when a host process or calling thread selected another DPI mode.
 
-```rust,ignore
-context.window_visuals(
-    WindowVisuals::new()
-        .client_size(1280.0, 800.0)
-        .centered(),
-);
-```
+Notification menus follow the Windows system/taskbar light or dark preference, independently of
+the app's window themes. Control-attached menus inherit their control's theme, while
+`AppContext::show_menu_at` uses WinUI's default theme. High-contrast rendering remains WinUI-owned.
 
-Like `client_size`, a position is applied only when the declared value changes. Declaring
-`centered()` on every publication therefore never drags a window the user has moved back to the
-middle of the screen.
+The notification host reads `SystemUsesLightTheme` before opening a popup and queues a refresh on
+`WM_SETTINGCHANGE` or `WM_THEMECHANGED`. Refreshes coalesce, update open menus, and do not retain a
+retired host. A notification arriving during a refresh schedules another pass. The window procedure
+does not access mutable popup state or change XAML properties. A missing preference silently uses
+WinUI's default; unexpected registry failures follow the application error path, just like native
+setter failures. Native theme tests inject preferences without changing Windows settings and cover
+live changes, reopening, fallback, invalidation during refresh, teardown, and error propagation.
 
-Use `client_position` instead when the position is known: it declares the top-left corner of the
-window frame in DIPs, relative to the virtual screen. That is what "remember where the window was"
-is built on - read the position while closing and declare it back at startup. Both methods write the
-same declaration, so the one called last wins.
+The `test-reactor-integration` `tray_flyout` fixture uses an application-owned notification icon,
+checks that menu items overlap the icon's monitor and extend outside its work area, and exercises
+application shutdown with the menu open.
+The `menu_position` fixture verifies exact physical host bounds under four DPI modes and checks
+that successful and rejected menu requests preserve the caller's thread context.
 
-An application that needs the numbers itself can query them. Sizes and positions are in DIPs where
-the declaration layer expects DIPs, and in physical pixels where Win32 geometry is being compared:
+## Position and restore windows
 
-```rust,ignore
-// A first-run window that covers 70% of the primary display's work area, centered.
-let (work_width, work_height) = primary_work_area_dip().unwrap_or((1280.0, 800.0));
-context.window_visuals(
-    WindowVisuals::new()
-        .client_size(work_width * 0.7, work_height * 0.7)
-        .centered(),
-);
-```
+Publish startup placement through `context.window_visuals`. The first committed declaration is
+applied before the native window becomes visible, for both primary and secondary windows.
 
-`primary_work_area` and `work_area_for_window` report a work area in physical pixels,
-`primary_work_area_dip` reports the primary display's work-area size in DIPs, and
-`window_placement_dip` reports where the window frame currently is in DIPs - the same units and the
-same corner as `client_position`, so a stored position can be declared back without drift. The two
-functions that take a window use the handle from `run_window`. `WorkArea` exposes `dips` and
-`centered_origin` for arithmetic that mixes both unit systems.
+| Setting | Meaning |
+| --- | --- |
+| `initial_position(ScreenPoint)` | Initial outer-window top-left in physical screen pixels |
+| `initial_placement(WindowPlacement)` | Restored outer bounds in physical screen pixels, plus maximized state |
+| `client_size(width, height)` | Client-area size in DIPs; later explicit changes still resize |
+| `constraints(WindowConstraints)` | Client-size limits in DIPs, including when restoring placement |
 
-## Build views from controls
-
-WinUI controls use typed builders. Start with `Control::new()`, set properties, connect events, and
-add content or children:
-
-```rust,ignore
-Border::new()
-    .padding(16.0)
-    .content(
-        StackPanel::new().spacing(12.0).children((
-            TextBlock::new()
-                .text("Account")
-                .font_size(24.0),
-            TextBox::new().placeholder_text("Name"),
-            Button::new().content("Save"),
-        )),
-    )
-```
-
-Use `content` for a control with one child, such as a button or border. Use `children` for a
-container with an ordered set of children. Tuples are convenient because the children may have
-different control types. For these ordinary content and container controls, put `content` or
-`children` last in a builder chain because it finishes the control and returns a `View`.
-
-Controls with several named content areas expose one builder method for each area. The method
-signature distinguishes a single view from a keyed collection:
+Full placement takes precedence over initial position and initial client size. Later changes to
+either initial setting do not move or resize an open window. Load saved placement before opening
+the window; an asynchronous update after startup is too late. Negative coordinates are valid on a
+multi-monitor desktop. Windows adjusts fully off-screen bounds to an available monitor.
 
 ```rust,ignore
-NavigationView::new()
-    .menu_items([
-        ("home", NavigationViewItem::new().content("Home")),
-        ("files", NavigationViewItem::new().content("Files")),
-    ])
-    .footer_menu_items([(
-        "settings",
-        NavigationViewItem::new().content("Settings"),
-    )])
-    .content("Page content")
-    .into()
+context.window_visuals(WindowVisuals::new().initial_placement(saved_placement));
+context.on_window_placement(context.callback(Message::Placement));
 ```
 
-These named methods remain part of the control builder, so properties and other named areas can be
-chained after them. The compiler rejects passing one view to a collection area or a collection to
-a single-view area. Assigning the same named area more than once replaces its earlier value.
+`on_window_placement` reports the initial placement and native changes while subscribed.
+Notifications contain the restored outer bounds even when maximized, are coalesced, and exclude
+minimized state. An unchanged subscription does not replay unchanged placement on each render;
+a replacement or new subscription receives the current non-minimized placement. Each window
+allows one placement subscriber. Removing its declaration or closing the component/window ends
+the subscription.
 
-Values that implement `Into<View>` can be used directly with these methods. In particular, use a
-`&str` or `String` for ordinary text and reach for `TextBlock` only to set font, layout,
-accessibility, or other control properties:
+Applications own persistence: store each observation in the message handler, rather than wait for
+a final shutdown notification. This is observed native state, not a continuously controlled
+position. Keeping a saved value in `initial_placement` does not cause snapback after a user move.
+Reactor converts Win32 workspace coordinates internally; application values use screen pixels,
+not DIPs.
+
+Run `cargo run -p reactor-window-placement` to move, resize, or maximize a window and open a copy
+at its observed placement. The sample retains placement in memory, without a persistence backend.
+
+For restoration across a full process restart, run
+`cargo run -p reactor-window-placement-registry`. Move, resize, or maximize the window, close it,
+then run the command again. This sample uses `windows-registry` to save each placement observation
+in the `Placement` string value under `HKCU\Software\windows-rs\samples\window-placement`. It loads
+that value before opening the window. The five fields are `x y width height maximized`, with
+maximized encoded as `0` or `1`; one registry value keeps the fields together.
+
+Persistence is best-effort: missing or invalid placement and registry read errors use the default
+window size. Write failures do not interrupt the application. Fallback and save failures are
+reported in the console, without adding error state to the component. Delete the `Placement` value
+to reset the sample.
+Minimized state is not saved.
+
+## Add icon content
+
+`Icon` describes icon content for control slots. Reactor realizes the same value as WinUI's visual
+`IconElement` or nonvisual `IconSource`, depending on the destination property:
 
 ```rust,ignore
 StackPanel::new().children((
-    "A short label",
-    format!("Welcome, {}!", self.name),
-    TextBlock::new().text("Styled text").font_size(24.0),
+    TitleBar::new()
+        .title("Search")
+        .icon(Symbol::Home)
+        .left_header(TextBlock::new().text("Files")),
+    AutoSuggestBox::new().query_icon(Icon::font("\u{E721}")),
 ))
 ```
 
-Layout is just more builder methods. Containers describe their rows, columns, direction, or
-spacing, while children say where they belong:
+Use `Icon::symbol`, `Icon::font`, `Icon::bitmap`, `Icon::image_*`, or `Icon::path` for control icon
+slots. Use `SymbolIcon`, `FontIcon`, `BitmapIcon`, `ImageIcon`, and `PathIcon` when the icon is a
+standalone visual that needs layout or other visual properties.
+
+## Configure navigation
+
+`NavigationView` exposes separate pane content and visibility settings:
 
 ```rust,ignore
-Grid::new()
-    .rows([GridLength::Auto, GridLength::STAR])
-    .columns([
-        GridLength::Auto,
-        GridLength::STAR.min(120.0).max(320.0),
-    ])
-    .children((
-        TextBlock::new().text("Name").grid_row(0).grid_column(0),
-        TextBox::new().grid_row(0).grid_column(1),
-        TextBlock::new()
-            .text("Details go here")
-            .grid_row(1)
-            .grid_column_span(2),
-    ))
+NavigationView::new()
+    .pane_header("Workspace")
+    .pane_footer("Account")
+    .is_back_enabled(false)
+    .is_pane_visible(true)
+    .content("Page")
 ```
 
-Use `min` and `max` to constrain any auto, pixel, or star-sized row or column. Values are measured
-in device-independent pixels (DIPs).
+`pane_header` owns one visual, like `pane_footer`; strings become text views. Updating it follows
+the usual positional reconciliation rules, and omitting it on a later render removes the header.
+It is separate from `header`, which belongs above the main content.
+`is_back_enabled` controls the back button's enabled state, not its visibility or navigation
+behavior. `is_pane_visible` controls pane visibility, not whether a visible pane is open.
+Omitting either Boolean property clears its local value and restores WinUI's default or styled
+value. Neither property changes application selection or maintains navigation history.
 
-The builders expose native WinUI concepts with Rust types, so invalid property values and callback
-payloads are usually caught by the compiler.
+Run the [interactive sample](../../crates/samples/reactor/navigation-view-properties):
 
-## Keep state in the component
+```text
+cargo run -p reactor-navigation-view-properties
+```
 
-For an editable control, pass the current value as a property and route changes back through a
-message. This is often called a controlled control:
+Cycle the pane header between text, a bordered replacement, and no header. Toggle the back arrow
+between disabled and enabled, then hide and restore the pane. The controls stay in the main content
+so the pane can always be restored. The back arrow has no navigation action in this sample.
+
+## Add editable state
+
+Editable controls are controlled: pass the current value from component state and send changes
+back as messages.
 
 ```rust,ignore
-struct Profile {
-    name: String,
-}
-
-impl Component for Profile {
-    type Input = ();
-    type Message = String;
-
-    fn create(_input: &(), _context: &ComponentContext<Self>) -> Self {
-        Self {
-            name: String::new(),
-        }
-    }
-
-    fn update(&mut self, name: String, _context: &ComponentContext<Self>) {
-        self.name = name;
-    }
-
-    fn view(&self, _input: &(), context: &mut ViewContext<Self>) -> View {
-        StackPanel::new().spacing(8.0).children((
-            TextBox::new()
-                .text(self.name.clone())
-                .placeholder_text("Type your name")
-                .on_text_changed(context.forward()),
-            format!("Hello, {}!", self.name),
-        ))
-    }
-}
+TextBox::new(self.name.clone())
+    .placeholder_text("Type your name")
+    .on_text_changed(context.callback(Message::SetName))
 ```
 
-Use `context.message(value)` when an event should always send the same message. Use
-`context.callback(function)` when the event carries a value that should become part of the
-message enum. When the event payload already is the component's message type, as in the example
-above, `context.forward()` is the shortest form.
+Handle `Message::SetName(name)` in `update` by assigning `self.name = name`. Reactor suppresses
+feedback from its own writes while still delivering user edits.
 
-Keep event-driven state changes in `update`, and keep `view` focused on turning the current state
-into controls. That makes the direction of data flow easy to follow.
+The [`controlled`](../../crates/samples/reactor/controlled) sample shows the complete pattern.
 
-## Handle keyboard input on custom surfaces
+## Split up the view
 
-`Border` can act as a focusable interaction surface around Canvas, Composition, or another custom
-view. Enable tab focus and native post-event pointer focus, then use routed callbacks for input
-events whose WinUI `Handled` value must be set before the native callback returns:
-
-```rust,ignore
-Border::new()
-    .is_tab_stop(true)
-    .focus_on_pointer_release(true)
-    .on_preview_key_down(context.routed_callback(|info: KeyEventInfo| {
-        match info.key {
-            VirtualKey::LEFT => RoutedMessage::handled(Message::MoveLeft),
-            VirtualKey::RIGHT => RoutedMessage::handled(Message::MoveRight),
-            _ => RoutedMessage::bubble_without_message(),
-        }
-    }))
-    .on_character_received(context.routed_callback(|info: CharacterEventInfo| {
-        RoutedMessage::handled(Message::Character(info.character))
-    }))
-    .on_got_focus(context.callback(Message::Focused))
-    .on_lost_focus(context.callback(Message::Blurred))
-    .content(custom_surface)
-```
-
-The routed callback inspects an owned payload and decides whether the native event is handled.
-Its optional component message still enters the normal queue, so `Component::update` and
-reconciliation never run inside the WinUI callback. Return `bubble_without_message` for keys such
-as Tab that should retain their normal XAML behavior. Input bubbles when the component queue is
-already full. Once handled, its deferred message retains its native FIFO position and waits for
-component queue capacity.
-
-`KeyEventInfo` includes the mapped and original virtual key, physical-key status, and modifier
-state. `CharacterEventInfo::character` is one UTF-16 code unit so surrogate pairs are preserved
-without lossy conversion. `focus_on_pointer_release(true)` queues a native
-`FocusState::Pointer` request from the routed pointer event. The request runs after the native
-callback returns. It works when a child such as Canvas is the direct hit-test source.
-`ElementRef<Border>` supports other programmatic focus cases.
-
-## Split the UI into understandable pieces
-
-For small, stateless pieces, use an ordinary function that returns `View`:
-
-```rust,ignore
-fn section_heading(text: &str) -> View {
-    TextBlock::new()
-        .text(text)
-        .font_size(20.0)
-        .font_weight(FontWeight::BOLD)
-        .into()
-}
-```
-
-When a piece needs its own state, messages, or lifecycle, make it a component. Parents pass data
-through the component's `Input`:
-
-```rust,ignore
-#[derive(Clone, PartialEq)]
-struct GreetingInput {
-    name: String,
-}
-
-struct Greeting;
-
-impl Component for Greeting {
-    type Input = GreetingInput;
-    type Message = ();
-
-    fn create(_input: &GreetingInput, _context: &ComponentContext<Self>) -> Self {
-        Self
-    }
-
-    fn view(
-        &self,
-        input: &GreetingInput,
-        _context: &mut ViewContext<Self>,
-    ) -> View {
-        format!("Hello, {}!", input.name).into()
-    }
-}
-```
-
-The parent places it in its view like any other child:
+Use a function returning `View` for a stateless piece. Use a child component when a subtree needs
+its own state or lifecycle:
 
 ```rust,ignore
 View::component::<Greeting>(GreetingInput {
@@ -440,357 +339,206 @@ View::component::<Greeting>(GreetingInput {
 })
 ```
 
-`Input` must implement `Clone + PartialEq`. Reactor compares it with the previous input and updates
-the child when it changes. Start with explicit inputs; shared context is more useful when data must
-reach many distant descendants.
+Component input must implement `Clone + PartialEq`.
 
-## Use normal Rust for conditionals
-
-There is no special syntax for conditional UI. Build a `View` with an ordinary `if` or `match`:
+Children at fixed positions keep identity by position and type. Items that can move need stable
+application keys:
 
 ```rust,ignore
-let status: View = if self.loading {
-    ProgressRing::new().is_active(true).into()
-} else {
-    "Ready".into()
-};
-
-StackPanel::new().children((
-    status,
-    Button::new().content("Refresh"),
-))
+StackPanel::new().keyed_children(
+    self.tasks
+        .iter()
+        .map(|task| (task.id, task.title.clone())),
+)
 ```
 
-Use `View::empty()` when one branch should render nothing. `View::fragment` groups several sibling
-views without adding a native container.
+Do not use list indices as keys when items can move. Stable keys keep state and focus attached to
+the correct item.
 
-## Render changing lists with stable keys
+## Do work without blocking the window
 
-Use `children` for a fixed group of controls. For a changing collection, map each item to a
-`KeyedView` and use `keyed_children`:
+Rendering and component updates run on the UI thread. Use `set_timeout` for delayed messages and
+`spawn_background` for blocking or CPU-intensive work. Background work returns a message rather
+than touching controls or component state directly.
 
-```rust,ignore
-let rows = self
-    .tasks
-    .iter()
-    .map(|task| (task.id, task.title.clone()));
+Use an effect when an external subscription or resource should exist only while part of the view
+is present. See the [`use-effect`](../../crates/samples/reactor/use-effect) and
+[`async-state`](../../crates/samples/reactor/async-state) samples for complete lifecycle patterns.
 
-StackPanel::new().spacing(4.0).keyed_children(rows)
+## Choose a deployment model
+
+A framework-dependent application uses an installed Windows App SDK framework package and needs
+only `windows-reactor`.
+
+For a self-contained application, add:
+
+```toml
+[build-dependencies]
+windows-reactor-setup = "0.100"
 ```
 
-Each `(key, view)` tuple converts to a `KeyedView`, and the title string converts to its text view.
-The key should identify the logical item, such as a record ID. Do not use the current list index
-when items can move. Stable keys let Reactor keep the right child component state attached as items
-are inserted, removed, or reordered.
-
-Native collections that require a specific item type use the same `Keyed::new` constructor. For
-example, `SelectorBar::items` accepts `SelectorBarItem`, while command-bar collections accept
-`AppBarButton` and `AppBarSeparator`. Reactor checks these item types at compile time.
-
-For very large collections, `ItemsRepeater` and `VirtualSource` add virtualization. Start with
-`keyed_children`; move to virtualization only when the list is large enough to need it.
-
-## Schedule UI work
-
-Use `set_timeout` to send a component message after a delay:
+Then create `build.rs`:
 
 ```rust,ignore
-self.timer = Some(
-    context
-        .set_timeout(Duration::from_millis(500), Message::Tick)
-        .unwrap(),
-);
-```
-
-The timer runs on the UI dispatcher, so its message does not need to implement `Send` and waiting
-does not occupy a thread-pool worker. Store the returned `ComponentTimer`; dropping or cancelling
-it prevents delivery.
-
-## Move slow work off the UI thread
-
-Rendering, component updates, and native controls live on the UI thread. Use
-`spawn_background` for blocking or CPU-intensive work, then return a message with the result:
-
-```rust,ignore
-enum Message {
-    Load,
-    Loaded(String),
-}
-
-fn update(&mut self, message: Message, context: &ComponentContext<Self>) {
-    match message {
-        Message::Load => {
-            self.loading = true;
-
-            _ = context.spawn_background(|_| {
-                let value = load_data();
-                Message::Loaded(value)
-            });
-        }
-        Message::Loaded(value) => {
-            self.value = value;
-            self.loading = false;
-        }
-    }
+fn main() {
+    windows_reactor_setup::as_self_contained();
 }
 ```
 
-The background closure must only capture `Send` data and must not touch controls or component
-state. Put expected failures in the returned message, usually as `Result<T, E>`, and display the
-result after `update` stores it.
+The [setup guide](windows-reactor-setup.md) covers prerequisites, WebView2, and packaging.
 
-## Run modal work with the owning window
+## Explore larger samples
 
-Use `run_window` for a native operation that must run on the owning UI thread with the window's
-HWND. For example, a Win32 message box can return its selection as a component message:
-
-```rust,ignore
-Message::Confirm => {
-    let accepted = context.run_window(|window| {
-        let answer = unsafe {
-            MessageBoxW(
-                window.as_raw(),
-                w!("Continue with this operation?"),
-                w!("Confirm"),
-                (MB_YESNO | MB_ICONQUESTION) as u32,
-            )
-        };
-        Message::Answered(answer)
-    });
-    if !accepted {
-        self.status = "Another window operation is pending".to_string();
-    }
-}
-Message::Answered(IDYES) => {
-    self.status = "You chose Yes".to_string();
-}
-```
-
-Reactor runs the closure in the next host dispatch after the current publication commits and
-queues its returned message. It discards the work if publication fails, the requesting component
-retires, or the window starts closing. A `true` return means that the work was staged, not that it
-is guaranteed to run. The `WindowHandle` is scoped to the closure. Each Reactor window accepts one
-pending operation at a time, so a second request returns `false` until the first operation runs or
-is discarded.
-
-Component dispatch for the owning window is suspended until the closure returns. A native modal
-loop can continue drawing and processing its own input, and other Reactor windows remain
-independent. Keep slow non-UI work in `spawn_background`; `run_window` is for native calls such as
-modal dialogs that must remain on the UI thread.
-
-The [`message-box`](../../crates/samples/reactor/message-box) sample contains the complete
-component. `windows-pickers` builds on the same mechanism and provides `request` methods that map
-picker results into component messages.
-
-## Reach for the other APIs when you need them
-
-The component/message/view loop covers most application code. These APIs solve more specific
-problems:
-
-| API | Use it for |
+| Sample | What it demonstrates |
 | --- | --- |
-| `use_effect` | Starting and cleaning up an external subscription |
-| `use_effect_guard` | Owning a subscription or revoker that cleans itself up when dropped |
-| `Context<T>` | Sharing app-wide data such as a theme with distant descendants |
-| `ElementRef<T>` | Focus, scroll-offset observation, or another operation that cannot be expressed as state |
-| `open_window` | Opening an independent secondary window |
-| `run_window` | Running a native modal operation with the owning HWND |
-| `ItemsRepeater` | Virtualizing a large collection |
-| `SwipeItems` | Left/right swipe actions on content, with the invoked text routed back |
-| `VirtualSource` | Building `ItemsRepeater` rows lazily by index |
-| `ThemeTransition::Reposition` | Animating an element between layout-driven positions |
+| [`calculator`](../../crates/samples/reactor/calculator) | State, messages, and Grid layout |
+| [`solitaire`](../../crates/samples/reactor/solitaire) | A larger application with keyed state |
+| [`stacker`](../../crates/samples/reactor/stacker) | Reactor, Canvas, and Composition together |
+| [`gallery`](../../crates/samples/reactor/gallery) | Available controls and navigation |
 
-Prefer component input over context for normal parent-to-child data, and prefer properties and
-messages over `ElementRef`. The declarative path is usually shorter and easier to maintain.
+Browse the [sample directory](../../crates/samples/reactor) for smaller examples of controlled
+input, context, effects, multiple windows, virtualization, WebView2, and deployment.
 
-`observe_scroll_offsets` reports the scroller position where no declarative event reaches it.
-`ScrollViewer` reports its own view; `ComboBox` reports its drop-down list viewer. The callback
-fires once on subscribe, then on every view change; dropping the handle stops delivery:
+## Maintain generated controls
 
-```rust,ignore
-struct Reader {
-    viewer: ElementRef<ScrollViewer>,
-    _offsets: Option<ElementObservation>,
-}
+`crates/tools/reactor/src/schema.toml` declares controls, properties, relations, and events.
+Native classes, property types, event payloads, and collection types come from the WinUI metadata.
+The schema specifies only Reactor behavior and public API exceptions. Controls default to the
+`Visual` category, relations default to one positional owned visual, and adapters define
+Reactor-specific value conversions. Unknown schema fields are rejected, and inferred metadata is
+validated before generation. Control capabilities such as focus, references, and attachments are
+declared on the control.
 
-// On mount:
-let _offsets = self.viewer.observe_scroll_offsets(|offsets| {
-    // offsets.horizontal, offsets.vertical, offsets.zoom
-});
-ScrollViewer::new().element_ref(&self.viewer).content(content)
-```
+### Choose public names
 
-Media, maps, and text styling follow the same builder pattern:
+Metadata names are the default. Normalize a name only when existing Reactor APIs expose the same
+public value, role, and behavior under different native spellings. Keep distinct names when the
+callback payload, lifecycle boundary, ownership, or collection shape differs.
 
-```rust,ignore
-MediaPlayerElement::new()
-    .source("https://example.com/video.mp4")
-    .unwrap()
-    .are_transport_controls_enabled(true);
+Prefer the shortest established Reactor term for a shared concept. Do not mechanically expand
+names to mirror property spelling, and do not retain the native spelling as an alias. Apply and
+review one concept family at a time. For example, date and time pickers use `on_date_changed` and
+`on_time_changed` because `SelectedDateChanged`, `DateChanged`, and `SelectedTimeChanged` all
+report the current date or time value.
 
-MapControl::new().center(-30.034647, -51.217659).zoom_level(4.0);
+For container relations, `content` means one owned visual that fills the control. Native `Child`
+and `Content` members therefore share the public `content` name. Keep `children` for ordered visual
+collections and `items` for item or container declarations.
 
-TextBlock::new()
-    .text("Styled")
-    .font_family("Segoe UI")
-    .font_weight(FontWeight::SEMI_BOLD);
-
-Image::new()
-    .source_file(path)
-    .unwrap()
-    .decode_width(320);
-```
-
-Apply `ThemeTransition::Reposition` with `LayoutControl::transitions` when an existing element
-moves because its parent performs a new layout. For example, changing a retained child's margin
-within a `Grid` animates between the old and new positions. Changes to `Canvas.Left` and
-`Canvas.Top` are absolute positioning updates and do not trigger this WinUI transition.
-
-## Deployment
-
-Reactor detects a staged Windows App Runtime or resolves an installed framework package at
-startup. For self-contained deployment, use `windows-reactor-setup` from `build.rs`. Compare the
-[`framework_dependent`](../../crates/samples/reactor/framework_dependent) and
-[`self_contained`](../../crates/samples/reactor/self_contained) samples when choosing how to
-package the app.
-
-## What to read next
-
-| Example | What it shows |
-| --- | --- |
-| [`gallery`](../../crates/samples/reactor/gallery) | The WinUI control catalog |
-| [`solitaire`](../../crates/samples/reactor/solitaire) | Components, state, input, keyed views, and transitions |
-
-Browse [`crates/samples/reactor`](../../crates/samples/reactor) for focused examples of individual
-APIs.
-
----
-
-## Internal documentation
-
-The remainder of this page describes how the crate is built and maintained. Applications do not
-need it to use Reactor.
-
-### Architecture
-
-| Layer | Location |
-| --- | --- |
-| Public frontend | `src/core/public.rs`, `src/element.rs`, `src/generated.rs` |
-| Component lifecycle and effects | `src/core/component/mod.rs` |
-| Reconciler | `src/core/pump` |
-| Scheduling | `src/core/engine/mod.rs`, `src/core/scheduler.rs` |
-| Native runtime | `src/native/winui` |
-| Recording runtime | `src/test/recording/mod.rs` |
-| Typed integrations | `src/reference.rs` |
-
-Components produce the public `View` representation. The Pump plans tree and lifecycle changes,
-then publishes commands to a runtime. The WinUI runtime applies those commands to native objects.
-`RecordingRuntime` consumes the same command stream for deterministic tests.
-
-In a debug build, set `WINDOWS_REACTOR_TRACE=1` to print a reconciliation summary before each
-nonempty component update is applied. The trace reports native property, topology, subscription,
-creation, and destruction command counts.
-
-One structural tree handles controls, components, fragments, slots, dialogs, overlays, and
-windows. Keyed views retain ownership across moves. Generational window, component, and node
-identities reject work that targets retired objects.
-
-Generated controls store shared payloads behind `Rc`; cloning a view shares the payload.
-Runtime-generated identity maps use `rustc_hash`. Collections keyed by application data keep
-randomized hashing.
-
-Unexpected native command failures are fatal because a partially applied batch would leave the
-native and retained trees inconsistent. Native subtree destruction detaches the subtree's external
-edge without clearing internal native collections that are destroyed in the same batch. This lets
-WinUI finish deferred visual-state work safely.
-
-`ToolTip` is an internal attachment type. The public surface is `TooltipExt` and `Tooltip`.
-
-### Native integration boundary
-
-Reactor-owned XAML objects never cross the public API. Typed `ElementRef` commands and observations
-are represented in both the WinUI and recording runtimes. Observations follow structural
-replacement and reject late callbacks by window and node identity. Accepted one-shot requests
-complete exactly once; `IntegrationError::Native` retains the HRESULT and `Unavailable` reports a
-retired or unavailable target.
-
-Swap-chain panel metrics include a binding generation so an integration can distinguish resize
-from structural panel replacement. `request_surface_frame` schedules one normal-priority
-UI-thread callback independently of `CompositionTarget::Rendering`; Canvas uses it to keep drawing
-during interactive resize without invoking application drawing code from a layout callback.
-
-Canvas owns its devices, swap chains, image sources, resize handling, and recovery. Composition
-owns application visual trees and animations. WebView users receive the CoreWebView2 object rather
-than Reactor's XAML control.
-
-Routed keyboard callbacks are stored separately from ordinary event callbacks. WinUI key and
-character arguments are copied into owned payloads, the callback decides `Handled` synchronously,
-and any resulting component message is placed in the existing native-event FIFO. This preserves
-native event order without running `Component::update` or reconciliation across a WinRT callback.
-Callback replacements publish transactionally and do not replace the native subscription.
-
-### Code generation
-
-`crates/tools/reactor` refreshes pinned WinUI, Windows App SDK, and WebView2 metadata, resolves
-`crates/tools/reactor/src/winui.toml`, and generates:
-
-| Output | Contents |
-| --- | --- |
-| `crates/libs/reactor/src/generated.rs` | Public control builders and retained data |
-| `crates/libs/reactor/src/native/winui/generated.rs` | Native command application |
-| `crates/libs/reactor/src/native/winui/bindings.rs` | Minimal WinUI bindings |
-| `crates/libs/canvas/src/reactor_bindings.rs` | Minimal Canvas bridge bindings |
-| `crates/tests/libs/reactor_surface/src/generated_surface.rs` | Live projected API cases |
-
-`bindings.txt` is the hand-maintained runtime filter. `control_bindings.txt` is generated from
-`winui.toml`. Content properties come from WinUI's `ContentPropertyAttribute`, including inherited
-properties. Feedback values come from event payloads instead of generated property readers.
-
-Generated Rust files are committed and must not be edited by hand. After changing the schema,
-metadata inputs, filters, or generator, run:
+After changing the schema or generator, run:
 
 ```text
 cargo run -p tool-reactor --quiet
-cargo run -p tool-reactor --quiet
-cargo check -p windows-reactor --quiet
 ```
 
-The second generator run must leave the tree unchanged.
+The command updates the Reactor declarations, native adapter, native bindings, and live coverage.
+`crates/tools/reactor/src/bindings.txt` is the handwritten native binding filter.
 
-Bindings used only by the `test` feature are allowed to be dead in a normal build. Enabling the
-feature removes that allowance so the live surface build checks all generated test callables.
+### Module imports
 
-### Testing
+Handwritten modules use `use super::*;`, with shared imports supplied by `src/lib.rs` and
+`src/native/mod.rs`. Keep native binding names separate where they overlap Reactor declarations;
+the WinUI adapter uses the `native::` prefix for those bindings. `Weak` denotes an `Rc` weak
+reference, while `SyncWeak` denotes an `Arc` weak reference.
 
-| Layer | Command or location |
+### Test boundaries
+
+The default API exposes application components, declarations, references, and window integration.
+Host/runtime protocols such as `ComponentHost`, `Runtime`, `Adapter`, retained graphs, mutations,
+service injection, schema metadata, and generic property/event records are available only with
+the `test` feature. Applications should use `App::run_component`, component messages, and `provide`
+rather than drive a retained host directly.
+Typed control callbacks and reference integration methods do not expose the runtime records.
+`ElementRef` exposes typed asynchronous operations rather than native object identity. The `test`
+feature retains `ElementRef::get()` and `ObjectId` for graph assertions and benchmarks.
+The reference compatibility traits are sealed because only generated controls and `ElementRef`
+implementations participate in that contract. The public API snapshot includes doc-hidden items so
+internal marker traits and methods cannot change without review.
+`AnyElement` remains a doc-hidden default marker for erased references, including component roots.
+Swap-chain metrics carry an opaque binding token so companion crates can reject stale completions
+without depending on Reactor's internal binding counter.
+
+Callback and view conversion traits are sealed. They accept the closure, callback, tuple, array,
+and vector forms supplied by Reactor without creating downstream implementation protocols.
+This is a closed conversion policy, not a requirement for runtime correctness. Custom collection
+wrappers must produce `Vec<View>` or another supported input instead of implementing `IntoViews`.
+Task and timer handles expose cancellation and delivery rejection in normal builds; full queue-state
+inspection is diagnostic and remains available with the `test` feature.
+`is_rejected()` polls for terminal queue rejection, not completion: `false` also includes pending
+and cancelled work. It does not notify the application or retry a rejected message.
+
+`src/lib.rs` explicitly exports handwritten application types. Generated controls and their value
+enums are exported from `declaration::generated_declarations`; the metadata in `generated` and
+validation errors in `ir` stay internal by default. These protocols still run in production.
+Restricting their exports does not make their implementations test-only. Keep application exports
+separate from internal wildcard imports so adding a public helper to an implementation module
+does not automatically add an application API.
+
+| Location | Purpose | Compilation |
+| --- | --- | --- |
+| `src/tests` | Unit tests and their private fixtures | `cfg(test)` |
+| `src/test_support` | Recording adapters, diagnostics, and live-test helpers | `cfg(test)` or the `test` feature, as gated by the owner |
+| Other `src` modules | Production implementation | Normal library builds |
+
+`test_support` mirrors the owning modules: `component`, `reconcile`, `reference`, and `native`.
+Headless host operations and services also live in this directory. The recording adapter remains
+a root module. Support files are private child modules loaded with
+`#[path]`, so diagnostic implementations can inspect their owner's state without widening
+production visibility. Existing diagnostic exports remain available through the `test` feature.
+Live application helpers in `test_support/native/app.rs` require that feature.
+
+Keep only representation and trait hooks beside the production code: conditional fields,
+counter updates, and conditional erased-component inspection methods. Diagnostic queries and
+test-only implementations belong in `test_support`. Unit-only mutation capture and reference
+scan instrumentation remain gated by `cfg(test)`, not the `test` feature, so external benchmarks
+do not acquire their allocation or layout costs.
+
+Handwritten native WinUI code compiles without a module-wide dead-code allowance. Diagnostic
+window helpers and event simulation live in `test_support`; generated bindings retain their
+separate allowance for unused metadata projections.
+
+Full property-contract enumeration and queued key/character payloads are diagnostic-only.
+Production validates individual properties and invokes routed input callbacks synchronously.
+
+Both directories are included in the published package. In particular, `test_support` cannot be
+excluded while a published feature depends on it. The Cargo `test` feature is an ordinary
+opt-in feature, not the compiler's unit-test configuration.
+
+### Private unit tests
+
+Unit test sources live under `crates/libs/reactor/src/tests`. The directory contains library test
+modules, not separate Cargo integration-test targets.
+
+| Files | Scope |
 | --- | --- |
-| Internal deterministic tests | `cargo test -p windows-reactor` |
-| External API tests | `cargo test -p test_reactor` |
-| Generator tests | `cargo test -p tool-reactor` |
-| Live handwritten fixtures | `cargo run -p test-reactor-selftest -- --headless` |
-| Generated WinUI surface | `cargo run -p test-reactor-surface -- --headless` |
-| Planner benchmarks | `cargo run -p test-reactor-bench --release` |
-| Live grid benchmark | `cargo run -p test-reactor-bench --bin reactor-live-grid --release` |
-| Live input benchmark | `cargo run -p test-reactor-bench --bin reactor-live-input --release` |
-| Live Notepad benchmark | `cargo run -p test-reactor-bench --bin reactor-live-notepad --release` |
+| `mod.rs` and its child modules | Shared fixtures and headless subsystem tests |
+| `component/mod.rs` and its child modules | Component-host tests and shared private fixtures |
+| `native/app.rs`, `native/transient_menu.rs`, `native/winui.rs` | Native implementation tests |
 
-The generated surface test covers projected controls, properties, events, content, collections,
-slots, attachments, virtual items, and TreeView nodes. Handwritten self-tests own imperative
-references, retirement, and other OS interactions.
+Keep tests that need private implementation details beneath the owning module, using `#[path]`
+to place their files in this directory. Test modules inherit imports with `use super::*;`; do not
+widen production visibility to make a test helper accessible.
 
-The live Notepad benchmark uses the same controlled `TextBox` shape as the `reactor-notepad`
-sample. It injects Unicode keyboard input and measures raw `WM_CHAR`, WinUI `TextChanged`,
-`Text()` retrieval, Reactor event and component queues, reconciliation, Rust allocations, and
-whether controlled feedback causes a native write-back. Use `--text-size` to test document-size
-scaling. Run the release build with its window in the foreground and leave the machine idle while
-collecting results. The test-only probes add instrumentation overhead, and the injected
-`KEYEVENTF_UNICODE` path does not measure physical-key translation or IME composition.
+The directory layout groups tests by ownership, but `#[path]` determines their module scope.
+For example, `tests/native/app.rs` is `native::app::tests`, not `tests::native::app`. Component
+tests are grouped by context, lifecycle, messaging, reconciliation, virtualization, and window
+services. Keep a fixture with its consumers; only fixtures used by multiple groups belong in
+`component/mod.rs`.
 
-Pass `--filter <name>` to run matching handwritten fixtures. For example:
+Filter tests by function name, for example
+`cargo test -p windows-reactor --all-features context_change_renders_only_subscribers`, rather
+than a full module path. This keeps commands independent of subsystem file organization.
 
-```text
-cargo run -p test-reactor-selftest -- --headless --filter Window_NestedOperationRearming
-```
+Run the unit tests with `cargo test -p windows-reactor --all-features --lib`. Privileged WinUI
+coverage lives in `test-reactor-selftest`; performance runners keep the diagnostic `test` feature.
+Application lifecycle, menu, Canvas, WebView, and window-state fixtures live in
+[`test-reactor-integration`](../../crates/tests/libs/reactor_integration/readme.md), which does not
+enable that feature. Build it in a separate Cargo invocation from privileged packages to avoid
+feature unification. Unit test sources are included in the published package.
 
-`crates/libs/reactor/public-api.txt` is the checked public API snapshot. Regenerate it with the
-repository's pinned `cargo-public-api` process after an intentional API change.
+The Workbench sample uses `App::run_component` and owns its theme through `provide`. Its normal
+build does not enable the `test` feature; only its headless regression tests do.
+
+The coverage gate in `crates/tests/libs/reactor_selftest/coverage.ps1` checks production and
+headless support files separately, not the unit-test bodies. Use modules rather than `include!`
+for handwritten support so coverage is attributed to the support files.

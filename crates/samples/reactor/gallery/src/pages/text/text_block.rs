@@ -35,19 +35,17 @@ impl Component for TextBlockPage {
                     StackPanel::new().spacing(8.0).children((
                         TextBlock::new()
                             .text("Segoe UI, semibold")
-                            .font_family("Segoe UI")
                             .font_weight(FontWeight::SEMI_BOLD)
                             .font_size(if self.large { 32.0 } else { 20.0 }),
                         TextBlock::new()
                             .text("Consolas monospace")
-                            .font_family("Consolas")
                             .font_size(16.0),
                         ToggleSwitch::new()
                             .is_on(self.large)
                             .on_toggled(context.callback(Message::Large))
                             .header("Large"),
                     )),
-                    "TextBlock::new().text(t).font_family(\"Segoe UI\").font_weight(FontWeight::SEMI_BOLD)",
+                    "TextBlock::new().text(t).font_weight(FontWeight::SEMI_BOLD)",
                 ),
             )],
         )

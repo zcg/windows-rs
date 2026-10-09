@@ -43,12 +43,16 @@ impl Component for RadioButtonPage {
                             RadioButton::new()
                                 .group_name("drive")
                                 .is_checked(self.first)
-                                .on_checked(context.callback(Message::First))
+                                .on_checked(context.callback(|value: Option<bool>| {
+                                    Message::First(value.unwrap_or(false))
+                                }))
                                 .content("Automatic"),
                             RadioButton::new()
                                 .group_name("drive")
                                 .is_checked(self.second)
-                                .on_checked(context.callback(Message::Second))
+                                .on_checked(context.callback(|value: Option<bool>| {
+                                    Message::Second(value.unwrap_or(false))
+                                }))
                                 .content("Manual"),
                             TextBlock::new()
                                 .text(format!(

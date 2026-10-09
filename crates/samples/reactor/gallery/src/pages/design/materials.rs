@@ -29,7 +29,7 @@ impl Component for MaterialsPage {
                     ButtonStyle::Default
                 })
                 .on_click(Callback::new(move |_| {
-                    let _ = callback.call(backdrop);
+                    callback.call(backdrop);
                 }))
                 .content(label)
         };
@@ -37,12 +37,6 @@ impl Component for MaterialsPage {
             WindowBackdrop::Mica => "Mica samples the desktop wallpaper with a subtle tint.",
             WindowBackdrop::MicaAlt => "Mica Alt uses a stronger tint for tabbed interfaces.",
             WindowBackdrop::Acrylic => "Acrylic provides a translucent blurred material.",
-            WindowBackdrop::AcrylicThin => {
-                "Thin acrylic tints less, so more of the desktop shows through."
-            }
-            WindowBackdrop::Solid => {
-                "A solid tint covers the desktop sample entirely; opacity drives the look."
-            }
             WindowBackdrop::None => "No system backdrop; the window uses a solid background.",
         };
         page_content(
@@ -61,8 +55,6 @@ impl Component for MaterialsPage {
                                     choice("Mica", WindowBackdrop::Mica),
                                     choice("Mica Alt", WindowBackdrop::MicaAlt),
                                     choice("Acrylic", WindowBackdrop::Acrylic),
-                                    choice("Acrylic thin", WindowBackdrop::AcrylicThin),
-                                    choice("Solid", WindowBackdrop::Solid),
                                     choice("None", WindowBackdrop::None),
                                 )),
                             TextBlock::new().text(description).opacity(0.7),
@@ -80,7 +72,7 @@ impl Component for MaterialsPage {
                             "Use Acrylic for transient surfaces.",
                             "Use None for a solid window background.",
                         )),
-                        "WindowBackdrop::{Mica, MicaAlt, Acrylic, AcrylicThin, Solid, None}",
+                        "WindowBackdrop::{Mica, MicaAlt, Acrylic, None}",
                     ),
                 ),
             ],

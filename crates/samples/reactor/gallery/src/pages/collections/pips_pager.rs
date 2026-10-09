@@ -2,17 +2,17 @@ use crate::controls::*;
 use windows_reactor::*;
 
 pub struct PipsPagerPage {
-    page: i32,
+    page: usize,
 }
 
 #[derive(Clone)]
 pub enum Message {
-    Selected(i32),
+    Selected(Option<usize>),
     Previous,
     Next,
 }
 
-const PAGE_COUNT: i32 = 5;
+const PAGE_COUNT: usize = 5;
 
 impl Component for PipsPagerPage {
     type Message = Message;
@@ -24,8 +24,9 @@ impl Component for PipsPagerPage {
 
     fn update(&mut self, message: Message, _: &ComponentContext<Self>) {
         match message {
-            Message::Selected(page) => self.page = page.clamp(0, PAGE_COUNT - 1),
-            Message::Previous => self.page = (self.page - 1).max(0),
+            Message::Selected(Some(page)) => self.page = page.min(PAGE_COUNT - 1),
+            Message::Selected(None) => {}
+            Message::Previous => self.page = self.page.saturating_sub(1),
             Message::Next => self.page = (self.page + 1).min(PAGE_COUNT - 1),
         }
     }
@@ -40,8 +41,8 @@ impl Component for PipsPagerPage {
                     "Basic PipsPager",
                     StackPanel::new().spacing(8.0).children((
                         PipsPager::new()
-                            .number_of_pages(PAGE_COUNT)
-                            .selected_page_index(self.page)
+                            .number_of_pages(PAGE_COUNT as i32)
+                            .selected_page_index(Some(self.page))
                             .max_visible_pips(5)
                             .on_selected_index_changed(context.callback(Message::Selected)),
                         StackPanel::new()

@@ -12,33 +12,26 @@ impl Component for VariableSizedWrapGridPage {
     }
 
     fn view(&self, _: &(), _: &mut ViewContext<Self>) -> View {
-        let tile = |text: &str, row_span: i32, column_span: i32| {
+        let tile = |text: &str| -> View {
             Border::new()
                 .background(ThemeBrush::CardBackground)
                 .padding(12.0)
-                .wrap_grid_row_span(row_span)
-                .wrap_grid_column_span(column_span)
                 .content(TextBlock::new().text(text))
+                .into()
         };
+        let tiles: Vec<View> = ["1", "2", "3", "4", "5"].into_iter().map(tile).collect();
         page_content(
             "VariableSizedWrapGrid",
-            "Arranges items in a grid where items can span rows and columns.",
+            "Arranges items in a grid with a fixed item size, wrapping into rows.",
             [KeyedView::new(
                 "basic",
                 sample_card(
-                    "Spanning Tiles",
+                    "Wrapping Tiles",
                     VariableSizedWrapGrid::new()
                         .item_height(64.0)
                         .item_width(64.0)
-                        .maximum_rows_or_columns(4)
-                        .children([
-                            tile("1x1", 1, 1),
-                            tile("2x1", 2, 1),
-                            tile("1x2", 1, 2),
-                            tile("1x1", 1, 1),
-                            tile("2x2", 2, 2),
-                        ]),
-                    "VariableSizedWrapGrid::new().children([...wrap_grid_row_span(2)...])",
+                        .children(tiles),
+                    "VariableSizedWrapGrid::new().item_height(64.0).item_width(64.0).children([...])",
                 ),
             )],
         )

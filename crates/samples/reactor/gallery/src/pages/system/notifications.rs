@@ -199,7 +199,7 @@ impl Component for NotificationsPage {
                                     RadioButton::new()
                                         .group_name("badge-mode")
                                         .is_checked(self.mode == BadgeMode::Number)
-                                        .on_checked(context.callback(|_: bool| {
+                                        .on_checked(context.callback(|_: Option<bool>| {
                                             Message::SetMode(BadgeMode::Number)
                                         }))
                                         .content("Number"),
@@ -207,7 +207,7 @@ impl Component for NotificationsPage {
                                         .group_name("badge-mode")
                                         .is_checked(self.mode == BadgeMode::Dot)
                                         .on_checked(
-                                            context.callback(|_: bool| {
+                                            context.callback(|_: Option<bool>| {
                                                 Message::SetMode(BadgeMode::Dot)
                                             }),
                                         )

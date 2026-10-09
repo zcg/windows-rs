@@ -20,14 +20,14 @@ impl Component for ItemContainerPage {
                     "basic",
                     sample_card(
                         "Item container",
-                        ItemContainer::new().width(220.0).content(
+                        ItemContainer::new().width(220.0).child(
                             Border::new().padding(12.0).content(
                                 TextBlock::new()
                                     .text("Item content")
                                     .font_weight(FontWeight::SEMI_BOLD),
                             ),
                         ),
-                        "ItemContainer::new().content(view)",
+                        "ItemContainer::new().child(view)",
                     ),
                 ),
                 KeyedView::new(

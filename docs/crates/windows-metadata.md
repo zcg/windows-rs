@@ -36,10 +36,10 @@ For methods, match ECMA-335 parameter rows with
 nonzero sequences are one-based signature positions. `params()` instead returns physical table
 order and is appropriate for lossless copying, not semantic parameter association.
 
-`tool-reactor` provides a larger example. Its metadata resolver loads WinUI winmd files, adds
-`windows-default` byte inputs, indexes classes and interfaces, then uses method signatures and
-attributes to drive generated UI code. `tool-features` uses `Index::iter_items` to enumerate types,
-free functions, and constants.
+`tool-reactor-metadata` provides a larger example. Its metadata resolver loads WinUI winmd files,
+adds `windows-default` byte inputs, indexes classes and interfaces, then uses method signatures and
+attributes to drive generated UI code. `tool-features` uses `Index::iter_items` to enumerate
+types, free functions, and constants.
 
 ## Input and output model
 
@@ -89,7 +89,7 @@ their routed target namespaces.
 
 The focused fixtures in `crates/tests/libs/rdl` and `crates/tests/libs/bindgen` show metadata
 shapes. The main tool consumers are `tool-winrt`, `tool-win32`, `tool-package`, `tool-features`,
-and `tool-reactor`.
+and `tool-reactor-metadata`.
 
 ---
 
@@ -147,6 +147,27 @@ The merge is deterministic: it stages through `BTreeMap`s and insertion-ordered 
 The merger and namespace remapper accept strings, `Path`, or `PathBuf` for input and output paths
 and retain them as `PathBuf`. The remapper provides singular/plural `input`/`inputs`,
 `source`/`sources`, and `route`/`routes` methods.
+
+### Nested type identity
+
+Decoded signature `TypeName` values retain the outermost namespace and a slash-separated name,
+such as `Test` and `Outer/Child`. `TypeDef::full_name`, `TypeRef::full_name`, and
+`TypeDefOrRef::full_name` expose that identity; their `name` and `namespace` accessors still return
+the raw table columns. TypeDef names follow `NestedClass`, while TypeRef names follow enclosing
+TypeRef scopes.
+
+The writer turns the qualified name into an enclosing-TypeRef chain. Merge preserves that chain,
+and namespace remapping routes its outermost type without changing the nested path. A
+`NestedClass` row alone does not resolve an unqualified, module-scoped reference to a nested type
+(ECMA-335 II.7.3 and II.22.38).
+
+Nested generic instantiations are outside the writer's supported input. Both signature and
+TypeSpec emission assert against them rather than derive a nested name's arity from the total
+generic argument count. Top-level generics and non-generic nested records remain supported.
+
+`test_metadata::nested_references` checks physical scope chains, signature decoding through both
+TypeRef and TypeDef tokens, repeated leaf names under different parents, rejection of nested
+generic instantiations, merge, and namespace remapping.
 
 ### Method parameter association
 

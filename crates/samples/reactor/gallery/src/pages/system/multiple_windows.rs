@@ -22,7 +22,7 @@ impl Component for MultipleWindowsPage {
         match message {
             Message::Open => {
                 let number = self.opened + 1;
-                if context.open_window(View::component::<CounterWindow>(number)) {
+                if context.open_window::<CounterWindow>(number) {
                     self.opened = number;
                 }
             }
@@ -48,7 +48,7 @@ impl Component for MultipleWindowsPage {
                             .text(format!("Windows opened: {}", self.opened))
                             .opacity(0.6),
                     )),
-                    "context.open_window(View::component::<CounterWindow>(n))",
+                    "context.open_window::<CounterWindow>(n)",
                 ),
             )],
         )
@@ -102,5 +102,6 @@ impl Component for CounterWindow {
                     )),
             )),
         )
+        .into()
     }
 }

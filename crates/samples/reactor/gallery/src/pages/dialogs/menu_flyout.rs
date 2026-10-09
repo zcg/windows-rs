@@ -45,7 +45,8 @@ impl Component for MenuFlyoutPage {
                                     MenuItem::item("copy", "Copy"),
                                     MenuItem::item("paste", "Paste"),
                                 ],
-                                context.callback(|label| ("action".to_string(), label)),
+                                context
+                                    .callback(|key: Key| ("action".to_string(), key_label(&key))),
                             )),
                             TextBlock::new()
                                 .text(format!("Last action: {}", self.last_action))
@@ -76,7 +77,8 @@ impl Component for MenuFlyoutPage {
                                     MenuItem::item("underline", "Underline"),
                                     MenuItem::item("strikethrough", "Strikethrough"),
                                 ],
-                                context.callback(|label| ("format".to_string(), label)),
+                                context
+                                    .callback(|key: Key| ("format".to_string(), key_label(&key))),
                             )),
                             TextBlock::new()
                                 .text(format!("Last format: {}", self.last_format))
@@ -99,16 +101,16 @@ impl Component for MenuFlyoutPage {
                 KeyedView::new(
                     "state",
                     sample_card(
-                        "Checkable and nested items",
+                        "Nested items",
                         StackPanel::new().spacing(8.0).children((
                             Button::new().content("View options").menu(Menu::new(
                                 [
-                                    MenuItem::toggle("wrap", "Word wrap", true),
-                                    MenuItem::toggle("ruler", "Ruler", false),
+                                    MenuItem::item("wrap", "Word wrap"),
+                                    MenuItem::item("ruler", "Ruler"),
                                     MenuItem::separator("state-separator"),
-                                    MenuItem::radio("zoom-100", "Zoom 100%", "zoom", true),
-                                    MenuItem::radio("zoom-125", "Zoom 125%", "zoom", false),
-                                    MenuItem::radio("zoom-150", "Zoom 150%", "zoom", false),
+                                    MenuItem::item("zoom-100", "Zoom 100%"),
+                                    MenuItem::item("zoom-125", "Zoom 125%"),
+                                    MenuItem::item("zoom-150", "Zoom 150%"),
                                     MenuItem::separator("nested-separator"),
                                     MenuItem::submenu(
                                         "theme",
@@ -118,16 +120,16 @@ impl Component for MenuFlyoutPage {
                                             MenuItem::item("theme-dark", "Dark"),
                                         ],
                                     ),
+                                    MenuItem::disabled("zoom-more", "More zoom levels"),
                                 ],
-                                context.callback(|label| ("state".to_string(), label)),
+                                context.callback(|key: Key| ("state".to_string(), key_label(&key))),
                             )),
                             TextBlock::new()
                                 .text(format!("Last state: {}", self.last_state))
                                 .opacity(0.6),
                         )),
-                        r#"MenuItem::toggle(key, label, checked)
-MenuItem::radio(key, label, "zoom", checked)
-MenuItem::submenu(key, label, items)"#,
+                        r#"MenuItem::submenu(key, label, items)
+MenuItem::disabled(key, label)"#,
                     ),
                 ),
             ],

@@ -45,15 +45,15 @@ impl Component for WebViewPage {
                 let reflect = web.clone();
                 let navigate_sender = sender.clone();
                 if let Ok(registration) = web.on_navigation_completed(move |_| {
-                    navigate_sender.send(Message::Navigated(reflect.source()));
+                    _ = navigate_sender.send(Message::Navigated(reflect.source()));
                 }) {
                     self.registrations.push(registration);
                 }
                 if let Ok(registration) = web.on_process_failed(move |args: ProcessFailedArgs| {
                     if matches!(args.kind(), ProcessFailedKind::BrowserProcessExited) {
-                        sender.send(Message::ProcessExited);
+                        _ = sender.send(Message::ProcessExited);
                     } else {
-                        sender.send(Message::Failed(format!(
+                        _ = sender.send(Message::Failed(format!(
                             "WebView process failed: {:?}",
                             args.kind()
                         )));
@@ -137,10 +137,11 @@ impl Component for WebViewPage {
                     .on_click(context.message(Message::Reload))
                     .grid_column(2)
                     .content("↻"),
-                TextBox::new()
-                    .text(self.address.clone())
+                TextBox::new(self.address.clone())
                     .placeholder_text("Enter a URL")
-                    .on_text_changed(context.callback(Message::AddressChanged))
+                    .on_text_changed(context.callback(|value: std::rc::Rc<str>| {
+                        Message::AddressChanged(value.to_string())
+                    }))
                     .grid_column(3),
                 Button::new()
                     .on_click(context.message(Message::Navigate))

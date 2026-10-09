@@ -107,6 +107,10 @@ variadics.
 as `windows` and `windows-sys`; focused libraries normally use one flat file. In sys package mode,
 empty COM-only namespaces and their unused feature entries are pruned.
 
+Default module layout preserves custom metadata namespaces, including nested namespaces under
+`Windows.Win32`, in both declarations and references. Only package layout routes references through
+the Win32 umbrella's re-exports.
+
 ## Common generation tasks
 
 - Use `implement` or `implements` to generate WinRT implementation traits for selected interfaces.
@@ -232,6 +236,12 @@ signatures, dependencies, and remapping. Separate writers preserve the different
 - WinRT delegates are COM interfaces with `Invoke`; COM callbacks can be function pointers.
 - Win32 also has free exports, constants, handles, unions, nested types, and architecture-specific
   layout.
+
+Nested record references retain their outer namespace and enclosing type path from metadata.
+Bindgen resolves direct children against the containing record's architecture variant and keeps
+the generated flat helper names. Existing unscoped leaf references remain supported.
+`test_bindgen`'s `struct_nested_anon` fixture covers nested unions, structs, and architecture
+variants.
 
 ### Bit-field accessors
 

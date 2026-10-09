@@ -60,7 +60,10 @@ warnings and therefore enforced.
 ### Reactor
 
 ```sh
-# Regenerate codegen (after editing winui.toml or tool-reactor source)
+# Refresh WinUI metadata after changing Windows App SDK or WebView2 pins
+cargo run -p tool-reactor-metadata --quiet
+
+# Regenerate Reactor code after editing schema.toml or tool-reactor source
 cargo run -p tool-reactor --quiet
 
 # Regenerate bindings (after editing filter .txt files)
@@ -70,12 +73,15 @@ cargo run -p tool-bindings --quiet
 cargo check -p windows-reactor --quiet
 
 # Unit tests (headless, fast)
-cargo test -p test_reactor --quiet
+cargo test -p windows-reactor --all-features --quiet
 
 # Integration tests (launches WinUI window)
 cargo run -p test-reactor-selftest
 cargo run -p test-reactor-selftest -- --headless    # CI mode
-cargo run -p test-reactor-selftest -- --filter Name  # single fixture
+cargo run -p test-reactor-integration --bin application_menu
+cargo run -p test-reactor-integration --bin canvas_integration
+cargo run -p test-reactor-integration --bin webview_integration
+cargo run -p test-reactor-integration --bin window_state
 
 # Clippy
 cargo clippy -p windows-reactor --all-targets
@@ -106,16 +112,19 @@ The core `windows` / `windows-sys` crates are generated from Windows metadata (`
 `windows-bindgen` (driven by `tool-package`). `windows-metadata` and `windows-rdl` support
 reading/authoring that metadata. The reactor / canvas / webview pipelines layer on top:
 
-1. **`tool-reactor`** - reads `crates/tools/reactor/src/winui.toml` + WinUI `.winmd` metadata ->
-   generates `generated.rs`, `generated_set_prop.rs`, `generated_attach_event.rs`, and
-   `generated.txt` filter entries.
+1. **`tool-reactor-metadata`** - refreshes committed WinUI / Windows App SDK / WebView2 `.winmd`
+   metadata and generates `extras.winmd`.
 
-2. **`tool-bindings`** - reads filter `.txt` files from `crates/tools/bindings/src/` -> runs
+2. **`tool-reactor`** - reads `crates/tools/reactor/src/schema.toml` plus the shared WinUI
+   metadata -> generates Reactor declarations, native projection code, the Reactor native
+   bindings, and the canvas Reactor bridge bindings.
+
+3. **`tool-bindings`** - reads filter `.txt` files from `crates/tools/bindings/src/` -> runs
    `windows-bindgen` -> generates `bindings.rs` in each crate:
    - `crates/libs/canvas/src/bindings.rs` (from `canvas.txt`)
    - `crates/libs/time/src/bindings.rs`, `numerics`, `reference`, etc.
 
-3. **`tool-package`** - generates the published `windows` and `windows-sys` package crates using
+4. **`tool-package`** - generates the published `windows` and `windows-sys` package crates using
    `--package` mode (per-namespace files + Cargo.toml features).
 
 4. After regenerating, always verify: `cargo check -p <affected-crate> --quiet`
@@ -134,9 +143,11 @@ reading/authoring that metadata. The reactor / canvas / webview pipelines layer 
 
 ### Reactor architecture
 
-- WinUI backend is in `crates/libs/reactor/src/backend/winui/`.
-- The TOML config (`winui.toml`) declares ~52 WinUI controls. Keys are WinUI metadata names; the
-  tool infers types, setter patterns, and event handlers from `.winmd` files.
+- WinUI backend ownership is split across `crates/libs/reactor/src/native/winui.rs` and
+  `crates/libs/reactor/src/native/winui/`.
+- The TOML config (`crates/tools/reactor/src/schema.toml`) declares 79 WinUI controls. Keys are
+  WinUI metadata names; the tool infers types, setter patterns, and event handlers from `.winmd`
+  files.
 - COM casts: classes Deref to their default interface (zero-cost). Only cast to non-default parent
   interfaces. The `Param` trait handles parent-class conversions automatically.
 
@@ -152,10 +163,12 @@ reading/authoring that metadata. The reactor / canvas / webview pipelines layer 
 - **Panics**: Use `panic!` only for invariant violations. Use `diag::` helpers for missing features
   (warn in debug, no-op in release).
 - **`.unwrap()` over `.expect("...")`** - the panic hook provides full context.
-- **No `thread_local!` in app code** - use reactor hooks (`use_state`, `use_ref`) instead.
-  `thread_local!` is reserved for framework plumbing.
-- **Test naming**: Unit tests in `test_reactor`, integration tests in `test-reactor-selftest`.
-  Canvas tests use WARP software rendering.
+- **No `thread_local!` in app code** - keep state in components and pass shared values through typed
+  contexts. `thread_local!` is reserved for framework plumbing.
+- **Test naming**: Reactor unit tests live in `windows-reactor`; live WinUI coverage lives in
+  `test-reactor-selftest`. Public application and companion-crate fixtures live in
+  `test-reactor-integration` without the Reactor `test` feature. Build that package separately
+  from privileged tests to avoid Cargo feature unification. Canvas tests use WARP rendering.
 
 ## Documentation
 
@@ -308,3 +321,32 @@ source and the WinUI backend assigns `MediaPlayerElement.Source` directly. The
 `media_source` adapter in `winui.toml` therefore declares no filter entries of its
 own; adding `MediaSource::CreateFromUri` back to the generated filter reintroduces
 an unused-function warning, because nothing in the library calls it.
+
+### Upstream third-preview merge: local feature ports left for follow-up (2026-10)
+
+The local branch's reactor work was merged onto the upstream reactor rewrite. The widget
+coverage carries over (21 widgets are now declared in `crates/tools/reactor/src/schema.toml`),
+but the items below did not fit the rewritten architecture in the same pass and are
+intentionally absent. Old implementations live in history (`git show HEAD~1:<path>` on the
+`backup/pre-merge-20261009` branch). Each needs a proper port rather than a copy:
+
+| Area | What is missing | Old home |
+| --- | --- | --- |
+| Text | `font_family` property (TextBlock/RichTextBlock/NavigationView), per-name FontFamily cache, global `font_scale` | `native/winui/mod.rs`, `generate_winui.rs` |
+| Image | `image_decode_width` downsample decode | `generate.rs` |
+| Border | `implicit_translation` / `implicit_translation_transition` | `generate_winui.rs` |
+| Events | `value_field` projection (Slider.SizeChanged width) and `FieldAsF64` conversion | `schema.rs`, `generate_winui.rs` |
+| Widgets | `media_source` (MediaPlayerElement.source), `items_view_layout` (ItemsView.layout), `map_center` (MapControl.center), `refresh_deferral` (RefreshContainer.on_refresh_requested) | `generate.rs`, `generate_winui.rs` |
+| Tree/Time | `tree_node_content` (TreeView), `clock_identifier` (TimePicker) | `schema.rs` |
+| Window | Work-area queries (`WorkArea`, `primary_work_area`, `primary_work_area_dip`, `window_placement_dip`, `work_area_for_window`); the file `native/winui/window_geometry.rs` is kept but not wired into the module tree | `window_geometry.rs` |
+| App | `install_theme_resources` exists in `native/app_shim.rs` but the new App startup has no application-resource hook | `app/mod.rs` |
+| Backdrop | `WindowBackdrop::{AcrylicThin, Solid}` and `WindowBackdropTuning` (composition-controller path); the merged enum has `None/Mica/MicaAlt/Acrylic` | `native/winui/mod.rs` |
+| Reference | `ScrollOffsets`, `ElementRef::observe_scroll_offsets`, `ScrollViewer::on_view_changed` | `reference.rs` |
+| Menus | `MenuItem::{radio, toggle}` (RadioMenuFlyoutItem/ToggleMenuFlyoutItem) | `schema.rs` |
+| Swipe | `SwipeControl` swipe items (`SwipeItem`/`SwipeItems`) | `schema.rs`, `generate.rs` |
+
+The resolver extensions those adapters relied on already live in
+`crates/tools/reactor-metadata/src/lib.rs` (`value_fields`, `class_methods`,
+`ReadValueConversion::FieldAsF64`, `resolve_event_args_property_field`,
+`resolve_event_args_method`, and the `EventHandler<T>` generic-arity name fix), so each
+port is mostly generator + schema work.

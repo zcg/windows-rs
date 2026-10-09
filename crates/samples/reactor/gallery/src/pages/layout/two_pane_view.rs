@@ -54,4 +54,5 @@ fn pane(title: &str, body: &str) -> View {
                     .text_wrapping(TextWrapping::Wrap),
             )),
         )
+        .into()
 }
