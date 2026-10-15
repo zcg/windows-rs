@@ -291,7 +291,10 @@ pub(super) fn validate_menu_items(
 ) -> windows_core::Result<()> {
     for item in items {
         let (key, children) = match item {
-            MenuItem::Item { key, .. } | MenuItem::Separator { key } => (key, None),
+            MenuItem::Item { key, .. }
+            | MenuItem::Radio { key, .. }
+            | MenuItem::Toggle { key, .. }
+            | MenuItem::Separator { key } => (key, None),
             MenuItem::Submenu { key, items, .. } => (key, Some(items.as_slice())),
         };
         if !keys.insert(key.clone()) {
@@ -338,6 +341,34 @@ fn build_menu_items(
                 let callback = callback.clone();
                 let key = key.clone();
                 revokers.push(item.Click(move |_, _| callback.call(key.clone()))?);
+                item.cast()?
+            }
+            MenuItem::Radio {
+                key,
+                label,
+                group,
+                checked,
+            } => {
+                let item = RadioMenuFlyoutItem::new()?;
+                let text = item.cast::<IMenuFlyoutItem>()?;
+                text.SetText(label)?;
+                let state = item.cast::<IRadioMenuFlyoutItem>()?;
+                state.SetGroupName(group)?;
+                state.SetIsChecked(*checked)?;
+                let callback = callback.clone();
+                let key = key.clone();
+                revokers.push(text.Click(move |_, _| callback.call(key.clone()))?);
+                item.cast()?
+            }
+            MenuItem::Toggle { key, label, checked } => {
+                let item = ToggleMenuFlyoutItem::new()?;
+                let text = item.cast::<IMenuFlyoutItem>()?;
+                text.SetText(label)?;
+                let state = item.cast::<IToggleMenuFlyoutItem>()?;
+                state.SetIsChecked(*checked)?;
+                let callback = callback.clone();
+                let key = key.clone();
+                revokers.push(text.Click(move |_, _| callback.call(key.clone()))?);
                 item.cast()?
             }
             MenuItem::Separator { .. } => MenuFlyoutSeparator::new()?.cast()?,

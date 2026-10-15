@@ -60,7 +60,10 @@ impl DeclarationValidator {
 fn validate_menu_items(items: &[MenuItem], keys: &mut HashSet<Key>) -> Result<(), GraphError> {
     for item in items {
         let (key, children) = match item {
-            MenuItem::Item { key, .. } | MenuItem::Separator { key } => (key, None),
+            MenuItem::Item { key, .. }
+            | MenuItem::Radio { key, .. }
+            | MenuItem::Toggle { key, .. }
+            | MenuItem::Separator { key } => (key, None),
             MenuItem::Submenu { key, items, .. } => (key, Some(items.as_slice())),
         };
         if !keys.insert(key.clone()) {

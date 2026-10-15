@@ -224,6 +224,27 @@ impl WinUiAdapter {
         }
     }
 
+    fn dispatch_refresh_deferral(
+        event: &Rc<RefCell<NativeRefreshDeferralEvent>>,
+        event_queue: &Rc<NativeEventQueue>,
+        object: ObjectId,
+        event_id: EventId,
+        observation: Option<Observation>,
+        value: RefreshDeferral,
+    ) {
+        let event = event.borrow();
+        let queued = event.callback.is_some().then(|| QueuedEvent {
+            object,
+            event: event_id,
+            revision: event.revision,
+            payload: EventPayload::RefreshDeferral(value),
+        });
+        if observation.is_some() || queued.is_some() {
+            event_queue.queue(observation, queued);
+            Self::schedule_event_wake(event_queue);
+        }
+    }
+
     fn dispatch_navigation_view_display_mode(
         event: &Rc<RefCell<NativeNavigationViewDisplayModeEvent>>,
         event_queue: &Rc<NativeEventQueue>,

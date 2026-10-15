@@ -394,6 +394,9 @@ impl EventDispatch {
             (EventValue::PointerEventInfo(callback), EventPayload::PointerEventInfo(value)) => {
                 callback.call(value);
             }
+            (EventValue::RefreshDeferral(callback), EventPayload::RefreshDeferral(value)) => {
+                callback.call(value);
+            }
             #[cfg(any(test, feature = "test"))]
             (EventValue::KeyEventInfo(callback), EventPayload::KeyEventInfo(value)) => {
                 callback.call(value);

@@ -65,7 +65,7 @@ impl WinUiAdapter {
                         _ => None,
                     })
                     .unwrap_or_default();
-                if value.Text()? != expected {
+                if value.value.Text()? != expected {
                     return Err(WinUiError::StateMismatch(object));
                 }
             }
@@ -351,8 +351,8 @@ impl WinUiAdapter {
             return Err(WinUiError::InvalidObject(object));
         };
         Ok((
-            value.RowDefinitions()?.Size()?,
-            value.ColumnDefinitions()?.Size()?,
+            value.value.RowDefinitions()?.Size()?,
+            value.value.ColumnDefinitions()?.Size()?,
         ))
     }
 
@@ -1368,8 +1368,8 @@ impl WinUiAdapter {
             return Err(WinUiError::InvalidObject(object));
         };
         Ok((
-            panel.Spacing()?,
-            panel.Orientation()? == native::Orientation::Horizontal,
+            panel.value.Spacing()?,
+            panel.value.Orientation()? == native::Orientation::Horizontal,
         ))
     }
 
@@ -1405,7 +1405,7 @@ impl WinUiAdapter {
         else {
             return Err(WinUiError::InvalidObject(object));
         };
-        Ok(value.FontWeight()?.weight)
+        Ok(value.value.FontWeight()?.weight)
     }
 
     pub fn text_box_state(&self, object: ObjectId) -> Result<(String, i32, i32), WinUiError> {

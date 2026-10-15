@@ -141,10 +141,15 @@ default = ""
 name = "FontSize"
 default = "14.0"
 validation = "finite_positive"
+scaled = true
 
 [[objects.properties]]
 name = "FontWeight"
 value = "FontWeight"
+
+[[objects.properties]]
+name = "FontFamily"
+adapter = "font_family"
 
 [[objects.properties]]
 name = "Foreground"
@@ -154,6 +159,11 @@ adapter = "theme_brush"
 name = "Padding"
 default = "default"
 validation = "finite_non_negative"
+
+[[objects.properties]]
+name = "LineHeight"
+validation = "finite_positive"
+scaled = true
 
 [[objects.properties]]
 name = "TextWrapping"
@@ -167,6 +177,12 @@ name = "TextTrimming"
 [[objects.properties]]
 name = "MaxLines"
 validation = "non_negative"
+
+[[objects.properties]]
+name = "IsHitTestVisible"
+
+[[objects.events]]
+name = "Tapped"
 
 [[objects]]
 name = "TextBox"
@@ -208,6 +224,18 @@ name = "Header"
 name = "TextChanged"
 observes = "Text"
 
+
+[[objects.properties]]
+name = "Padding"
+default = "default"
+validation = "finite_non_negative"
+[[objects.properties]]
+name = "FontSize"
+validation = "finite_positive"
+scaled = true
+[[objects.properties]]
+name = "Resources"
+adapter = "resource_overrides"
 [[objects]]
 name = "Button"
 enabled = true
@@ -244,6 +272,23 @@ name = "Content"
 [[objects.events]]
 name = "Click"
 
+
+[[objects.properties]]
+name = "Padding"
+default = "default"
+validation = "finite_non_negative"
+[[objects.properties]]
+name = "CornerRadius"
+default = "default"
+validation = "finite_non_negative"
+[[objects.properties]]
+name = "Foreground"
+adapter = "theme_brush"
+[[objects.properties]]
+name = "IsHitTestVisible"
+
+[[objects.events]]
+name = "Tapped"
 [[objects]]
 name = "CheckBox"
 enabled = true
@@ -272,6 +317,13 @@ name = "IsCheckedChanged"
 property_changed = true
 observes = "IsChecked"
 
+
+[[objects.properties]]
+name = "Resources"
+adapter = "resource_overrides"
+
+[[objects.events]]
+name = "Tapped"
 [[objects]]
 name = "Border"
 focus = true
@@ -317,6 +369,14 @@ validation = "finite_non_negative"
 [[objects.properties]]
 name = "ScaleTransition"
 adapter = "implicit_scale_transition"
+
+[[objects.properties]]
+name = "Translation"
+adapter = "implicit_translation"
+
+[[objects.properties]]
+name = "TranslationTransition"
+adapter = "implicit_translation_transition"
 
 [[objects.properties]]
 name = "CapturePointerOnPress"
@@ -403,6 +463,15 @@ name = "DragLeave"
 name = "Drop"
 adapter = "dropped_data"
 
+
+[[objects.properties]]
+name = "IsHitTestVisible"
+
+[[objects.events]]
+name = "PointerWheelChanged"
+
+[[objects.events]]
+name = "Tapped"
 [[objects]]
 name = "Grid"
 reference = true
@@ -435,6 +504,15 @@ adapter = "key_accelerators"
 name = "Children"
 identity = "Keyed"
 
+
+[[objects.properties]]
+name = "IsHitTestVisible"
+
+[[objects.events]]
+name = "PointerWheelChanged"
+
+[[objects.events]]
+name = "Tapped"
 [[objects]]
 name = "StackPanel"
 
@@ -450,6 +528,12 @@ default = "Vertical"
 name = "Children"
 identity = "Keyed"
 
+
+[[objects.properties]]
+name = "IsHitTestVisible"
+
+[[objects.events]]
+name = "Tapped"
 [[objects]]
 name = "Canvas"
 
@@ -560,6 +644,21 @@ name = "ValueChanged"
 observes = "Value"
 payload = "NewValue"
 
+[[objects.events]]
+name = "SizeChanged"
+payload = "NewSize"
+value_field = "width"
+
+
+[[objects.properties]]
+name = "IsThumbToolTipEnabled"
+[[objects.properties]]
+name = "CornerRadius"
+default = "default"
+validation = "finite_non_negative"
+[[objects.properties]]
+name = "Resources"
+adapter = "resource_overrides"
 [[objects]]
 name = "TreeView"
 enabled = true
@@ -728,6 +827,9 @@ validation = "finite_positive"
 name = "Children"
 identity = "Keyed"
 
+
+[[objects.properties]]
+name = "MaximumRowsOrColumns"
 [[objects]]
 name = "AutoSuggestBox"
 enabled = true
@@ -764,6 +866,10 @@ name = "SuggestionChosen"
 payload = "SelectedItem"
 payload_adapter = "inspectable_string"
 
+
+[[objects.events]]
+name = "QuerySubmitted"
+payload = "QueryText"
 [[objects]]
 name = "PasswordBox"
 enabled = true
@@ -823,6 +929,10 @@ observes = "Value"
 payload = "NewValue"
 payload_adapter = "number_box_value"
 
+
+[[objects.properties]]
+name = "Resources"
+adapter = "resource_overrides"
 [[objects]]
 name = "NavigationView"
 enabled = true
@@ -863,6 +973,14 @@ name = "IsPaneOpen"
 controlled = "IsPaneOpenChanged"
 feedback = "exact"
 clear_feedback = true
+
+[[objects.properties]]
+name = "FontFamily"
+adapter = "font_family"
+
+[[objects.properties]]
+name = "Resources"
+adapter = "resource_overrides"
 
 [[objects.relations]]
 name = "Content"
@@ -990,6 +1108,19 @@ name = "ShowPaused"
 [[objects.properties]]
 name = "IsEnabled"
 
+
+[[objects.properties]]
+name = "CornerRadius"
+default = "default"
+validation = "finite_non_negative"
+[[objects.properties]]
+name = "Foreground"
+adapter = "theme_brush"
+[[objects.properties]]
+name = "IsHitTestVisible"
+[[objects.properties]]
+name = "Resources"
+adapter = "resource_overrides"
 [[objects]]
 name = "ToggleSwitch"
 enabled = true
@@ -1016,6 +1147,10 @@ name = "OffContent"
 name = "Toggled"
 observes = "IsOn"
 
+
+[[objects.properties]]
+name = "Resources"
+adapter = "resource_overrides"
 [[objects]]
 name = "ToggleButton"
 enabled = true
@@ -1038,6 +1173,13 @@ name = "IsCheckedChanged"
 property_changed = true
 observes = "IsChecked"
 
+
+[[objects.properties]]
+name = "Resources"
+adapter = "resource_overrides"
+
+[[objects.events]]
+name = "Tapped"
 [[objects]]
 name = "RadioButton"
 enabled = true
@@ -1152,6 +1294,10 @@ name = "Source"
 adapter = "image_uri"
 
 [[objects.properties]]
+name = "DecodeWidth"
+adapter = "image_decode_width"
+
+[[objects.properties]]
 name = "Stretch"
 
 [[objects.events]]
@@ -1162,6 +1308,9 @@ field = "on_opened"
 name = "ImageFailed"
 field = "on_failed"
 
+
+[[objects.properties]]
+name = "IsHitTestVisible"
 [[objects]]
 name = "ProgressRing"
 enabled = true
@@ -1404,6 +1553,16 @@ name = "Header"
 name = "SelectionChanged"
 observes = "SelectedIndex"
 
+
+[[objects.properties]]
+name = "CornerRadius"
+default = "default"
+validation = "finite_non_negative"
+[[objects.properties]]
+name = "IsHitTestVisible"
+[[objects.properties]]
+name = "Resources"
+adapter = "resource_overrides"
 [[objects]]
 name = "Pivot"
 
@@ -1902,6 +2061,11 @@ name = "TextWrapping"
 [[objects.properties]]
 name = "FontSize"
 validation = "finite_positive"
+scaled = true
+
+[[objects.properties]]
+name = "FontFamily"
+adapter = "font_family"
 
 [[objects]]
 name = "WebView2"
@@ -1978,6 +2142,10 @@ name = "ItemsSource"
 adapter = "inspectable_string_list"
 
 [[objects.properties]]
+name = "Layout"
+adapter = "items_view_layout"
+
+[[objects.properties]]
 name = "SelectionMode"
 
 [[objects.events]]
@@ -1987,6 +2155,10 @@ payload_adapter = "inspectable_string"
 
 [[objects]]
 name = "MapControl"
+
+[[objects.properties]]
+name = "Center"
+adapter = "map_center"
 
 [[objects.properties]]
 name = "ZoomLevel"
@@ -2000,6 +2172,10 @@ name = "InteractiveControlsVisible"
 [[objects]]
 name = "MediaPlayerElement"
 reference = true
+
+[[objects.properties]]
+name = "Source"
+adapter = "media_source"
 
 [[objects.properties]]
 name = "AreTransportControlsEnabled"
@@ -2049,6 +2225,10 @@ name = "RefreshContainer"
 
 [[objects.properties]]
 name = "PullDirection"
+
+[[objects.events]]
+name = "RefreshRequested"
+adapter = "refresh_deferral"
 
 [[objects.relations]]
 name = "Content"

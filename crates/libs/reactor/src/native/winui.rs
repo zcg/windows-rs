@@ -83,6 +83,7 @@ type NativeOptionalTimeSpanEvent = NativeValueEvent<Option<TimeSpan>>;
 type NativeNavigationViewDisplayModeEvent = NativeValueEvent<NavigationViewDisplayMode>;
 type NativePointerEventInfoEvent = NativeValueEvent<PointerEventInfo>;
 type NativeKeyEventInfoEvent = NativeRoutedValueEvent<KeyEventInfo>;
+type NativeRefreshDeferralEvent = NativeValueEvent<RefreshDeferral>;
 type NativeSelectionEvent = NativeValueEvent<Option<Rc<str>>>;
 type NativeSelectionIndexEvent = NativeValueEvent<Option<usize>>;
 type NativeTextEvent = NativeValueEvent<Rc<str>>;
@@ -1110,6 +1111,112 @@ fn solid_color_brush(value: Color) -> Result<native::SolidColorBrush, WinUiError
     Ok(brush)
 }
 
+/// `FontFamily` objects cached by name.
+///
+/// A `FontFamily` is a WinRT object, and rebuilding one for every text control on every
+/// render would churn allocations on text-heavy pages. The cache is built on the UI thread;
+/// the mutex guards insertion only.
+fn cached_font_family(name: &str) -> Result<native::FontFamily, WinUiError> {
+    static CACHE: std::sync::OnceLock<Mutex<HashMap<String, native::FontFamily>>> =
+        std::sync::OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut guard = cache.lock().unwrap();
+    if let Some(family) = guard.get(name) {
+        return Ok(family.clone());
+    }
+    let family = native::FontFamily::CreateInstanceWithName(name)?;
+    guard.insert(name.to_string(), family.clone());
+    Ok(family)
+}
+
+/// Wraps a native refresh deferral so hosts can hold the refresh indicator while
+/// their asynchronous refresh runs.
+fn refresh_deferral(deferral: native::Deferral) -> RefreshDeferral {
+    RefreshDeferral::new(move || {
+        let _ = deferral.Complete();
+    })
+}
+
+/// Builds the native layout object for an [`ItemsViewLayout`] choice.
+fn items_view_layout(value: ItemsViewLayout) -> Result<native::Layout, WinUiError> {
+    Ok(match value {
+        ItemsViewLayout::Stack => {
+            let layout = native::StackLayout::new()?;
+            layout.SetSpacing(8.0)?;
+            layout.SetOrientation(native::Orientation::Vertical)?;
+            layout.cast::<native::Layout>()?
+        }
+        ItemsViewLayout::Grid => {
+            let layout = native::UniformGridLayout::new()?;
+            layout.SetMinItemWidth(120.0)?;
+            layout.SetMinItemHeight(48.0)?;
+            layout.SetMinRowSpacing(8.0)?;
+            layout.SetMinColumnSpacing(8.0)?;
+            layout.cast::<native::Layout>()?
+        }
+        ItemsViewLayout::Lined => {
+            let layout = native::LinedFlowLayout::new()?;
+            layout.SetItemsStretch(native::LinedFlowLayoutItemsStretch::Fill)?;
+            layout.SetLineSpacing(8.0)?;
+            layout.SetMinItemSpacing(8.0)?;
+            layout.cast::<native::Layout>()?
+        }
+    })
+}
+
+/// Centers a `MapControl` on the `"latitude,longitude"` string the declaration
+/// stores, placing a pin at the same position.
+fn set_map_center(control: &native::MapControl, value: &str) -> Result<(), WinUiError> {
+    let (latitude, longitude) = value
+        .split_once(',')
+        .and_then(|(latitude, longitude)| {
+            Some((
+                latitude.trim().parse::<f64>().ok()?,
+                longitude.trim().parse::<f64>().ok()?,
+            ))
+        })
+        .ok_or_else(|| {
+            WinUiError::Native(windows_core::Error::new(
+                HRESULT(0x80070057_u32 as i32),
+                "map center must be a \"latitude,longitude\" pair",
+            ))
+        })?;
+    let position = native::BasicGeoposition {
+        latitude,
+        longitude,
+        altitude: 0.0,
+    };
+    let point = native::Geopoint::Create(position)?;
+    control.SetCenter(&point)?;
+    let icon = native::MapIcon::new()?;
+    icon.SetLocation(&point)?;
+    let layer = native::MapElementsLayer::new()?;
+    layer.MapElements()?.Append(&icon)?;
+    control.Layers()?.Append(&layer)?;
+    Ok(())
+}
+
+/// Applies a physical decode width to the image's current `BitmapImage` source.
+///
+/// Re-setting the URI source makes WinUI reload the bitmap at the requested
+/// width; a negative width (the cleared state) leaves the source untouched.
+fn apply_image_decode_width(control: &native::Image, width: i32) -> Result<(), WinUiError> {
+    if width < 0 {
+        return Ok(());
+    }
+    let Ok(source) = control.Source() else {
+        return Ok(());
+    };
+    let Ok(bitmap) = source.cast::<native::BitmapImage>() else {
+        return Ok(());
+    };
+    bitmap.SetDecodePixelType(native::DecodePixelType::Physical)?;
+    bitmap.SetDecodePixelWidth(width)?;
+    let uri = bitmap.UriSource()?;
+    bitmap.SetUriSource(&uri)?;
+    Ok(())
+}
+
 fn to_native_color(value: Color) -> native::Color {
     native::Color {
         a: value.a,
@@ -1307,6 +1414,56 @@ fn build_menu_items(
                 })?);
                 item.cast()?
             }
+            MenuItem::Radio {
+                key,
+                label,
+                group,
+                checked,
+            } => {
+                let item = native::RadioMenuFlyoutItem::new()?;
+                let text = item.cast::<native::IMenuFlyoutItem>()?;
+                text.SetText(label)?;
+                let state = item.cast::<native::IRadioMenuFlyoutItem>()?;
+                state.SetGroupName(group)?;
+                state.SetIsChecked(*checked)?;
+                let clicked_key = key.clone();
+                let clicked_queue = Rc::clone(event_queue);
+                revokers.push(text.Click(move |_, _| {
+                    clicked_queue.queue(
+                        None,
+                        Some(QueuedEvent {
+                            object: target,
+                            event: EventId::MenuItemInvoked,
+                            revision,
+                            payload: EventPayload::Key(clicked_key.clone()),
+                        }),
+                    );
+                    WinUiAdapter::schedule_event_wake(&clicked_queue);
+                })?);
+                item.cast()?
+            }
+            MenuItem::Toggle { key, label, checked } => {
+                let item = native::ToggleMenuFlyoutItem::new()?;
+                let text = item.cast::<native::IMenuFlyoutItem>()?;
+                text.SetText(label)?;
+                let state = item.cast::<native::IToggleMenuFlyoutItem>()?;
+                state.SetIsChecked(*checked)?;
+                let clicked_key = key.clone();
+                let clicked_queue = Rc::clone(event_queue);
+                revokers.push(text.Click(move |_, _| {
+                    clicked_queue.queue(
+                        None,
+                        Some(QueuedEvent {
+                            object: target,
+                            event: EventId::MenuItemInvoked,
+                            revision,
+                            payload: EventPayload::Key(clicked_key.clone()),
+                        }),
+                    );
+                    WinUiAdapter::schedule_event_wake(&clicked_queue);
+                })?);
+                item.cast()?
+            }
             MenuItem::Separator { .. } => native::MenuFlyoutSeparator::new()?.cast()?,
             MenuItem::Submenu { label, items, .. } => {
                 let item = native::MenuFlyoutSubItem::new()?;
@@ -1473,6 +1630,40 @@ fn set_scale_transition(
     let transition = native::Vector3Transition::new()?;
     transition.SetDuration(duration)?;
     element.SetScaleTransition(&transition)?;
+    Ok(())
+}
+
+fn set_implicit_translation(
+    element: &native::UIElement,
+    value: Option<Vector3>,
+) -> Result<(), WinUiError> {
+    let value = value.unwrap_or(Vector3 {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    element
+        .SetTranslation(native::Vector3 {
+            x: value.x,
+            y: value.y,
+            z: value.z,
+        })
+        .map_err(Into::into)
+}
+
+fn set_translation_transition(
+    element: &native::UIElement,
+    duration: Option<Duration>,
+) -> Result<(), WinUiError> {
+    let Some(duration) = duration else {
+        return element
+            .SetTranslationTransition(None::<&native::Vector3Transition>)
+            .map_err(Into::into);
+    };
+    let duration = TimeSpan::try_from(duration).map_err(|_| WinUiError::InvalidDuration)?;
+    let transition = native::Vector3Transition::new()?;
+    transition.SetDuration(duration)?;
+    element.SetTranslationTransition(&transition)?;
     Ok(())
 }
 
@@ -2068,6 +2259,7 @@ include!("winui/events.rs");
 include!("winui/relations.rs");
 
 include!("winui/adapter.rs");
+include!("winui/window_geometry.rs");
 
 fn relation_contract(
     kind: ObjectType,

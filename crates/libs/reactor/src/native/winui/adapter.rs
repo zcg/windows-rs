@@ -578,8 +578,8 @@ impl Adapter for WinUiAdapter {
                 else {
                     return Ok(());
                 };
-                let element = control.cast::<native::UIElement>()?;
-                let framework = control.cast::<native::IFrameworkElement>()?;
+                let element = control.value.cast::<native::UIElement>()?;
+                let framework = control.value.cast::<native::IFrameworkElement>()?;
                 let visual = native::ElementCompositionPreview::GetElementVisual(&element)?;
                 let compositor = visual.cast::<native::ICompositionObject>()?.Compositor()?;
                 callback.call(CompositionHostEvent::Ready {
@@ -669,7 +669,7 @@ impl Adapter for WinUiAdapter {
             } => {
                 let result = match self.handles.get(&object) {
                     Some(Handle::Generated(GeneratedHandle::Grid(control))) => {
-                        control.cast::<native::UIElement>().and_then(|element| {
+                        control.value.cast::<native::UIElement>().and_then(|element| {
                             visual
                                 .as_ref()
                                 .map(|visual| visual.cast::<native::Visual>())

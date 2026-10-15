@@ -170,17 +170,24 @@ impl std::fmt::Display for Validation {
 #[serde(rename_all = "snake_case")]
 enum PropertyAdapter {
     DropPolicy,
+    FontFamily,
     GridColumns,
     GridRows,
     IconElement,
     IconSource,
+    ImageDecodeWidth,
     ImageUri,
     ImplicitOpacityTransition,
     ImplicitScale,
     ImplicitScaleTransition,
+    ImplicitTranslation,
+    ImplicitTranslationTransition,
     InspectableString,
     InspectableStringList,
+    ItemsViewLayout,
     KeyAccelerators,
+    MapCenter,
+    MediaSource,
     NativeColor,
     NumberBoxValue,
     PathData,
@@ -201,14 +208,21 @@ impl PropertyAdapter {
     fn value(self) -> &'static str {
         match self {
             Self::DropPolicy => "DragDropPolicy",
+            Self::FontFamily => "String",
             Self::GridColumns | Self::GridRows => "GridLengths",
             Self::IconElement | Self::IconSource => "Icon",
+            Self::ImageDecodeWidth => "I32",
             Self::ImageUri => "ImageSource",
             Self::ImplicitOpacityTransition | Self::ImplicitScaleTransition => "Duration",
             Self::ImplicitScale => "F64",
+            Self::ImplicitTranslation => "Vector3",
+            Self::ImplicitTranslationTransition => "Duration",
             Self::InspectableString | Self::PathData | Self::RichEditText | Self::Uri => "String",
             Self::InspectableStringList => "StringList",
+            Self::ItemsViewLayout => "ItemsViewLayout",
             Self::KeyAccelerators => "KeyAccelerators",
+            Self::MapCenter => "String",
+            Self::MediaSource => "IUnknown",
             Self::NativeColor => "Color",
             Self::NumberBoxValue | Self::RatingValue => "OptionalF64",
             Self::PointerCapture | Self::PointerFocus => "Bool",
@@ -237,6 +251,12 @@ impl PropertyAdapter {
             self,
             Self::PointerCapture | Self::PointerFocus | Self::DropPolicy
         )
+    }
+
+    /// Synthetic properties are declared on the schema but have no native
+    /// `put_` method behind them; their arms are emitted by hand.
+    fn synthetic(self) -> bool {
+        matches!(self, Self::ImageDecodeWidth | Self::MapCenter)
     }
 
     fn mutates_native_collection(self) -> bool {
@@ -296,6 +316,7 @@ enum EventAdapter {
     ItemTag,
     Key,
     Pointer,
+    RefreshDeferral,
     StringList,
 }
 
@@ -309,6 +330,7 @@ impl EventAdapter {
             Self::ItemTag => "String",
             Self::Key => "KeyEventInfo",
             Self::Pointer => "PointerEventInfo",
+            Self::RefreshDeferral => "RefreshDeferral",
             Self::StringList => "StringList",
         }
     }
@@ -387,6 +409,10 @@ struct Property {
     required: bool,
     default: Option<String>,
     validation: Option<Validation>,
+    /// Multiplies the value by the global font scale when written (see
+    /// `native::font_scale`). Used for font sizes and explicit line heights.
+    #[serde(default)]
+    scaled: bool,
 }
 
 impl Property {
@@ -436,6 +462,14 @@ struct Event {
     observes: Option<String>,
     payload: Option<String>,
     payload_adapter: Option<PayloadAdapter>,
+    /// Projects a single field of a value-type event-args property.
+    ///
+    /// `payload = "NewSize"` alone is unresolvable because `Windows.Foundation.Size` has no
+    /// payload variant of its own. `value_field = "width"` selects that struct's `width`
+    /// field (matched by snake_case name) and widens it to the `F64` payload, which is how
+    /// `Slider.SizeChanged` reports the control's new layout width in DIP. Requires `payload`.
+    #[serde(default)]
+    value_field: Option<String>,
     #[serde(default)]
     active_properties: Vec<String>,
     #[serde(default)]
@@ -611,6 +645,20 @@ fn normalize_schema(schema: &mut Schema, metadata: &tool_reactor_metadata::Metad
                         .payload_adapter
                         .map(PayloadAdapter::value)
                         .map(str::to_string)
+                })
+                .or_else(|| {
+                    event.value_field.as_deref().and_then(|field| {
+                        event.payload.as_deref().and_then(|payload| {
+                            metadata
+                                .resolve_event_args_property_field(
+                                    &owner,
+                                    &format!("add_{}", event.name),
+                                    payload,
+                                    field,
+                                )
+                                .map(|(value, _, _)| normalize_metadata_value(value))
+                        })
+                    })
                 })
                 .or_else(|| {
                     event.payload.as_deref().and_then(|payload| {
@@ -1158,6 +1206,7 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                     || event.value == "PointerEventInfo"
                     || event.value == "FocusEventInfo"
                     || matches!(event.value.as_str(), "DragKind" | "DroppedData")
+                    || event.adapter == Some(EventAdapter::RefreshDeferral)
                     || event.payload.is_some()
                     || selection.is_some_and(|selection| selection.event_item_source == "EventArgs")
                 {
@@ -1268,8 +1317,10 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                     output.push_str("let dispatch = true;\nlet observation = None;\n");
                 }
                 if selection.is_none()
-                    && let Some(payload) = &event.payload
+                    && (event.payload.is_some()
+                        || event.adapter == Some(EventAdapter::RefreshDeferral))
                 {
+                    let payload = event.payload.as_deref().unwrap_or_default();
                     if event.payload_adapter == Some(PayloadAdapter::ItemTag) {
                         output.push_str(&format!(
                             "let args = args.unwrap();\n\
@@ -1294,6 +1345,38 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                              Err(error) if error.code().is_ok() => None, Err(error) => {{ \
                              report_error(error); return; }} }};\n"
                         ));
+                    } else if let Some(field) = &event.value_field {
+                        let (_, _, conversion) = metadata
+                            .resolve_event_args_property_field(
+                                &native_name(object),
+                                &format!("add_{}", event.name),
+                                payload,
+                                field,
+                            )
+                            .unwrap_or_else(|| {
+                                panic!(
+                                    "cannot resolve {}.{} value_field {field} on {payload}",
+                                    object.name, event.name
+                                )
+                            });
+                        let projection = match conversion {
+                            tool_reactor_metadata::ReadValueConversion::FieldAsF64(_) => {
+                                format!("(value.{field}) as f64")
+                            }
+                            _ => format!("value.{field}"),
+                        };
+                        output.push_str(&format!(
+                            "let args = args.unwrap();\n\
+                             let payload = match args.{payload}() {{ Ok(value) => {projection}, \
+                             Err(error) => {{ report_error(error); return; }} }};\n"
+                        ));
+                    } else if event.adapter == Some(EventAdapter::RefreshDeferral) {
+                        output.push_str(
+                            "let args = args.unwrap();\n\
+                             let payload = match args.GetDeferral() { Ok(deferral) => \
+                             refresh_deferral(deferral), Err(error) => {{ report_error(error); \
+                             return; }} };\n",
+                        );
                     } else {
                         let conversion = match event.payload_adapter {
                             Some(PayloadAdapter::ContentDialogResult) => {
@@ -1325,7 +1408,9 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                         ));
                     }
                 }
-                let dispatch_value = if event.payload.is_some() {
+                let dispatch_value = if event.payload.is_some()
+                    || event.adapter == Some(EventAdapter::RefreshDeferral)
+                {
                     "payload"
                 } else {
                     "observed"
@@ -1384,6 +1469,12 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                     )),
                     "OptionalTimeSpan" => output.push_str(&format!(
                         "if dispatch {{ WinUiAdapter::dispatch_optional_time_span(\
+                         &event_for_callback, &event_queue_{field}, object, EventId::{}, \
+                         observation, {dispatch_value}); }}\n",
+                        event.name,
+                    )),
+                    "RefreshDeferral" => output.push_str(&format!(
+                        "if dispatch {{ WinUiAdapter::dispatch_refresh_deferral(\
                          &event_for_callback, &event_queue_{field}, object, EventId::{}, \
                          observation, {dispatch_value}); }}\n",
                         event.name,
@@ -1913,6 +2004,7 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
             None,
             "UIElement",
             metadata,
+            false,
         );
     }
     for property in &schema.visual_properties {
@@ -1953,6 +2045,7 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                 None,
                 "UIElement",
                 metadata,
+                false,
             );
         }
     }
@@ -2000,6 +2093,7 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                 property.adapter,
                 "UIElement",
                 metadata,
+                property.scaled,
             );
         }
     }
@@ -2154,6 +2248,8 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                 .is_some_and(PropertyAdapter::uses_framework_element)
             {
                 "IFrameworkElement"
+            } else if property.adapter.is_some_and(PropertyAdapter::synthetic) {
+                "IUIElement"
             } else {
                 metadata
                     .resolve(&native_name(object), &method)
@@ -2180,6 +2276,7 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                 property.adapter,
                 &native_name(object),
                 metadata,
+                property.scaled,
             );
         }
     }
@@ -2391,6 +2488,7 @@ fn emit_native_property_arms(
     adapter: Option<PropertyAdapter>,
     target_class: &str,
     metadata: &tool_reactor_metadata::MetadataResolver,
+    scaled: bool,
 ) {
     if adapter.is_some_and(PropertyAdapter::uses_framework_element) {
         return;
@@ -2441,12 +2539,82 @@ fn emit_native_property_arms(
         ));
         return;
     }
+    if adapter == Some(PropertyAdapter::FontFamily) {
+        let clear = native_interface_call(target, target_class, interface, metadata, |object| {
+            format!("{object}.Set{native}(None::<&native::FontFamily>).map_err(Into::into)")
+        });
+        let set = native_interface_call(target, target_class, interface, metadata, |object| {
+            format!(
+                "cached_font_family(value.as_ref()).and_then(|family| \
+                 {object}.Set{native}(&family).map_err(Into::into))"
+            )
+        });
+        output.push_str(&format!(
+            "{pattern}None) => Some({clear}),\n\
+             {pattern}Some(PropertyValue::String(value))) => Some({set}),\n"
+        ));
+        return;
+    }
+    if adapter == Some(PropertyAdapter::ItemsViewLayout) {
+        let clear = native_interface_call(target, target_class, interface, metadata, |object| {
+            format!("{object}.Set{native}(None::<&native::Layout>).map_err(Into::into)")
+        });
+        let set = native_interface_call(target, target_class, interface, metadata, |object| {
+            format!(
+                "items_view_layout(*value).and_then(|layout| {object}.Set{native}(&layout)\
+                 .map_err(Into::into))"
+            )
+        });
+        output.push_str(&format!(
+            "{pattern}None) => Some({clear}),\n\
+             {pattern}Some(PropertyValue::ItemsViewLayout(value))) => Some({set}),\n"
+        ));
+        return;
+    }
+    if adapter == Some(PropertyAdapter::MapCenter) {
+        output.push_str(&format!(
+            "{pattern}None) => {{ let _ = {target}; Some(Ok(())) }},\n\
+             {pattern}Some(PropertyValue::String(value))) => \
+             Some(set_map_center({target}, value.as_ref())),\n"
+        ));
+        return;
+    }
+    if adapter == Some(PropertyAdapter::ImageDecodeWidth) {
+        output.push_str(&format!(
+            "{pattern}None) => Some(apply_image_decode_width(&{target}, -1)),\n\
+             {pattern}Some(PropertyValue::I32(value))) => \
+             Some(apply_image_decode_width(&{target}, *value)),\n"
+        ));
+        return;
+    }
+    if adapter == Some(PropertyAdapter::MediaSource) {
+        let clear = native_interface_call(target, target_class, interface, metadata, |object| {
+            format!(
+                "{object}.Set{native}(None::<&native::IMediaPlaybackSource>).map_err(Into::into)"
+            )
+        });
+        let set = native_interface_call(target, target_class, interface, metadata, |object| {
+            format!(
+                "match value {{ Some(source) => source.cast::<native::IMediaPlaybackSource>()\
+                 .map_err(Into::into).and_then(|source| {object}.Set{native}(&source)\
+                 .map_err(Into::into)), None => {object}\
+                 .Set{native}(None::<&native::IMediaPlaybackSource>).map_err(Into::into) }}"
+            )
+        });
+        output.push_str(&format!(
+            "{pattern}None) => Some({clear}),\n\
+             {pattern}Some(PropertyValue::IUnknown(value))) => Some({set}),\n"
+        ));
+        return;
+    }
     if matches!(
         adapter,
         Some(
             PropertyAdapter::ImplicitOpacityTransition
                 | PropertyAdapter::ImplicitScale
                 | PropertyAdapter::ImplicitScaleTransition
+                | PropertyAdapter::ImplicitTranslation
+                | PropertyAdapter::ImplicitTranslationTransition
         )
     ) {
         if adapter == Some(PropertyAdapter::ImplicitScale) {
@@ -2457,11 +2625,21 @@ fn emit_native_property_arms(
                  Some({target}.cast::<native::UIElement>().map_err(Into::into)\
                  .and_then(|object| set_implicit_scale(&object, *value))),\n"
             ));
+        } else if adapter == Some(PropertyAdapter::ImplicitTranslation) {
+            output.push_str(&format!(
+                "{pattern}None) => Some({target}.cast::<native::UIElement>().map_err(Into::into)\
+                 .and_then(|object| set_implicit_translation(&object, None))),\n\
+                 {pattern}Some(PropertyValue::Vector3(value))) => \
+                 Some({target}.cast::<native::UIElement>().map_err(Into::into)\
+                 .and_then(|object| set_implicit_translation(&object, *value))),\n"
+            ));
         } else {
-            let helper = if adapter == Some(PropertyAdapter::ImplicitOpacityTransition) {
-                "set_opacity_transition"
-            } else {
-                "set_scale_transition"
+            let helper = match adapter {
+                Some(PropertyAdapter::ImplicitOpacityTransition) => "set_opacity_transition",
+                Some(PropertyAdapter::ImplicitTranslationTransition) => {
+                    "set_translation_transition"
+                }
+                _ => "set_scale_transition",
             };
             output.push_str(&format!(
                 "{pattern}None) => Some({target}.cast::<native::UIElement>().map_err(Into::into)\
@@ -2548,9 +2726,9 @@ fn emit_native_property_arms(
     ) {
         let rows = adapter == Some(PropertyAdapter::GridRows);
         output.push_str(&format!(
-            "{pattern}None) => Some(set_grid_definitions({target}, &[], {rows})),\n\
+            "{pattern}None) => Some(set_grid_definitions(&{target}, &[], {rows})),\n\
              {pattern}Some(PropertyValue::GridLengths(value))) => \
-             Some(set_grid_definitions({target}, value, {rows})),\n"
+             Some(set_grid_definitions(&{target}, value, {rows})),\n"
         ));
         return;
     }
@@ -2680,6 +2858,11 @@ fn emit_native_property_arms(
     let (variant, expression) = match value {
         "String" => ("String", "value.as_ref()"),
         "Bool" => ("Bool", "*value"),
+        // Font sizes and explicit line heights ride the global font scale (see
+        // `native::font_scale`), so the factor applies at this one dispatch point.
+        // The generated code is included inside `native::winui`, where the
+        // `native` module's items are already in scope.
+        "F64" if scaled => ("F64", "*value * font_scale()"),
         "F64" => ("F64", "*value"),
         "FontWeight" => ("FontWeight", "native::FontWeight { weight: value.value() }"),
         "I32" => ("I32", "*value"),
@@ -2819,6 +3002,10 @@ fn generate(schema: &Schema, metadata: &tool_reactor_metadata::MetadataResolver)
              Selection,\n\
              ThemeTransitions,\n\
              Thickness,\n\
+             Vector3,\n\
+             IUnknown,\n\
+             ItemsViewLayout,\n\
+             RefreshDeferral,\n\
              SelectionIndex,\n\
              StringList,\n\
              Enum { kind: &'static str, variants: &'static [&'static str] },\n\
@@ -3339,7 +3526,7 @@ fn generate_declarations(
             .iter()
             .filter(|property| property.required)
         {
-            arguments.push(property_argument(property));
+            arguments.push(property_argument(property, &snake_case(&property.name)));
         }
         output.push_str(&format!(
             "pub fn new({}) -> Self {{\n",
@@ -3448,7 +3635,7 @@ fn generate_declarations(
                 Some(PropertyAdapter::ResourceOverrides) => {
                     "resource_overrides: ResourceOverrides".to_string()
                 }
-                _ => property_argument_parts(&name, &property.value),
+                _ => property_argument(property, &name),
             };
             output.push_str(&format!("pub fn {name}(mut self, {argument}) -> Self {{\n"));
             if matches!(property.value.as_str(), "CornerRadius" | "Thickness") {
@@ -3680,6 +3867,7 @@ fn generate_declarations(
                         "OptionalF64" => "Option<f64>",
                         "OptionalTimeSpan" => "Option<TimeSpan>",
                         "NavigationViewDisplayMode" => "NavigationViewDisplayMode",
+                        "RefreshDeferral" => "RefreshDeferral",
                         "Selection" => "Option<Rc<str>>",
                         "PointerEventInfo" => "PointerEventInfo",
                         "SelectionIndex" => "Option<usize>",
@@ -3722,8 +3910,12 @@ fn generate_declarations(
     output
 }
 
-fn property_argument(property: &Property) -> String {
-    property_argument_parts(&property.name, &property.value)
+fn property_argument(property: &Property, name: &str) -> String {
+    match property.adapter {
+        Some(PropertyAdapter::MapCenter) => "latitude: f64, longitude: f64".to_string(),
+        Some(PropertyAdapter::ImageDecodeWidth) => format!("{name}: impl Into<Option<i32>>"),
+        _ => property_argument_parts(name, &property.value),
+    }
 }
 
 fn validation_expression(name: &str, value: &str, validation: Validation) -> String {
@@ -3764,12 +3956,22 @@ fn property_argument_parts(name: &str, value: &str) -> String {
         "SelectionIndex" => format!("{name}: impl Into<Option<usize>>"),
         "StringList" => format!("{name}: impl IntoIterator<Item = impl Into<Rc<str>>>"),
         "Thickness" => format!("{name}: impl Into<Thickness>"),
+        "Vector3" => format!("{name}: impl Into<Option<Vector3>>"),
+        "IUnknown" => format!("{name}: impl Into<Option<windows_core::IUnknown>>"),
         value => format!("{name}: {value}"),
     }
 }
 
 fn property_value(property: &Property, name: &str) -> String {
-    property_value_parts(&property.value, name)
+    match property.adapter {
+        Some(PropertyAdapter::MapCenter) => {
+            "PropertyValue::String(Rc::from(format!(\"{latitude},{longitude}\")))".to_string()
+        }
+        Some(PropertyAdapter::ImageDecodeWidth) => {
+            format!("PropertyValue::I32(Into::<Option<i32>>::into({name}).unwrap_or(-1))")
+        }
+        _ => property_value_parts(&property.value, name),
+    }
 }
 
 fn property_value_parts(value: &str, name: &str) -> String {
@@ -3800,6 +4002,9 @@ fn property_value_parts(value: &str, name: &str) -> String {
             format!("PropertyValue::StringList({name}.into_iter().map(Into::into).collect())")
         }
         "Thickness" => format!("PropertyValue::Thickness({name})"),
+        "Vector3" => format!("PropertyValue::Vector3({name}.into())"),
+        "IUnknown" => format!("PropertyValue::IUnknown({name}.into())"),
+        "ItemsViewLayout" => format!("PropertyValue::ItemsViewLayout({name})"),
         _ => format!("{name}.property_value()"),
     }
 }
@@ -4002,6 +4207,9 @@ fn live_property_sample(
     ) {
         return "\"https://example.com\"".to_string();
     }
+    if adapter == Some(PropertyAdapter::MapCenter) {
+        return "1.0, 2.0".to_string();
+    }
     match value {
         "String" if name == "ClockIdentifier" => "\"24HourClock\"".to_string(),
         "String" if adapter == Some(PropertyAdapter::PathData) => "\"M 0,0 L 1,1\"".to_string(),
@@ -4034,6 +4242,9 @@ fn live_property_sample(
         "StringList" => "[\"coverage\"]".to_string(),
         "ThemeTransitions" => "[ThemeTransition::Reposition]".to_string(),
         "Thickness" => "Thickness::uniform(1.0)".to_string(),
+        "Vector3" => "Vector3 { x: 1.0, y: 1.0, z: 0.0 }".to_string(),
+        "IUnknown" => "None::<windows_core::IUnknown>".to_string(),
+        "ItemsViewLayout" => "ItemsViewLayout::Stack".to_string(),
         "AutomationHeadingLevel" => "AutomationHeadingLevel::Level1".to_string(),
         "HorizontalAlignment" => "HorizontalAlignment::Center".to_string(),
         "InfoBarSeverity" => "InfoBarSeverity::Informational".to_string(),
@@ -4123,6 +4334,10 @@ fn is_builtin_value(value: &str) -> bool {
             | "StringList"
             | "ThemeTransitions"
             | "Thickness"
+            | "Vector3"
+            | "IUnknown"
+            | "ItemsViewLayout"
+            | "RefreshDeferral"
     )
 }
 
@@ -4169,3 +4384,4 @@ fn rustfmt(source: &str) -> String {
     assert!(output.status.success());
     String::from_utf8(output.stdout).unwrap()
 }
+

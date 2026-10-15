@@ -127,6 +127,7 @@ pub enum PropertyId {
     CanvasTop,
     Caption,
     CapturePointerOnPress,
+    Center,
     ClockIdentifier,
     CloseButtonContent,
     CloseButtonText,
@@ -136,6 +137,7 @@ pub enum PropertyId {
     CornerRadius,
     Data,
     DayVisible,
+    DecodeWidth,
     Delay,
     DisplayMode,
     DisplayName,
@@ -144,6 +146,7 @@ pub enum PropertyId {
     Expanded,
     Fill,
     FocusOnPointerRelease,
+    FontFamily,
     FontSize,
     FontWeight,
     Foreground,
@@ -182,6 +185,7 @@ pub enum PropertyId {
     IsExpanded,
     IsGroupLabelVisible,
     IsHexInputVisible,
+    IsHitTestVisible,
     IsIndeterminate,
     IsLightDismissEnabled,
     IsOn,
@@ -196,6 +200,7 @@ pub enum PropertyId {
     IsSettingsVisible,
     IsTabStop,
     IsTextSelectionEnabled,
+    IsThumbToolTipEnabled,
     IsTodayHighlighted,
     IsZoomedInViewActive,
     ItemHeight,
@@ -203,6 +208,8 @@ pub enum PropertyId {
     ItemsSource,
     KeyboardAccelerators,
     Label,
+    Layout,
+    LineHeight,
     MapServiceToken,
     Margin,
     MaxColumns,
@@ -212,6 +219,7 @@ pub enum PropertyId {
     MaxVisiblePips,
     MaxWidth,
     Maximum,
+    MaximumRowsOrColumns,
     Message,
     MinHeight,
     MinWidth,
@@ -271,6 +279,8 @@ pub enum PropertyId {
     TextWrapping,
     Title,
     Transitions,
+    Translation,
+    TranslationTransition,
     UriSource,
     Value,
     VerticalAlignment,
@@ -350,15 +360,20 @@ pub enum EventId {
     PointerMoved,
     PointerPressed,
     PointerReleased,
+    PointerWheelChanged,
     PreviewKeyDown,
+    QuerySubmitted,
+    RefreshRequested,
     SelectedDateChanged,
     SelectedDatesChanged,
     SelectedIndexChanged,
     SelectedTimeChanged,
     SelectionChanged,
+    SizeChanged,
     SuggestionChosen,
     TabCloseRequested,
     TabItemsChanged,
+    Tapped,
     TextChanged,
     Toggled,
     ValueChanged,
@@ -429,6 +444,10 @@ pub enum ValueType {
     Selection,
     ThemeTransitions,
     Thickness,
+    Vector3,
+    IUnknown,
+    ItemsViewLayout,
+    RefreshDeferral,
     SelectionIndex,
     StringList,
     Enum {
@@ -617,15 +636,24 @@ pub fn relation_accepts(contract: &RelationContract, kind: ObjectType) -> bool {
 }
 pub fn event_contracts(kind: ObjectType) -> &'static [EventContract] {
     match kind {
-        ObjectType::TextBlock => &[],
+        ObjectType::TextBlock => &[EventContract {
+            id: EventId::Tapped,
+            value: ValueType::Unit,
+        }],
         ObjectType::TextBox => &[EventContract {
             id: EventId::TextChanged,
             value: ValueType::String,
         }],
-        ObjectType::Button => &[EventContract {
-            id: EventId::Click,
-            value: ValueType::Unit,
-        }],
+        ObjectType::Button => &[
+            EventContract {
+                id: EventId::Click,
+                value: ValueType::Unit,
+            },
+            EventContract {
+                id: EventId::Tapped,
+                value: ValueType::Unit,
+            },
+        ],
         ObjectType::CheckBox => &[
             EventContract {
                 id: EventId::Click,
@@ -634,6 +662,10 @@ pub fn event_contracts(kind: ObjectType) -> &'static [EventContract] {
             EventContract {
                 id: EventId::IsCheckedChanged,
                 value: ValueType::OptionalBool,
+            },
+            EventContract {
+                id: EventId::Tapped,
+                value: ValueType::Unit,
             },
         ],
         ObjectType::Border => &[
@@ -701,9 +733,29 @@ pub fn event_contracts(kind: ObjectType) -> &'static [EventContract] {
                 id: EventId::Drop,
                 value: ValueType::DroppedData,
             },
+            EventContract {
+                id: EventId::PointerWheelChanged,
+                value: ValueType::Unit,
+            },
+            EventContract {
+                id: EventId::Tapped,
+                value: ValueType::Unit,
+            },
         ],
-        ObjectType::Grid => &[],
-        ObjectType::StackPanel => &[],
+        ObjectType::Grid => &[
+            EventContract {
+                id: EventId::PointerWheelChanged,
+                value: ValueType::Unit,
+            },
+            EventContract {
+                id: EventId::Tapped,
+                value: ValueType::Unit,
+            },
+        ],
+        ObjectType::StackPanel => &[EventContract {
+            id: EventId::Tapped,
+            value: ValueType::Unit,
+        }],
         ObjectType::Canvas => &[],
         ObjectType::ScrollViewer => &[],
         ObjectType::Viewbox => &[],
@@ -717,10 +769,16 @@ pub fn event_contracts(kind: ObjectType) -> &'static [EventContract] {
                 value: ValueType::Unit,
             },
         ],
-        ObjectType::Slider => &[EventContract {
-            id: EventId::ValueChanged,
-            value: ValueType::F64,
-        }],
+        ObjectType::Slider => &[
+            EventContract {
+                id: EventId::ValueChanged,
+                value: ValueType::F64,
+            },
+            EventContract {
+                id: EventId::SizeChanged,
+                value: ValueType::F64,
+            },
+        ],
         ObjectType::TreeView => &[EventContract {
             id: EventId::ItemInvoked,
             value: ValueType::String,
@@ -759,6 +817,10 @@ pub fn event_contracts(kind: ObjectType) -> &'static [EventContract] {
                 id: EventId::SuggestionChosen,
                 value: ValueType::String,
             },
+            EventContract {
+                id: EventId::QuerySubmitted,
+                value: ValueType::String,
+            },
         ],
         ObjectType::PasswordBox => &[EventContract {
             id: EventId::PasswordChanged,
@@ -792,10 +854,16 @@ pub fn event_contracts(kind: ObjectType) -> &'static [EventContract] {
             id: EventId::Toggled,
             value: ValueType::Bool,
         }],
-        ObjectType::ToggleButton => &[EventContract {
-            id: EventId::IsCheckedChanged,
-            value: ValueType::OptionalBool,
-        }],
+        ObjectType::ToggleButton => &[
+            EventContract {
+                id: EventId::IsCheckedChanged,
+                value: ValueType::OptionalBool,
+            },
+            EventContract {
+                id: EventId::Tapped,
+                value: ValueType::Unit,
+            },
+        ],
         ObjectType::RadioButton => &[EventContract {
             id: EventId::Checked,
             value: ValueType::OptionalBool,
@@ -975,7 +1043,10 @@ pub fn event_contracts(kind: ObjectType) -> &'static [EventContract] {
             id: EventId::SelectedIndexChanged,
             value: ValueType::SelectionIndex,
         }],
-        ObjectType::RefreshContainer => &[],
+        ObjectType::RefreshContainer => &[EventContract {
+            id: EventId::RefreshRequested,
+            value: ValueType::RefreshDeferral,
+        }],
         ObjectType::RefreshVisualizer => &[],
         ObjectType::SemanticZoom => &[],
         ObjectType::SwipeControl => &[],
@@ -1223,6 +1294,10 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
             id,
             value: ValueType::FontWeight,
         }),
+        (ObjectType::TextBlock, PropertyId::FontFamily) => Some(PropertyContract {
+            id,
+            value: ValueType::String,
+        }),
         (ObjectType::TextBlock, PropertyId::Foreground) => Some(PropertyContract {
             id,
             value: ValueType::Brush,
@@ -1230,6 +1305,10 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
         (ObjectType::TextBlock, PropertyId::Padding) => Some(PropertyContract {
             id,
             value: ValueType::Thickness,
+        }),
+        (ObjectType::TextBlock, PropertyId::LineHeight) => Some(PropertyContract {
+            id,
+            value: ValueType::F64,
         }),
         (ObjectType::TextBlock, PropertyId::TextWrapping) => Some(PropertyContract {
             id,
@@ -1252,6 +1331,10 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
         (ObjectType::TextBlock, PropertyId::MaxLines) => Some(PropertyContract {
             id,
             value: ValueType::I32,
+        }),
+        (ObjectType::TextBlock, PropertyId::IsHitTestVisible) => Some(PropertyContract {
+            id,
+            value: ValueType::Bool,
         }),
         (ObjectType::TextBox, PropertyId::Text) => Some(PropertyContract {
             id,
@@ -1284,6 +1367,18 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
             id,
             value: ValueType::Thickness,
         }),
+        (ObjectType::TextBox, PropertyId::Padding) => Some(PropertyContract {
+            id,
+            value: ValueType::Thickness,
+        }),
+        (ObjectType::TextBox, PropertyId::FontSize) => Some(PropertyContract {
+            id,
+            value: ValueType::F64,
+        }),
+        (ObjectType::TextBox, PropertyId::Resources) => Some(PropertyContract {
+            id,
+            value: ValueType::ResourceOverrides,
+        }),
         (ObjectType::Button, PropertyId::Background) => Some(PropertyContract {
             id,
             value: ValueType::Brush,
@@ -1314,9 +1409,29 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
             id,
             value: ValueType::KeyAccelerators,
         }),
+        (ObjectType::Button, PropertyId::Padding) => Some(PropertyContract {
+            id,
+            value: ValueType::Thickness,
+        }),
+        (ObjectType::Button, PropertyId::CornerRadius) => Some(PropertyContract {
+            id,
+            value: ValueType::CornerRadius,
+        }),
+        (ObjectType::Button, PropertyId::Foreground) => Some(PropertyContract {
+            id,
+            value: ValueType::Brush,
+        }),
+        (ObjectType::Button, PropertyId::IsHitTestVisible) => Some(PropertyContract {
+            id,
+            value: ValueType::Bool,
+        }),
         (ObjectType::CheckBox, PropertyId::IsChecked) => Some(PropertyContract {
             id,
             value: ValueType::OptionalBool,
+        }),
+        (ObjectType::CheckBox, PropertyId::Resources) => Some(PropertyContract {
+            id,
+            value: ValueType::ResourceOverrides,
         }),
         (ObjectType::Border, PropertyId::Background) => Some(PropertyContract {
             id,
@@ -1358,6 +1473,14 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
             id,
             value: ValueType::Duration,
         }),
+        (ObjectType::Border, PropertyId::Translation) => Some(PropertyContract {
+            id,
+            value: ValueType::Vector3,
+        }),
+        (ObjectType::Border, PropertyId::TranslationTransition) => Some(PropertyContract {
+            id,
+            value: ValueType::Duration,
+        }),
         (ObjectType::Border, PropertyId::CapturePointerOnPress) => Some(PropertyContract {
             id,
             value: ValueType::Bool,
@@ -1369,6 +1492,10 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
         (ObjectType::Border, PropertyId::DropPolicy) => Some(PropertyContract {
             id,
             value: ValueType::DragDropPolicy,
+        }),
+        (ObjectType::Border, PropertyId::IsHitTestVisible) => Some(PropertyContract {
+            id,
+            value: ValueType::Bool,
         }),
         (ObjectType::Grid, PropertyId::GridRows) => Some(PropertyContract {
             id,
@@ -1394,6 +1521,10 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
             id,
             value: ValueType::KeyAccelerators,
         }),
+        (ObjectType::Grid, PropertyId::IsHitTestVisible) => Some(PropertyContract {
+            id,
+            value: ValueType::Bool,
+        }),
         (ObjectType::StackPanel, PropertyId::Spacing) => Some(PropertyContract {
             id,
             value: ValueType::F64,
@@ -1404,6 +1535,10 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
                 kind: "Orientation",
                 variants: &["Vertical", "Horizontal"],
             },
+        }),
+        (ObjectType::StackPanel, PropertyId::IsHitTestVisible) => Some(PropertyContract {
+            id,
+            value: ValueType::Bool,
         }),
         (ObjectType::ScrollViewer, PropertyId::HorizontalScrollBarVisibility) => {
             Some(PropertyContract {
@@ -1476,6 +1611,18 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
         (ObjectType::Slider, PropertyId::StepFrequency) => Some(PropertyContract {
             id,
             value: ValueType::F64,
+        }),
+        (ObjectType::Slider, PropertyId::IsThumbToolTipEnabled) => Some(PropertyContract {
+            id,
+            value: ValueType::Bool,
+        }),
+        (ObjectType::Slider, PropertyId::CornerRadius) => Some(PropertyContract {
+            id,
+            value: ValueType::CornerRadius,
+        }),
+        (ObjectType::Slider, PropertyId::Resources) => Some(PropertyContract {
+            id,
+            value: ValueType::ResourceOverrides,
         }),
         (ObjectType::TreeView, PropertyId::SelectionMode) => Some(PropertyContract {
             id,
@@ -1550,6 +1697,12 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
             id,
             value: ValueType::F64,
         }),
+        (ObjectType::VariableSizedWrapGrid, PropertyId::MaximumRowsOrColumns) => {
+            Some(PropertyContract {
+                id,
+                value: ValueType::I32,
+            })
+        }
         (ObjectType::AutoSuggestBox, PropertyId::PlaceholderText) => Some(PropertyContract {
             id,
             value: ValueType::String,
@@ -1592,6 +1745,10 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
         (ObjectType::NumberBox, PropertyId::Value) => Some(PropertyContract {
             id,
             value: ValueType::OptionalF64,
+        }),
+        (ObjectType::NumberBox, PropertyId::Resources) => Some(PropertyContract {
+            id,
+            value: ValueType::ResourceOverrides,
         }),
         (ObjectType::NavigationView, PropertyId::PaneDisplayMode) => Some(PropertyContract {
             id,
@@ -1640,6 +1797,14 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
         (ObjectType::NavigationView, PropertyId::IsPaneOpen) => Some(PropertyContract {
             id,
             value: ValueType::Bool,
+        }),
+        (ObjectType::NavigationView, PropertyId::FontFamily) => Some(PropertyContract {
+            id,
+            value: ValueType::String,
+        }),
+        (ObjectType::NavigationView, PropertyId::Resources) => Some(PropertyContract {
+            id,
+            value: ValueType::ResourceOverrides,
         }),
         (ObjectType::NavigationViewItem, PropertyId::IsSelected) => Some(PropertyContract {
             id,
@@ -1704,13 +1869,37 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
             id,
             value: ValueType::Bool,
         }),
+        (ObjectType::ProgressBar, PropertyId::CornerRadius) => Some(PropertyContract {
+            id,
+            value: ValueType::CornerRadius,
+        }),
+        (ObjectType::ProgressBar, PropertyId::Foreground) => Some(PropertyContract {
+            id,
+            value: ValueType::Brush,
+        }),
+        (ObjectType::ProgressBar, PropertyId::IsHitTestVisible) => Some(PropertyContract {
+            id,
+            value: ValueType::Bool,
+        }),
+        (ObjectType::ProgressBar, PropertyId::Resources) => Some(PropertyContract {
+            id,
+            value: ValueType::ResourceOverrides,
+        }),
         (ObjectType::ToggleSwitch, PropertyId::IsOn) => Some(PropertyContract {
             id,
             value: ValueType::Bool,
         }),
+        (ObjectType::ToggleSwitch, PropertyId::Resources) => Some(PropertyContract {
+            id,
+            value: ValueType::ResourceOverrides,
+        }),
         (ObjectType::ToggleButton, PropertyId::IsChecked) => Some(PropertyContract {
             id,
             value: ValueType::OptionalBool,
+        }),
+        (ObjectType::ToggleButton, PropertyId::Resources) => Some(PropertyContract {
+            id,
+            value: ValueType::ResourceOverrides,
         }),
         (ObjectType::RadioButton, PropertyId::GroupName) => Some(PropertyContract {
             id,
@@ -1789,12 +1978,20 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
             id,
             value: ValueType::ImageSource,
         }),
+        (ObjectType::Image, PropertyId::DecodeWidth) => Some(PropertyContract {
+            id,
+            value: ValueType::I32,
+        }),
         (ObjectType::Image, PropertyId::Stretch) => Some(PropertyContract {
             id,
             value: ValueType::Enum {
                 kind: "Stretch",
                 variants: &["None", "Fill", "Uniform", "UniformToFill"],
             },
+        }),
+        (ObjectType::Image, PropertyId::IsHitTestVisible) => Some(PropertyContract {
+            id,
+            value: ValueType::Bool,
         }),
         (ObjectType::ProgressRing, PropertyId::Minimum) => Some(PropertyContract {
             id,
@@ -2152,6 +2349,18 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
             id,
             value: ValueType::SelectionIndex,
         }),
+        (ObjectType::ComboBox, PropertyId::CornerRadius) => Some(PropertyContract {
+            id,
+            value: ValueType::CornerRadius,
+        }),
+        (ObjectType::ComboBox, PropertyId::IsHitTestVisible) => Some(PropertyContract {
+            id,
+            value: ValueType::Bool,
+        }),
+        (ObjectType::ComboBox, PropertyId::Resources) => Some(PropertyContract {
+            id,
+            value: ValueType::ResourceOverrides,
+        }),
         (ObjectType::Pivot, PropertyId::Title) => Some(PropertyContract {
             id,
             value: ValueType::String,
@@ -2407,6 +2616,10 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
             id,
             value: ValueType::F64,
         }),
+        (ObjectType::RichTextBlock, PropertyId::FontFamily) => Some(PropertyContract {
+            id,
+            value: ValueType::String,
+        }),
         (ObjectType::AnimatedVisualPlayer, PropertyId::AutoPlay) => Some(PropertyContract {
             id,
             value: ValueType::Bool,
@@ -2431,12 +2644,20 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
             id,
             value: ValueType::StringList,
         }),
+        (ObjectType::ItemsView, PropertyId::Layout) => Some(PropertyContract {
+            id,
+            value: ValueType::ItemsViewLayout,
+        }),
         (ObjectType::ItemsView, PropertyId::SelectionMode) => Some(PropertyContract {
             id,
             value: ValueType::Enum {
                 kind: "ItemsViewSelectionMode",
                 variants: &["None", "Single", "Multiple", "Extended"],
             },
+        }),
+        (ObjectType::MapControl, PropertyId::Center) => Some(PropertyContract {
+            id,
+            value: ValueType::String,
         }),
         (ObjectType::MapControl, PropertyId::ZoomLevel) => Some(PropertyContract {
             id,
@@ -2452,6 +2673,10 @@ pub fn property_contract(kind: ObjectType, id: PropertyId) -> Option<PropertyCon
                 value: ValueType::Bool,
             })
         }
+        (ObjectType::MediaPlayerElement, PropertyId::Source) => Some(PropertyContract {
+            id,
+            value: ValueType::IUnknown,
+        }),
         (ObjectType::MediaPlayerElement, PropertyId::AreTransportControlsEnabled) => {
             Some(PropertyContract {
                 id,
@@ -2551,12 +2776,15 @@ pub(crate) fn property_order(kind: ObjectType, id: PropertyId) -> usize {
         (ObjectType::TextBlock, PropertyId::Text) => 26,
         (ObjectType::TextBlock, PropertyId::FontSize) => 27,
         (ObjectType::TextBlock, PropertyId::FontWeight) => 28,
-        (ObjectType::TextBlock, PropertyId::Foreground) => 29,
-        (ObjectType::TextBlock, PropertyId::Padding) => 30,
-        (ObjectType::TextBlock, PropertyId::TextWrapping) => 31,
-        (ObjectType::TextBlock, PropertyId::IsTextSelectionEnabled) => 32,
-        (ObjectType::TextBlock, PropertyId::TextTrimming) => 33,
-        (ObjectType::TextBlock, PropertyId::MaxLines) => 34,
+        (ObjectType::TextBlock, PropertyId::FontFamily) => 29,
+        (ObjectType::TextBlock, PropertyId::Foreground) => 30,
+        (ObjectType::TextBlock, PropertyId::Padding) => 31,
+        (ObjectType::TextBlock, PropertyId::LineHeight) => 32,
+        (ObjectType::TextBlock, PropertyId::TextWrapping) => 33,
+        (ObjectType::TextBlock, PropertyId::IsTextSelectionEnabled) => 34,
+        (ObjectType::TextBlock, PropertyId::TextTrimming) => 35,
+        (ObjectType::TextBlock, PropertyId::MaxLines) => 36,
+        (ObjectType::TextBlock, PropertyId::IsHitTestVisible) => 37,
         (ObjectType::TextBox, PropertyId::Text) => 26,
         (ObjectType::TextBox, PropertyId::PlaceholderText) => 27,
         (ObjectType::TextBox, PropertyId::AcceptsReturn) => 28,
@@ -2564,7 +2792,10 @@ pub(crate) fn property_order(kind: ObjectType, id: PropertyId) -> usize {
         (ObjectType::TextBox, PropertyId::Background) => 30,
         (ObjectType::TextBox, PropertyId::BorderBrush) => 31,
         (ObjectType::TextBox, PropertyId::BorderThickness) => 32,
-        (ObjectType::TextBox, PropertyId::IsEnabled) => 33,
+        (ObjectType::TextBox, PropertyId::Padding) => 33,
+        (ObjectType::TextBox, PropertyId::FontSize) => 34,
+        (ObjectType::TextBox, PropertyId::Resources) => 35,
+        (ObjectType::TextBox, PropertyId::IsEnabled) => 36,
         (ObjectType::Button, PropertyId::Background) => 26,
         (ObjectType::Button, PropertyId::IsEnabled) => 27,
         (ObjectType::Button, PropertyId::HorizontalContentAlignment) => 28,
@@ -2572,8 +2803,13 @@ pub(crate) fn property_order(kind: ObjectType, id: PropertyId) -> usize {
         (ObjectType::Button, PropertyId::Resources) => 30,
         (ObjectType::Button, PropertyId::Style) => 31,
         (ObjectType::Button, PropertyId::KeyboardAccelerators) => 32,
+        (ObjectType::Button, PropertyId::Padding) => 33,
+        (ObjectType::Button, PropertyId::CornerRadius) => 34,
+        (ObjectType::Button, PropertyId::Foreground) => 35,
+        (ObjectType::Button, PropertyId::IsHitTestVisible) => 36,
         (ObjectType::CheckBox, PropertyId::IsChecked) => 26,
         (ObjectType::CheckBox, PropertyId::IsEnabled) => 27,
+        (ObjectType::CheckBox, PropertyId::Resources) => 28,
         (ObjectType::Border, PropertyId::Background) => 26,
         (ObjectType::Border, PropertyId::BorderBrush) => 27,
         (ObjectType::Border, PropertyId::BorderThickness) => 28,
@@ -2584,17 +2820,22 @@ pub(crate) fn property_order(kind: ObjectType, id: PropertyId) -> usize {
         (ObjectType::Border, PropertyId::OpacityTransition) => 33,
         (ObjectType::Border, PropertyId::Scale) => 34,
         (ObjectType::Border, PropertyId::ScaleTransition) => 35,
-        (ObjectType::Border, PropertyId::CapturePointerOnPress) => 36,
-        (ObjectType::Border, PropertyId::FocusOnPointerRelease) => 37,
-        (ObjectType::Border, PropertyId::DropPolicy) => 38,
+        (ObjectType::Border, PropertyId::Translation) => 36,
+        (ObjectType::Border, PropertyId::TranslationTransition) => 37,
+        (ObjectType::Border, PropertyId::CapturePointerOnPress) => 38,
+        (ObjectType::Border, PropertyId::FocusOnPointerRelease) => 39,
+        (ObjectType::Border, PropertyId::DropPolicy) => 40,
+        (ObjectType::Border, PropertyId::IsHitTestVisible) => 41,
         (ObjectType::Grid, PropertyId::GridRows) => 26,
         (ObjectType::Grid, PropertyId::GridColumns) => 27,
         (ObjectType::Grid, PropertyId::RowSpacing) => 28,
         (ObjectType::Grid, PropertyId::ColumnSpacing) => 29,
         (ObjectType::Grid, PropertyId::Background) => 30,
         (ObjectType::Grid, PropertyId::KeyboardAccelerators) => 31,
+        (ObjectType::Grid, PropertyId::IsHitTestVisible) => 32,
         (ObjectType::StackPanel, PropertyId::Spacing) => 26,
         (ObjectType::StackPanel, PropertyId::Orientation) => 27,
+        (ObjectType::StackPanel, PropertyId::IsHitTestVisible) => 28,
         (ObjectType::ScrollViewer, PropertyId::HorizontalScrollBarVisibility) => 26,
         (ObjectType::ScrollViewer, PropertyId::VerticalScrollBarVisibility) => 27,
         (ObjectType::Viewbox, PropertyId::Stretch) => 26,
@@ -2610,6 +2851,9 @@ pub(crate) fn property_order(kind: ObjectType, id: PropertyId) -> usize {
         (ObjectType::Slider, PropertyId::IsEnabled) => 29,
         (ObjectType::Slider, PropertyId::Orientation) => 30,
         (ObjectType::Slider, PropertyId::StepFrequency) => 31,
+        (ObjectType::Slider, PropertyId::IsThumbToolTipEnabled) => 32,
+        (ObjectType::Slider, PropertyId::CornerRadius) => 33,
+        (ObjectType::Slider, PropertyId::Resources) => 34,
         (ObjectType::TreeView, PropertyId::SelectionMode) => 26,
         (ObjectType::TreeView, PropertyId::IsEnabled) => 27,
         (ObjectType::TreeNode, PropertyId::Text) => 26,
@@ -2630,6 +2874,7 @@ pub(crate) fn property_order(kind: ObjectType, id: PropertyId) -> usize {
         (ObjectType::VariableSizedWrapGrid, PropertyId::Orientation) => 26,
         (ObjectType::VariableSizedWrapGrid, PropertyId::ItemWidth) => 27,
         (ObjectType::VariableSizedWrapGrid, PropertyId::ItemHeight) => 28,
+        (ObjectType::VariableSizedWrapGrid, PropertyId::MaximumRowsOrColumns) => 29,
         (ObjectType::AutoSuggestBox, PropertyId::PlaceholderText) => 26,
         (ObjectType::AutoSuggestBox, PropertyId::IsEnabled) => 27,
         (ObjectType::AutoSuggestBox, PropertyId::ItemsSource) => 28,
@@ -2643,6 +2888,7 @@ pub(crate) fn property_order(kind: ObjectType, id: PropertyId) -> usize {
         (ObjectType::NumberBox, PropertyId::Minimum) => 27,
         (ObjectType::NumberBox, PropertyId::Maximum) => 28,
         (ObjectType::NumberBox, PropertyId::Value) => 29,
+        (ObjectType::NumberBox, PropertyId::Resources) => 30,
         (ObjectType::NavigationView, PropertyId::IsEnabled) => 26,
         (ObjectType::NavigationView, PropertyId::PaneDisplayMode) => 27,
         (ObjectType::NavigationView, PropertyId::IsPaneToggleButtonVisible) => 28,
@@ -2654,6 +2900,8 @@ pub(crate) fn property_order(kind: ObjectType, id: PropertyId) -> usize {
         (ObjectType::NavigationView, PropertyId::PaneTitle) => 34,
         (ObjectType::NavigationView, PropertyId::OpenPaneLength) => 35,
         (ObjectType::NavigationView, PropertyId::IsPaneOpen) => 36,
+        (ObjectType::NavigationView, PropertyId::FontFamily) => 37,
+        (ObjectType::NavigationView, PropertyId::Resources) => 38,
         (ObjectType::NavigationViewItem, PropertyId::IsSelected) => 26,
         (ObjectType::NavigationViewItem, PropertyId::SelectsOnInvoked) => 27,
         (ObjectType::NavigationViewItem, PropertyId::IsExpanded) => 28,
@@ -2670,10 +2918,16 @@ pub(crate) fn property_order(kind: ObjectType, id: PropertyId) -> usize {
         (ObjectType::ProgressBar, PropertyId::ShowError) => 30,
         (ObjectType::ProgressBar, PropertyId::ShowPaused) => 31,
         (ObjectType::ProgressBar, PropertyId::IsEnabled) => 32,
+        (ObjectType::ProgressBar, PropertyId::CornerRadius) => 33,
+        (ObjectType::ProgressBar, PropertyId::Foreground) => 34,
+        (ObjectType::ProgressBar, PropertyId::IsHitTestVisible) => 35,
+        (ObjectType::ProgressBar, PropertyId::Resources) => 36,
         (ObjectType::ToggleSwitch, PropertyId::IsEnabled) => 26,
         (ObjectType::ToggleSwitch, PropertyId::IsOn) => 27,
+        (ObjectType::ToggleSwitch, PropertyId::Resources) => 28,
         (ObjectType::ToggleButton, PropertyId::IsEnabled) => 26,
         (ObjectType::ToggleButton, PropertyId::IsChecked) => 27,
+        (ObjectType::ToggleButton, PropertyId::Resources) => 28,
         (ObjectType::RadioButton, PropertyId::GroupName) => 26,
         (ObjectType::RadioButton, PropertyId::IsEnabled) => 27,
         (ObjectType::RadioButton, PropertyId::IsChecked) => 28,
@@ -2691,7 +2945,9 @@ pub(crate) fn property_order(kind: ObjectType, id: PropertyId) -> usize {
         (ObjectType::ScrollView, PropertyId::HorizontalScrollBarVisibility) => 26,
         (ObjectType::ScrollView, PropertyId::VerticalScrollBarVisibility) => 27,
         (ObjectType::Image, PropertyId::Source) => 26,
-        (ObjectType::Image, PropertyId::Stretch) => 27,
+        (ObjectType::Image, PropertyId::DecodeWidth) => 27,
+        (ObjectType::Image, PropertyId::Stretch) => 28,
+        (ObjectType::Image, PropertyId::IsHitTestVisible) => 29,
         (ObjectType::ProgressRing, PropertyId::Minimum) => 26,
         (ObjectType::ProgressRing, PropertyId::Maximum) => 27,
         (ObjectType::ProgressRing, PropertyId::Value) => 28,
@@ -2733,6 +2989,9 @@ pub(crate) fn property_order(kind: ObjectType, id: PropertyId) -> usize {
         (ObjectType::ComboBox, PropertyId::IsEnabled) => 28,
         (ObjectType::ComboBox, PropertyId::ItemsSource) => 29,
         (ObjectType::ComboBox, PropertyId::SelectedIndex) => 30,
+        (ObjectType::ComboBox, PropertyId::CornerRadius) => 31,
+        (ObjectType::ComboBox, PropertyId::IsHitTestVisible) => 32,
+        (ObjectType::ComboBox, PropertyId::Resources) => 33,
         (ObjectType::Pivot, PropertyId::Title) => 26,
         (ObjectType::Pivot, PropertyId::SelectedIndex) => 27,
         (ObjectType::PivotItem, PropertyId::Header) => 26,
@@ -2802,6 +3061,7 @@ pub(crate) fn property_order(kind: ObjectType, id: PropertyId) -> usize {
         (ObjectType::RichTextBlock, PropertyId::IsTextSelectionEnabled) => 27,
         (ObjectType::RichTextBlock, PropertyId::TextWrapping) => 28,
         (ObjectType::RichTextBlock, PropertyId::FontSize) => 29,
+        (ObjectType::RichTextBlock, PropertyId::FontFamily) => 30,
         (ObjectType::AnimatedVisualPlayer, PropertyId::AutoPlay) => 26,
         (ObjectType::AnnotatedScrollBar, PropertyId::SmallChange) => 26,
         (ObjectType::AppBarToggleButton, PropertyId::Label) => 26,
@@ -2809,13 +3069,16 @@ pub(crate) fn property_order(kind: ObjectType, id: PropertyId) -> usize {
         (ObjectType::AppBarToggleButton, PropertyId::IsEnabled) => 28,
         (ObjectType::AppBarToggleButton, PropertyId::Icon) => 29,
         (ObjectType::ItemsView, PropertyId::ItemsSource) => 26,
-        (ObjectType::ItemsView, PropertyId::SelectionMode) => 27,
-        (ObjectType::MapControl, PropertyId::ZoomLevel) => 26,
-        (ObjectType::MapControl, PropertyId::MapServiceToken) => 27,
-        (ObjectType::MapControl, PropertyId::InteractiveControlsVisible) => 28,
-        (ObjectType::MediaPlayerElement, PropertyId::AreTransportControlsEnabled) => 26,
-        (ObjectType::MediaPlayerElement, PropertyId::AutoPlay) => 27,
-        (ObjectType::MediaPlayerElement, PropertyId::Stretch) => 28,
+        (ObjectType::ItemsView, PropertyId::Layout) => 27,
+        (ObjectType::ItemsView, PropertyId::SelectionMode) => 28,
+        (ObjectType::MapControl, PropertyId::Center) => 26,
+        (ObjectType::MapControl, PropertyId::ZoomLevel) => 27,
+        (ObjectType::MapControl, PropertyId::MapServiceToken) => 28,
+        (ObjectType::MapControl, PropertyId::InteractiveControlsVisible) => 29,
+        (ObjectType::MediaPlayerElement, PropertyId::Source) => 26,
+        (ObjectType::MediaPlayerElement, PropertyId::AreTransportControlsEnabled) => 27,
+        (ObjectType::MediaPlayerElement, PropertyId::AutoPlay) => 28,
+        (ObjectType::MediaPlayerElement, PropertyId::Stretch) => 29,
         (ObjectType::ParallaxView, PropertyId::HorizontalShift) => 26,
         (ObjectType::PipsPager, PropertyId::NumberOfPages) => 26,
         (ObjectType::PipsPager, PropertyId::SelectedPageIndex) => 27,
@@ -2956,6 +3219,7 @@ pub(crate) const ALL_PROPERTY_IDS: &[PropertyId] = &[
     PropertyId::CanvasTop,
     PropertyId::Caption,
     PropertyId::CapturePointerOnPress,
+    PropertyId::Center,
     PropertyId::ClockIdentifier,
     PropertyId::CloseButtonContent,
     PropertyId::CloseButtonText,
@@ -2965,6 +3229,7 @@ pub(crate) const ALL_PROPERTY_IDS: &[PropertyId] = &[
     PropertyId::CornerRadius,
     PropertyId::Data,
     PropertyId::DayVisible,
+    PropertyId::DecodeWidth,
     PropertyId::Delay,
     PropertyId::DisplayMode,
     PropertyId::DisplayName,
@@ -2973,6 +3238,7 @@ pub(crate) const ALL_PROPERTY_IDS: &[PropertyId] = &[
     PropertyId::Expanded,
     PropertyId::Fill,
     PropertyId::FocusOnPointerRelease,
+    PropertyId::FontFamily,
     PropertyId::FontSize,
     PropertyId::FontWeight,
     PropertyId::Foreground,
@@ -3011,6 +3277,7 @@ pub(crate) const ALL_PROPERTY_IDS: &[PropertyId] = &[
     PropertyId::IsExpanded,
     PropertyId::IsGroupLabelVisible,
     PropertyId::IsHexInputVisible,
+    PropertyId::IsHitTestVisible,
     PropertyId::IsIndeterminate,
     PropertyId::IsLightDismissEnabled,
     PropertyId::IsOn,
@@ -3025,6 +3292,7 @@ pub(crate) const ALL_PROPERTY_IDS: &[PropertyId] = &[
     PropertyId::IsSettingsVisible,
     PropertyId::IsTabStop,
     PropertyId::IsTextSelectionEnabled,
+    PropertyId::IsThumbToolTipEnabled,
     PropertyId::IsTodayHighlighted,
     PropertyId::IsZoomedInViewActive,
     PropertyId::ItemHeight,
@@ -3032,6 +3300,8 @@ pub(crate) const ALL_PROPERTY_IDS: &[PropertyId] = &[
     PropertyId::ItemsSource,
     PropertyId::KeyboardAccelerators,
     PropertyId::Label,
+    PropertyId::Layout,
+    PropertyId::LineHeight,
     PropertyId::MapServiceToken,
     PropertyId::Margin,
     PropertyId::MaxColumns,
@@ -3041,6 +3311,7 @@ pub(crate) const ALL_PROPERTY_IDS: &[PropertyId] = &[
     PropertyId::MaxVisiblePips,
     PropertyId::MaxWidth,
     PropertyId::Maximum,
+    PropertyId::MaximumRowsOrColumns,
     PropertyId::Message,
     PropertyId::MinHeight,
     PropertyId::MinWidth,
@@ -3100,6 +3371,8 @@ pub(crate) const ALL_PROPERTY_IDS: &[PropertyId] = &[
     PropertyId::TextWrapping,
     PropertyId::Title,
     PropertyId::Transitions,
+    PropertyId::Translation,
+    PropertyId::TranslationTransition,
     PropertyId::UriSource,
     PropertyId::Value,
     PropertyId::VerticalAlignment,

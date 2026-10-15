@@ -1910,6 +1910,13 @@ impl TextBlock {
         );
         self
     }
+    pub fn font_family(mut self, font_family: impl AsRef<str>) -> Self {
+        self.0 = self.0.property(
+            PropertyId::FontFamily,
+            PropertyValue::String(Rc::from(font_family.as_ref())),
+        );
+        self
+    }
     pub fn foreground(mut self, foreground: impl Into<Brush>) -> Self {
         self.0 = self.0.property(
             PropertyId::Foreground,
@@ -1926,6 +1933,16 @@ impl TextBlock {
         self.0 = self
             .0
             .property(PropertyId::Padding, PropertyValue::Thickness(padding));
+        self
+    }
+    pub fn line_height(mut self, line_height: f64) -> Self {
+        assert!(
+            line_height.is_finite() && line_height > 0.0,
+            "TextBlock.LineHeight requires finite_positive"
+        );
+        self.0 = self
+            .0
+            .property(PropertyId::LineHeight, PropertyValue::F64(line_height));
         self
     }
     pub fn text_wrapping(mut self, text_wrapping: TextWrapping) -> Self {
@@ -1954,7 +1971,21 @@ impl TextBlock {
             .property(PropertyId::MaxLines, PropertyValue::I32(max_lines));
         self
     }
+    pub fn is_hit_test_visible(mut self, is_hit_test_visible: bool) -> Self {
+        self.0 = self.0.property(
+            PropertyId::IsHitTestVisible,
+            PropertyValue::Bool(is_hit_test_visible),
+        );
+        self
+    }
     visual_methods!();
+    pub fn on_tapped(mut self, callback: impl IntoUnitCallback) -> Self {
+        self.0 = self.0.event(
+            EventId::Tapped,
+            EventValue::Unit(callback.into_unit_callback()),
+        );
+        self
+    }
 }
 impl Default for TextBlock {
     fn default() -> Self {
@@ -2022,6 +2053,34 @@ impl TextBox {
         self.0 = self.0.property(
             PropertyId::BorderThickness,
             PropertyValue::Thickness(border_thickness),
+        );
+        self
+    }
+    pub fn padding(mut self, padding: impl Into<Thickness>) -> Self {
+        let padding = padding.into();
+        assert!(
+            padding.is_finite_non_negative(),
+            "TextBox.Padding requires finite_non_negative"
+        );
+        self.0 = self
+            .0
+            .property(PropertyId::Padding, PropertyValue::Thickness(padding));
+        self
+    }
+    pub fn font_size(mut self, font_size: f64) -> Self {
+        assert!(
+            font_size.is_finite() && font_size > 0.0,
+            "TextBox.FontSize requires finite_positive"
+        );
+        self.0 = self
+            .0
+            .property(PropertyId::FontSize, PropertyValue::F64(font_size));
+        self
+    }
+    pub fn resource_overrides(mut self, resource_overrides: ResourceOverrides) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Resources,
+            PropertyValue::ResourceOverrides(resource_overrides),
         );
         self
     }
@@ -2116,6 +2175,43 @@ impl Button {
         );
         self
     }
+    pub fn padding(mut self, padding: impl Into<Thickness>) -> Self {
+        let padding = padding.into();
+        assert!(
+            padding.is_finite_non_negative(),
+            "Button.Padding requires finite_non_negative"
+        );
+        self.0 = self
+            .0
+            .property(PropertyId::Padding, PropertyValue::Thickness(padding));
+        self
+    }
+    pub fn corner_radius(mut self, corner_radius: impl Into<CornerRadius>) -> Self {
+        let corner_radius = corner_radius.into();
+        assert!(
+            corner_radius.is_finite_non_negative(),
+            "Button.CornerRadius requires finite_non_negative"
+        );
+        self.0 = self.0.property(
+            PropertyId::CornerRadius,
+            PropertyValue::CornerRadius(corner_radius),
+        );
+        self
+    }
+    pub fn foreground(mut self, foreground: impl Into<Brush>) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Foreground,
+            PropertyValue::Brush(foreground.into()),
+        );
+        self
+    }
+    pub fn is_hit_test_visible(mut self, is_hit_test_visible: bool) -> Self {
+        self.0 = self.0.property(
+            PropertyId::IsHitTestVisible,
+            PropertyValue::Bool(is_hit_test_visible),
+        );
+        self
+    }
     focus_methods!(Button);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
@@ -2134,6 +2230,13 @@ impl Button {
     pub fn on_click(mut self, callback: impl IntoUnitCallback) -> Self {
         self.0 = self.0.event(
             EventId::Click,
+            EventValue::Unit(callback.into_unit_callback()),
+        );
+        self
+    }
+    pub fn on_tapped(mut self, callback: impl IntoUnitCallback) -> Self {
+        self.0 = self.0.event(
+            EventId::Tapped,
             EventValue::Unit(callback.into_unit_callback()),
         );
         self
@@ -2171,6 +2274,13 @@ impl CheckBox {
             .property(PropertyId::IsEnabled, PropertyValue::Bool(is_enabled));
         self
     }
+    pub fn resource_overrides(mut self, resource_overrides: ResourceOverrides) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Resources,
+            PropertyValue::ResourceOverrides(resource_overrides),
+        );
+        self
+    }
     focus_methods!(CheckBox);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
@@ -2200,6 +2310,13 @@ impl CheckBox {
         self.0 = self.0.event(
             EventId::IsCheckedChanged,
             EventValue::OptionalBool(callback.into_payload_callback()),
+        );
+        self
+    }
+    pub fn on_tapped(mut self, callback: impl IntoUnitCallback) -> Self {
+        self.0 = self.0.event(
+            EventId::Tapped,
+            EventValue::Unit(callback.into_unit_callback()),
         );
         self
     }
@@ -2309,6 +2426,20 @@ impl Border {
         );
         self
     }
+    pub fn translation(mut self, translation: impl Into<Option<Vector3>>) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Translation,
+            PropertyValue::Vector3(translation.into()),
+        );
+        self
+    }
+    pub fn translation_transition(mut self, translation_transition: Duration) -> Self {
+        self.0 = self.0.property(
+            PropertyId::TranslationTransition,
+            PropertyValue::Duration(translation_transition),
+        );
+        self
+    }
     pub fn capture_pointer_on_press(mut self, capture_pointer_on_press: bool) -> Self {
         self.0 = self.0.property(
             PropertyId::CapturePointerOnPress,
@@ -2327,6 +2458,13 @@ impl Border {
         self.0 = self.0.property(
             PropertyId::DropPolicy,
             PropertyValue::DragDropPolicy(Rc::new(drop_policy)),
+        );
+        self
+    }
+    pub fn is_hit_test_visible(mut self, is_hit_test_visible: bool) -> Self {
+        self.0 = self.0.property(
+            PropertyId::IsHitTestVisible,
+            PropertyValue::Bool(is_hit_test_visible),
         );
         self
     }
@@ -2470,6 +2608,20 @@ impl Border {
         );
         self
     }
+    pub fn on_pointer_wheel_changed(mut self, callback: impl IntoUnitCallback) -> Self {
+        self.0 = self.0.event(
+            EventId::PointerWheelChanged,
+            EventValue::Unit(callback.into_unit_callback()),
+        );
+        self
+    }
+    pub fn on_tapped(mut self, callback: impl IntoUnitCallback) -> Self {
+        self.0 = self.0.event(
+            EventId::Tapped,
+            EventValue::Unit(callback.into_unit_callback()),
+        );
+        self
+    }
 }
 impl Default for Border {
     fn default() -> Self {
@@ -2531,6 +2683,13 @@ impl Grid {
         );
         self
     }
+    pub fn is_hit_test_visible(mut self, is_hit_test_visible: bool) -> Self {
+        self.0 = self.0.property(
+            PropertyId::IsHitTestVisible,
+            PropertyValue::Bool(is_hit_test_visible),
+        );
+        self
+    }
     reference_methods!(Grid);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
@@ -2559,6 +2718,20 @@ impl Grid {
             RelationValue::Many(Rc::new(
                 children.into_iter().map(|child| child.0.0).collect(),
             )),
+        );
+        self
+    }
+    pub fn on_pointer_wheel_changed(mut self, callback: impl IntoUnitCallback) -> Self {
+        self.0 = self.0.event(
+            EventId::PointerWheelChanged,
+            EventValue::Unit(callback.into_unit_callback()),
+        );
+        self
+    }
+    pub fn on_tapped(mut self, callback: impl IntoUnitCallback) -> Self {
+        self.0 = self.0.event(
+            EventId::Tapped,
+            EventValue::Unit(callback.into_unit_callback()),
         );
         self
     }
@@ -2592,6 +2765,13 @@ impl StackPanel {
             .property(PropertyId::Orientation, orientation.property_value());
         self
     }
+    pub fn is_hit_test_visible(mut self, is_hit_test_visible: bool) -> Self {
+        self.0 = self.0.property(
+            PropertyId::IsHitTestVisible,
+            PropertyValue::Bool(is_hit_test_visible),
+        );
+        self
+    }
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -2619,6 +2799,13 @@ impl StackPanel {
             RelationValue::Many(Rc::new(
                 children.into_iter().map(|child| child.0.0).collect(),
             )),
+        );
+        self
+    }
+    pub fn on_tapped(mut self, callback: impl IntoUnitCallback) -> Self {
+        self.0 = self.0.event(
+            EventId::Tapped,
+            EventValue::Unit(callback.into_unit_callback()),
         );
         self
     }
@@ -2926,6 +3113,32 @@ impl Slider {
         );
         self
     }
+    pub fn is_thumb_tool_tip_enabled(mut self, is_thumb_tool_tip_enabled: bool) -> Self {
+        self.0 = self.0.property(
+            PropertyId::IsThumbToolTipEnabled,
+            PropertyValue::Bool(is_thumb_tool_tip_enabled),
+        );
+        self
+    }
+    pub fn corner_radius(mut self, corner_radius: impl Into<CornerRadius>) -> Self {
+        let corner_radius = corner_radius.into();
+        assert!(
+            corner_radius.is_finite_non_negative(),
+            "Slider.CornerRadius requires finite_non_negative"
+        );
+        self.0 = self.0.property(
+            PropertyId::CornerRadius,
+            PropertyValue::CornerRadius(corner_radius),
+        );
+        self
+    }
+    pub fn resource_overrides(mut self, resource_overrides: ResourceOverrides) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Resources,
+            PropertyValue::ResourceOverrides(resource_overrides),
+        );
+        self
+    }
     focus_methods!(Slider);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
@@ -2944,6 +3157,13 @@ impl Slider {
     pub fn on_value_changed(mut self, callback: impl IntoPayloadCallback<f64>) -> Self {
         self.0 = self.0.event(
             EventId::ValueChanged,
+            EventValue::F64(callback.into_payload_callback()),
+        );
+        self
+    }
+    pub fn on_size_changed(mut self, callback: impl IntoPayloadCallback<f64>) -> Self {
+        self.0 = self.0.event(
+            EventId::SizeChanged,
             EventValue::F64(callback.into_payload_callback()),
         );
         self
@@ -3369,6 +3589,13 @@ impl VariableSizedWrapGrid {
             .property(PropertyId::ItemHeight, PropertyValue::F64(item_height));
         self
     }
+    pub fn maximum_rows_or_columns(mut self, maximum_rows_or_columns: i32) -> Self {
+        self.0 = self.0.property(
+            PropertyId::MaximumRowsOrColumns,
+            PropertyValue::I32(maximum_rows_or_columns),
+        );
+        self
+    }
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -3485,6 +3712,13 @@ impl AutoSuggestBox {
         );
         self
     }
+    pub fn on_query_submitted(mut self, callback: impl IntoPayloadCallback<Rc<str>>) -> Self {
+        self.0 = self.0.event(
+            EventId::QuerySubmitted,
+            EventValue::String(callback.into_payload_callback()),
+        );
+        self
+    }
 }
 impl Default for AutoSuggestBox {
     fn default() -> Self {
@@ -3596,6 +3830,13 @@ impl NumberBox {
         self.0 = self
             .0
             .property(PropertyId::Value, PropertyValue::OptionalF64(value.into()));
+        self
+    }
+    pub fn resource_overrides(mut self, resource_overrides: ResourceOverrides) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Resources,
+            PropertyValue::ResourceOverrides(resource_overrides),
+        );
         self
     }
     focus_methods!(NumberBox);
@@ -3718,6 +3959,20 @@ impl NavigationView {
         self.0 = self
             .0
             .property(PropertyId::IsPaneOpen, PropertyValue::Bool(is_pane_open));
+        self
+    }
+    pub fn font_family(mut self, font_family: impl AsRef<str>) -> Self {
+        self.0 = self.0.property(
+            PropertyId::FontFamily,
+            PropertyValue::String(Rc::from(font_family.as_ref())),
+        );
+        self
+    }
+    pub fn resource_overrides(mut self, resource_overrides: ResourceOverrides) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Resources,
+            PropertyValue::ResourceOverrides(resource_overrides),
+        );
         self
     }
     visual_methods!();
@@ -4106,6 +4361,39 @@ impl ProgressBar {
             .property(PropertyId::IsEnabled, PropertyValue::Bool(is_enabled));
         self
     }
+    pub fn corner_radius(mut self, corner_radius: impl Into<CornerRadius>) -> Self {
+        let corner_radius = corner_radius.into();
+        assert!(
+            corner_radius.is_finite_non_negative(),
+            "ProgressBar.CornerRadius requires finite_non_negative"
+        );
+        self.0 = self.0.property(
+            PropertyId::CornerRadius,
+            PropertyValue::CornerRadius(corner_radius),
+        );
+        self
+    }
+    pub fn foreground(mut self, foreground: impl Into<Brush>) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Foreground,
+            PropertyValue::Brush(foreground.into()),
+        );
+        self
+    }
+    pub fn is_hit_test_visible(mut self, is_hit_test_visible: bool) -> Self {
+        self.0 = self.0.property(
+            PropertyId::IsHitTestVisible,
+            PropertyValue::Bool(is_hit_test_visible),
+        );
+        self
+    }
+    pub fn resource_overrides(mut self, resource_overrides: ResourceOverrides) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Resources,
+            PropertyValue::ResourceOverrides(resource_overrides),
+        );
+        self
+    }
     visual_methods!();
 }
 impl Default for ProgressBar {
@@ -4137,6 +4425,13 @@ impl ToggleSwitch {
         self.0 = self
             .0
             .property(PropertyId::IsOn, PropertyValue::Bool(is_on));
+        self
+    }
+    pub fn resource_overrides(mut self, resource_overrides: ResourceOverrides) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Resources,
+            PropertyValue::ResourceOverrides(resource_overrides),
+        );
         self
     }
     focus_methods!(ToggleSwitch);
@@ -4220,6 +4515,13 @@ impl ToggleButton {
         );
         self
     }
+    pub fn resource_overrides(mut self, resource_overrides: ResourceOverrides) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Resources,
+            PropertyValue::ResourceOverrides(resource_overrides),
+        );
+        self
+    }
     focus_methods!(ToggleButton);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
@@ -4242,6 +4544,13 @@ impl ToggleButton {
         self.0 = self.0.event(
             EventId::IsCheckedChanged,
             EventValue::OptionalBool(callback.into_payload_callback()),
+        );
+        self
+    }
+    pub fn on_tapped(mut self, callback: impl IntoUnitCallback) -> Self {
+        self.0 = self.0.event(
+            EventId::Tapped,
+            EventValue::Unit(callback.into_unit_callback()),
         );
         self
     }
@@ -4628,10 +4937,24 @@ impl Image {
         );
         self
     }
+    pub fn decode_width(mut self, decode_width: impl Into<Option<i32>>) -> Self {
+        self.0 = self.0.property(
+            PropertyId::DecodeWidth,
+            PropertyValue::I32(Into::<Option<i32>>::into(decode_width).unwrap_or(-1)),
+        );
+        self
+    }
     pub fn stretch(mut self, stretch: Stretch) -> Self {
         self.0 = self
             .0
             .property(PropertyId::Stretch, stretch.property_value());
+        self
+    }
+    pub fn is_hit_test_visible(mut self, is_hit_test_visible: bool) -> Self {
+        self.0 = self.0.property(
+            PropertyId::IsHitTestVisible,
+            PropertyValue::Bool(is_hit_test_visible),
+        );
         self
     }
     reference_methods!(Image);
@@ -5331,6 +5654,32 @@ impl ComboBox {
         self.0 = self.0.property(
             PropertyId::SelectedIndex,
             PropertyValue::SelectionIndex(selected_index.into()),
+        );
+        self
+    }
+    pub fn corner_radius(mut self, corner_radius: impl Into<CornerRadius>) -> Self {
+        let corner_radius = corner_radius.into();
+        assert!(
+            corner_radius.is_finite_non_negative(),
+            "ComboBox.CornerRadius requires finite_non_negative"
+        );
+        self.0 = self.0.property(
+            PropertyId::CornerRadius,
+            PropertyValue::CornerRadius(corner_radius),
+        );
+        self
+    }
+    pub fn is_hit_test_visible(mut self, is_hit_test_visible: bool) -> Self {
+        self.0 = self.0.property(
+            PropertyId::IsHitTestVisible,
+            PropertyValue::Bool(is_hit_test_visible),
+        );
+        self
+    }
+    pub fn resource_overrides(mut self, resource_overrides: ResourceOverrides) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Resources,
+            PropertyValue::ResourceOverrides(resource_overrides),
         );
         self
     }
@@ -6863,6 +7212,13 @@ impl RichTextBlock {
             .property(PropertyId::FontSize, PropertyValue::F64(font_size));
         self
     }
+    pub fn font_family(mut self, font_family: impl AsRef<str>) -> Self {
+        self.0 = self.0.property(
+            PropertyId::FontFamily,
+            PropertyValue::String(Rc::from(font_family.as_ref())),
+        );
+        self
+    }
     visual_methods!();
 }
 impl Default for RichTextBlock {
@@ -7172,6 +7528,12 @@ impl ItemsView {
         );
         self
     }
+    pub fn layout(mut self, layout: ItemsViewLayout) -> Self {
+        self.0 = self
+            .0
+            .property(PropertyId::Layout, PropertyValue::ItemsViewLayout(layout));
+        self
+    }
     pub fn selection_mode(mut self, selection_mode: ItemsViewSelectionMode) -> Self {
         self.0 = self
             .0
@@ -7203,6 +7565,13 @@ impl MapControl {
     pub fn new() -> Self {
         let declaration = Declaration::new(ObjectType::MapControl);
         Self(declaration)
+    }
+    pub fn center(mut self, latitude: f64, longitude: f64) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Center,
+            PropertyValue::String(Rc::from(format!("{latitude},{longitude}"))),
+        );
+        self
     }
     pub fn zoom_level(mut self, zoom_level: f64) -> Self {
         self.0 = self
@@ -7244,6 +7613,12 @@ impl MediaPlayerElement {
     pub fn new() -> Self {
         let declaration = Declaration::new(ObjectType::MediaPlayerElement);
         Self(declaration)
+    }
+    pub fn source(mut self, source: impl Into<Option<windows_core::IUnknown>>) -> Self {
+        self.0 = self
+            .0
+            .property(PropertyId::Source, PropertyValue::IUnknown(source.into()));
+        self
     }
     pub fn are_transport_controls_enabled(mut self, are_transport_controls_enabled: bool) -> Self {
         self.0 = self.0.property(
@@ -7430,6 +7805,16 @@ impl RefreshContainer {
         self.0 = self.0.relation(
             RelationId::Content,
             RelationValue::One(Some(Rc::new(content.into().0))),
+        );
+        self
+    }
+    pub fn on_refresh_requested(
+        mut self,
+        callback: impl IntoPayloadCallback<RefreshDeferral>,
+    ) -> Self {
+        self.0 = self.0.event(
+            EventId::RefreshRequested,
+            EventValue::RefreshDeferral(callback.into_payload_callback()),
         );
         self
     }

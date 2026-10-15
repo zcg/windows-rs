@@ -1,5 +1,22 @@
 use super::*;
 
+/// Three-dimensional vector (DIP): the displacement used by `Translation` and
+/// similar composition properties.
+pub use windows_numerics::Vector3;
+
+/// A displacement with only the vertical component (DIP).
+///
+/// Gesture-driven displacement (pull-to-refresh, drag tracking) almost always
+/// needs just this one direction, and [`Vector3`] components are `f32` - this
+/// constructor saves an `as f32` at every call site.
+pub fn translation_y(value: f64) -> Vector3 {
+    Vector3 {
+        x: 0.0,
+        y: value as f32,
+        z: 0.0,
+    }
+}
+
 fn validate_uri(value: &str) -> windows_core::Result<()> {
     native::validate_native_uri(value)
 }
@@ -748,6 +765,17 @@ pub enum MenuItem {
         label: Rc<str>,
         enabled: bool,
     },
+    Radio {
+        key: Key,
+        label: Rc<str>,
+        group: Rc<str>,
+        checked: bool,
+    },
+    Toggle {
+        key: Key,
+        label: Rc<str>,
+        checked: bool,
+    },
     Separator {
         key: Key,
     },
@@ -772,6 +800,30 @@ impl MenuItem {
             key: key.into(),
             label: label.into(),
             enabled: false,
+        }
+    }
+
+    /// Creates an item that is checked exclusively within `group`.
+    pub fn radio(
+        key: impl Into<Key>,
+        label: impl Into<Rc<str>>,
+        group: impl Into<Rc<str>>,
+        checked: bool,
+    ) -> Self {
+        Self::Radio {
+            key: key.into(),
+            label: label.into(),
+            group: group.into(),
+            checked,
+        }
+    }
+
+    /// Creates an item that keeps its own checked state.
+    pub fn toggle(key: impl Into<Key>, label: impl Into<Rc<str>>, checked: bool) -> Self {
+        Self::Toggle {
+            key: key.into(),
+            label: label.into(),
+            checked,
         }
     }
 
@@ -1104,6 +1156,9 @@ pub enum PropertyValue {
     StringList(Rc<[Rc<str>]>),
     ThemeTransitions(Rc<[ThemeTransition]>),
     Thickness(Thickness),
+    Vector3(Option<Vector3>),
+    IUnknown(Option<windows_core::IUnknown>),
+    ItemsViewLayout(ItemsViewLayout),
     Enum {
         kind: &'static str,
         variant: &'static str,
@@ -1399,6 +1454,46 @@ pub enum NavigationViewDisplayMode {
     Expanded,
 }
 
+/// Layout applied to `ItemsView`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ItemsViewLayout {
+    Stack,
+    Grid,
+    Lined,
+}
+
+/// Deferral handed to `RefreshContainer::on_refresh_requested` callbacks.
+///
+/// Keeps the system refresh indicator on screen until the host finishes its
+/// asynchronous refresh and calls [`RefreshDeferral::complete`]. Dropping the
+/// value without completing it also releases the native deferral, because the
+/// WinRT object completes itself on destruction.
+#[derive(Clone)]
+pub struct RefreshDeferral(Rc<dyn Fn()>);
+
+impl RefreshDeferral {
+    pub(crate) fn new(complete: impl Fn() + 'static) -> Self {
+        Self(Rc::new(complete))
+    }
+
+    /// Completes the deferral; calling it more than once is a no-op.
+    pub fn complete(&self) {
+        (self.0)()
+    }
+}
+
+impl fmt::Debug for RefreshDeferral {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("RefreshDeferral")
+    }
+}
+
+impl PartialEq for RefreshDeferral {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.0, &other.0)
+    }
+}
+
 /// Pointer state in element-local and window-relative device-independent pixels.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct PointerEventInfo {
@@ -1434,6 +1529,7 @@ pub enum EventValue {
     PointerEventInfo(Callback<PointerEventInfo>),
     KeyEventInfo(RoutedCallback<KeyEventInfo>),
     Key(Callback<Key>),
+    RefreshDeferral(Callback<RefreshDeferral>),
     Selection(Callback<Option<Rc<str>>>),
     SelectionIndex(Callback<Option<usize>>),
     StringList(Callback<Vec<String>>),
@@ -1461,6 +1557,7 @@ pub enum EventPayload {
     #[cfg(any(test, feature = "test"))]
     KeyEventInfo(KeyEventInfo),
     Key(Key),
+    RefreshDeferral(RefreshDeferral),
     Selection(SelectionChange),
     SelectionIndex(Option<usize>),
     StringList(Vec<String>),

@@ -23762,6 +23762,15 @@ impl ITextBlock {
             .ok()
         }
     }
+    pub(crate) fn SetLineHeight(&self, value: f64) -> windows_core::Result<()> {
+        unsafe {
+            (windows_core::Interface::vtable(self).SetLineHeight)(
+                windows_core::Interface::as_raw(self),
+                value,
+            )
+            .ok()
+        }
+    }
     pub(crate) fn SetIsTextSelectionEnabled(&self, value: bool) -> windows_core::Result<()> {
         unsafe {
             (windows_core::Interface::vtable(self).SetIsTextSelectionEnabled)(
@@ -23828,7 +23837,8 @@ pub struct ITextBlock_Vtbl {
     pub SetPadding:
         unsafe extern "system" fn(*mut core::ffi::c_void, Thickness) -> windows_core::HRESULT,
     LineHeight: usize,
-    SetLineHeight: usize,
+    pub SetLineHeight:
+        unsafe extern "system" fn(*mut core::ffi::c_void, f64) -> windows_core::HRESULT,
     LineStackingStrategy: usize,
     SetLineStackingStrategy: usize,
     IsTextSelectionEnabled: usize,
@@ -23891,7 +23901,10 @@ pub struct ITextBlockStatics_Vtbl {
         *mut *mut core::ffi::c_void,
     ) -> windows_core::HRESULT,
     PaddingProperty: usize,
-    LineHeightProperty: usize,
+    pub LineHeightProperty: unsafe extern "system" fn(
+        *mut core::ffi::c_void,
+        *mut *mut core::ffi::c_void,
+    ) -> windows_core::HRESULT,
     LineStackingStrategyProperty: usize,
     pub IsTextSelectionEnabledProperty: unsafe extern "system" fn(
         *mut core::ffi::c_void,
@@ -37291,6 +37304,16 @@ impl TextBlock {
         Self::ITextBlockStatics(|this| unsafe {
             let mut result__ = core::mem::zeroed();
             (windows_core::Interface::vtable(this).TextProperty)(
+                windows_core::Interface::as_raw(this),
+                &mut result__,
+            )
+            .and_then(|| windows_core::imp::Type::from_abi(result__))
+        })
+    }
+    pub(crate) fn LineHeightProperty() -> windows_core::Result<DependencyProperty> {
+        Self::ITextBlockStatics(|this| unsafe {
+            let mut result__ = core::mem::zeroed();
+            (windows_core::Interface::vtable(this).LineHeightProperty)(
                 windows_core::Interface::as_raw(this),
                 &mut result__,
             )
