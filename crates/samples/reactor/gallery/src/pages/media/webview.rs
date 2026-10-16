@@ -168,9 +168,6 @@ impl Component for WebViewPage {
                         browser,
                         TextBlock::new().text(self.status.clone()).opacity(0.6),
                     )),
-                    r#"webview(context.callback(Message::Ready))
-// on ready: web.navigate("https://example.com")
-// toolbar: back, forward, reload, address bar, go button"#,
                 ),
             )],
         )

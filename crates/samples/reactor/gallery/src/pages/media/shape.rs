@@ -68,7 +68,6 @@ impl Component for ShapePage {
                             .on_toggled(context.callback(Message::Filled))
                             .header("Filled"),
                     )),
-                    "Rectangle::new().fill(brush).stroke(brush)",
                 ),
             )],
         )

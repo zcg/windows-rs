@@ -249,20 +249,8 @@ pub const DXGI_ERROR_DEVICE_RESET: windows_core::HRESULT =
     windows_core::HRESULT(0x887A0007_u32 as _);
 pub const DXGI_ERROR_DRIVER_INTERNAL_ERROR: windows_core::HRESULT =
     windows_core::HRESULT(0x887A0020_u32 as _);
-/// `Present`/`Present1` 在 `DXGI_PRESENT_DO_NOT_WAIT` 下、当交换链没有可用的
-/// 后台缓冲（上一帧仍被 DXGI/DWM 持有）时返回的 HRESULT。
-///
-/// 它是**成功码的语义**（本帧未被提交，但调用者的意图是"不要等"），不是错误：
-/// 调用方应当把它当作"本帧丢弃"，而不是失败。
 pub const DXGI_ERROR_WAS_STILL_DRAWING: windows_core::HRESULT =
     windows_core::HRESULT(0x887A000A_u32 as _);
-/// `IDXGISwapChain::Present` 的标志：队列忙时立即返回
-/// [`DXGI_ERROR_WAS_STILL_DRAWING`]，而不是阻塞到有可用后台缓冲。
-///
-/// 值取自 `dxgi.h`：`DXGI_PRESENT_TEST = 0x1`、`DXGI_PRESENT_DO_NOT_SEQUENCE = 0x2`、
-/// `DXGI_PRESENT_RESTART = 0x4`、**`DXGI_PRESENT_DO_NOT_WAIT = 0x8`**。
-/// 注意别和 `DXGI_PRESENT_DO_NOT_SEQUENCE`(0x2) 搞混——两者语义完全不同。
-pub const DXGI_PRESENT_DO_NOT_WAIT: u32 = 0x00000008;
 pub type DXGI_FORMAT = i32;
 pub const DXGI_FORMAT_B8G8R8A8_UNORM: DXGI_FORMAT = 87;
 pub const DXGI_FORMAT_UNKNOWN: DXGI_FORMAT = 0;
@@ -278,6 +266,7 @@ pub struct DXGI_MATRIX_3X2_F {
 }
 pub type DXGI_MODE_SCALING = i32;
 pub type DXGI_MODE_SCANLINE_ORDER = i32;
+pub const DXGI_PRESENT_DO_NOT_WAIT: u32 = 8;
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct DXGI_RATIONAL {

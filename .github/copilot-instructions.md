@@ -325,28 +325,32 @@ an unused-function warning, because nothing in the library calls it.
 ### Upstream third-preview merge: local feature ports left for follow-up (2026-10)
 
 The local branch's reactor work was merged onto the upstream reactor rewrite. The widget
-coverage carries over (21 widgets are now declared in `crates/tools/reactor/src/schema.toml`),
-but the items below did not fit the rewritten architecture in the same pass and are
-intentionally absent. Old implementations live in history (`git show HEAD~1:<path>` on the
-`backup/pre-merge-20261009` branch). Each needs a proper port rather than a copy:
+coverage carries over (21 widgets are now declared in `crates/tools/reactor/src/schema.toml`).
+Most adapters were ported in the same pass; the table records the state of each. Old
+implementations live in history (`git show backup/pre-merge-20261009:<path>`), and a still-open
+entry needs a proper port rather than a copy:
 
-| Area | What is missing | Old home |
+| Area | Ported | Old home |
 | --- | --- | --- |
-| Text | `font_family` property (TextBlock/RichTextBlock/NavigationView), per-name FontFamily cache, global `font_scale` | `native/winui/mod.rs`, `generate_winui.rs` |
+| Text | `font_family` (TextBlock/RichTextBlock/NavigationView) with the FontFamily cache, and global `font_scale` | `native/winui/mod.rs`, `generate_winui.rs` |
 | Image | `image_decode_width` downsample decode | `generate.rs` |
 | Border | `implicit_translation` / `implicit_translation_transition` | `generate_winui.rs` |
 | Events | `value_field` projection (Slider.SizeChanged width) and `FieldAsF64` conversion | `schema.rs`, `generate_winui.rs` |
 | Widgets | `media_source` (MediaPlayerElement.source), `items_view_layout` (ItemsView.layout), `map_center` (MapControl.center), `refresh_deferral` (RefreshContainer.on_refresh_requested) | `generate.rs`, `generate_winui.rs` |
-| Tree/Time | `tree_node_content` (TreeView), `clock_identifier` (TimePicker) | `schema.rs` |
-| Window | Work-area queries (`WorkArea`, `primary_work_area`, `primary_work_area_dip`, `window_placement_dip`, `work_area_for_window`); the file `native/winui/window_geometry.rs` is kept but not wired into the module tree | `window_geometry.rs` |
-| App | `install_theme_resources` exists in `native/app_shim.rs` but the new App startup has no application-resource hook | `app/mod.rs` |
-| Backdrop | `WindowBackdrop::{AcrylicThin, Solid}` and `WindowBackdropTuning` (composition-controller path); the merged enum has `None/Mica/MicaAlt/Acrylic` | `native/winui/mod.rs` |
-| Reference | `ScrollOffsets`, `ElementRef::observe_scroll_offsets`, `ScrollViewer::on_view_changed` | `reference.rs` |
+| Time | `clock_identifier` (TimePicker) | `schema.rs` |
+| Window | Work-area queries (`WorkArea`, `primary_work_area`, `primary_work_area_dip`, `window_placement_dip`, `work_area_for_window`); `native/winui/window_geometry.rs` is hand-written and included from `native/winui/winui.rs` | `window_geometry.rs` |
 | Menus | `MenuItem::{radio, toggle}` (RadioMenuFlyoutItem/ToggleMenuFlyoutItem) | `schema.rs` |
 | Swipe | `SwipeControl` swipe items (`SwipeItem`/`SwipeItems`) | `schema.rs`, `generate.rs` |
+
+Still open:
+
+| Area | What is missing | Old home |
+| --- | --- | --- |
+| Tree | `tree_node_content` (TreeView); `native/winui/objects.rs` still uses the tree_node_texts scheme | `schema.rs` |
+| Reference | `ScrollOffsets`, `ElementRef::observe_scroll_offsets`, `ScrollViewer::on_view_changed` | `reference.rs` |
 
 The resolver extensions those adapters relied on already live in
 `crates/tools/reactor-metadata/src/lib.rs` (`value_fields`, `class_methods`,
 `ReadValueConversion::FieldAsF64`, `resolve_event_args_property_field`,
 `resolve_event_args_method`, and the `EventHandler<T>` generic-arity name fix), so each
-port is mostly generator + schema work.
+remaining port is mostly generator + schema work.

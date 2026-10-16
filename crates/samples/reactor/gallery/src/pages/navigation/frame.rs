@@ -37,7 +37,6 @@ impl Component for FramePage {
                                 )),
                             ),
                         ),
-                        "Frame::new().content(view)",
                     ),
                 ),
                 KeyedView::new(
@@ -54,7 +53,6 @@ impl Component for FramePage {
                                  supplied by the platform, such as hosted XAML content.",
                             )
                             .is_open(true),
-                        "Frame::new()",
                     ),
                 ),
             ],

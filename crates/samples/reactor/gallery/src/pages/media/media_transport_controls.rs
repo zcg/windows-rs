@@ -24,7 +24,6 @@ impl Component for MediaTransportControlsPage {
                             .background(ThemeBrush::CardBackground)
                             .padding(Thickness::new(12.0, 8.0, 12.0, 8.0))
                             .content(MediaTransportControls::new().height(64.0)),
-                        "MediaTransportControls::new()",
                     ),
                 ),
                 KeyedView::new(
@@ -41,7 +40,6 @@ impl Component for MediaTransportControlsPage {
                                  custom playback surface needs the standard commands.",
                             )
                             .is_open(true),
-                        "MediaPlayerElement::new().are_transport_controls_enabled(true)",
                     ),
                 ),
             ],

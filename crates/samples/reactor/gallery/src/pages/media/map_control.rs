@@ -51,7 +51,6 @@ impl Component for MapControlPage {
                             })),
                         TextBlock::new().text(self.status.clone()).opacity(0.6),
                     )),
-                    "MapControl::new().zoom_level(4.0).map_service_token(token)",
                 ),
             )],
         )

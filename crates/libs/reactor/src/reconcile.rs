@@ -921,6 +921,13 @@ impl RetainedGraph {
             .flatten()
     }
 
+    /// Returns whether the adapter still owns the object, including during an exit transition.
+    fn is_allocated(&self, object: ObjectId) -> bool {
+        self.objects
+            .get(object.index as usize)
+            .is_some_and(|slot| slot.generation == object.generation && slot.object.is_some())
+    }
+
     fn get_mut(&mut self, object: ObjectId) -> &mut RetainedObject {
         let slot = &mut self.objects[object.index as usize];
         assert_eq!(slot.generation, object.generation);
@@ -1506,9 +1513,16 @@ impl<'a> GraphTransaction<'a> {
                 };
                 validate_property(retained.kind, &property)?;
                 let property_id = property.id;
-                self.get_mut(object)
+                // Observing a native value does not make the declaration own that property.
+                if retained
                     .properties
-                    .upsert(|current| current.id == property_id, property);
+                    .iter()
+                    .any(|current| current.id == property_id)
+                {
+                    self.get_mut(object)
+                        .properties
+                        .upsert(|current| current.id == property_id, property);
+                }
             }
             Observation::SetSelection { object, selected } => {
                 let Some(owner) = self.graph.get(object) else {
@@ -1750,8 +1764,13 @@ impl<A: Adapter> Runtime<A> {
         let Some(queued) = self.references.pop() else {
             return Ok(false);
         };
-        let revoke = matches!(queued.request, ImperativeRequest::RevokeObservation { .. });
-        let available = self.graph.kind(queued.object).is_some() && (revoke || queued.is_current());
+        // Revocations must also reach retiring objects, whose native subscriptions stay live until
+        // the exit transition completes.
+        let available = if matches!(queued.request, ImperativeRequest::RevokeObservation { .. }) {
+            self.graph.is_allocated(queued.object)
+        } else {
+            self.graph.kind(queued.object).is_some() && queued.is_current()
+        };
         if !available {
             queued.request.complete_unavailable();
             return Ok(true);
@@ -2748,7 +2767,11 @@ impl Planner<'_, '_> {
                 self.retained_attachments(target).menu = Some(previous);
             }
             (Some(previous), Some(desired)) => {
-                let revision = previous.revision.wrapping_add(1);
+                let revision = if !target_replaced && previous.menu.same_content(&desired.menu) {
+                    previous.revision
+                } else {
+                    previous.revision.wrapping_add(1)
+                };
                 self.retained_attachments(target).menu = Some(RetainedMenu {
                     menu: desired.menu.clone(),
                     revision,
@@ -2816,7 +2839,12 @@ impl Planner<'_, '_> {
                 self.retained_attachments(target).command_bar_flyout = Some(previous);
             }
             (Some(previous), Some(desired)) => {
-                let revision = previous.revision.wrapping_add(1);
+                let revision = if !target_replaced && previous.flyout.same_content(&desired.flyout)
+                {
+                    previous.revision
+                } else {
+                    previous.revision.wrapping_add(1)
+                };
                 self.retained_attachments(target).command_bar_flyout =
                     Some(RetainedCommandBarFlyout {
                         flyout: desired.flyout.clone(),
@@ -3686,7 +3714,7 @@ impl Planner<'_, '_> {
         retained.lease_revision = lease_revision;
         retained.containers = containers;
         retained.active = active;
-        if items_changed || keys_changed {
+        if keys_changed {
             self.mutations.push(Mutation::SetVirtualSource {
                 object,
                 item_count: retained.keys.len(),

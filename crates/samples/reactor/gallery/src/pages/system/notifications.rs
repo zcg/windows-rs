@@ -153,7 +153,6 @@ impl Component for NotificationsPage {
                                      large size the number shows.",
                                 )
                                 .is_open(true),
-                            "Package::Current()?; BadgeNotificationManager::Current()?",
                         )
                     } else {
                         sample_card(
@@ -168,7 +167,6 @@ impl Component for NotificationsPage {
                                      the install.",
                                 )
                                 .is_open(true),
-                            "BadgeNotificationManager requires a package identity",
                         )
                     },
                 ),
@@ -182,9 +180,6 @@ impl Component for NotificationsPage {
                                 .content("Send toast"),
                             TextBlock::new().text(self.status.clone()).opacity(0.6),
                         )),
-                        "AppNotificationManager::Default()?.Register()?; \
-                         AppNotification::CreateInstance(payload)?; \
-                         manager.Show(&notification)?",
                     ),
                 ),
                 KeyedView::new(
@@ -206,11 +201,9 @@ impl Component for NotificationsPage {
                                     RadioButton::new()
                                         .group_name("badge-mode")
                                         .is_checked(self.mode == BadgeMode::Dot)
-                                        .on_checked(
-                                            context.callback(|_: Option<bool>| {
-                                                Message::SetMode(BadgeMode::Dot)
-                                            }),
-                                        )
+                                        .on_checked(context.callback(|_: Option<bool>| {
+                                            Message::SetMode(BadgeMode::Dot)
+                                        }))
                                         .content("Dot"),
                                     Button::new()
                                         .on_click(context.message(Message::Badge))
@@ -228,7 +221,6 @@ impl Component for NotificationsPage {
                                 .opacity(0.6),
                             TextBlock::new().text(self.status.clone()).opacity(0.6),
                         )),
-                        "BadgeNotificationManager::Current()?.SetBadgeAsCount(5)?",
                     ),
                 ),
             ],

@@ -29,7 +29,6 @@ impl Component for ScrollViewerPage {
                                 .text(long_text.clone())
                                 .text_wrapping(TextWrapping::Wrap),
                         ),
-                        "ScrollViewer::new().content(view)",
                     ),
                 ),
                 KeyedView::new(
@@ -45,9 +44,6 @@ impl Component for ScrollViewerPage {
                                     .text(long_text)
                                     .text_wrapping(TextWrapping::Wrap),
                             ),
-                        r#"ScrollViewer::new()
-    .horizontal_scroll_bar_visibility(ScrollBarVisibility::Auto)
-    .vertical_scroll_bar_visibility(ScrollBarVisibility::Auto)"#,
                     ),
                 ),
             ],

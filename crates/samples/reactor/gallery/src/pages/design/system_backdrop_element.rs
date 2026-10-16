@@ -21,7 +21,6 @@ impl Component for SystemBackdropElementPage {
                     sample_card(
                         "Backdrop element",
                         SystemBackdropElement::new().height(200.0),
-                        "SystemBackdropElement::new()",
                     ),
                 ),
                 KeyedView::new(
@@ -38,7 +37,6 @@ impl Component for SystemBackdropElementPage {
                                  tint without changing the rest of the window.",
                             )
                             .is_open(true),
-                        "WindowVisuals::new().backdrop(WindowBackdrop::Mica)",
                     ),
                 ),
             ],

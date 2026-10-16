@@ -60,7 +60,6 @@ impl Component for PipsPagerPage {
                                     .opacity(0.6),
                             )),
                     )),
-                    "PipsPager::new().number_of_pages(n).selected_page_index(i)",
                 ),
             )],
         )

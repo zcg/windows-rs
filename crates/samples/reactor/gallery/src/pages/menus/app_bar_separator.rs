@@ -24,7 +24,6 @@ impl Component for AppBarSeparatorPage {
                         KeyedView::new("sep", AppBarSeparator::new()),
                         KeyedView::new("open", AppBarButton::new().label("Open")),
                     ]),
-                    "AppBarSeparator::new()",
                 ),
             )],
         )

@@ -24,7 +24,6 @@ impl Component for AnimatedVisualPlayerPage {
                             .height(240.0)
                             .background(ThemeBrush::CardBackground)
                             .content(AnimatedVisualPlayer::new().auto_play(true).height(240.0)),
-                        "AnimatedVisualPlayer::new().auto_play(true)",
                     ),
                 ),
                 KeyedView::new(
@@ -41,7 +40,6 @@ impl Component for AnimatedVisualPlayerPage {
                                  above stays blank until a source is assigned.",
                             )
                             .is_open(true),
-                        "player.source(animated_visual_source)",
                     ),
                 ),
             ],

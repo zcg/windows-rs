@@ -1,16 +1,20 @@
-// 窗口几何实测：显示器工作区，以及窗口当前落在哪儿、有多大。
+// Window geometry measured at runtime: the monitor work area, and where a window currently
+// sits and how large it is.
 //
-// 手写层。`bindings.rs` 整体是生成产物（`crates/tools/reactor` 里的 winmd 生成器重写它），
-// 所以这里新用到的 Win32 入口定义在本文件里，重新生成绑定不会把它们冲掉。
+// Hand-written layer. `bindings.rs` is entirely generated (the winmd generator under
+// `crates/tools/reactor` rewrites it), so the Win32 entry points introduced here are declared
+// in this file and survive a binding regeneration.
 //
-// 为什么用 Win32 而不是 `Microsoft.UI.Windowing.DisplayArea`：绑定里没有 `DisplayArea`
-// （`winui.toml` 只收控件与少量接口，`MoveAndResizeRelativeToDisplayArea` 在 vtable 里还是
-// 匿名占位），而 `MonitorFromWindow` + `GetMonitorInfoW` 给的是同一份数据——`rcWork` 就是
-// 工作区，系统已经在里面排除了任务栏——且不必重新生成绑定。
+// Why Win32 instead of `Microsoft.UI.Windowing.DisplayArea`: the bindings carry no
+// `DisplayArea` (`winui.toml` takes controls and a few interfaces, and
+// `MoveAndResizeRelativeToDisplayArea` is still an anonymous vtable slot), while
+// `MonitorFromWindow` + `GetMonitorInfoW` return the same data - `rcWork` is the work area
+// with the taskbar already excluded - without regenerating the bindings.
 //
-// 单位约定：本文件的查询一律返回**物理像素**（虚拟屏幕坐标系，主显示器左上角是原点），
-// 与 Win32 `RECT`、`AppWindow` 的几何信息同一套。声明层（[`WindowVisuals`]）收的是 DIP，
-// 两者之间用 [`WorkArea::dips`] 换算，或者直接交给 [`WindowVisuals::centered`]。
+// Units: every query in this file returns **physical pixels** in the virtual screen
+// coordinate space (the primary monitor top-left corner is the origin), the same space Win32
+// `RECT` and `AppWindow` geometry use. The declaration layer ([`WindowVisuals`]) takes DIP;
+// convert with [`WorkArea::dips`], or hand the value straight to [`WindowVisuals::centered`].
 //
 // [`WindowVisuals`]: crate::WindowVisuals
 // [`WindowVisuals::initial_position`]: crate::WindowVisuals::initial_position
@@ -20,8 +24,8 @@ use crate::WindowHandle;
 /// Raw `HWND` value as [`WindowHandle::as_raw`] returns it (`*mut c_void`).
 type HwndRaw = *mut std::ffi::c_void;
 
-// `HMONITOR` / `RECT` / `MONITORINFO` 是 Win32 的名字，这里按 Rust 命名写（FFI 只认
-// 布局不认名字），文档里标回原名以便对照。
+// `HMONITOR` / `RECT` / `MONITORINFO` are the Win32 names; the Rust spellings are used here
+// because FFI cares about layout, not names. Doc comments name the original for cross-checking.
 windows_core::link!("user32.dll" "system" fn GetDpiForSystem() -> u32);
 windows_core::link!("user32.dll" "system" fn GetDpiForWindow(hwnd : HwndRaw) -> u32);
 windows_core::link!("user32.dll" "system" fn GetWindowRect(hwnd : HwndRaw, lprect : *mut Rect) -> windows_core::BOOL);
@@ -29,15 +33,15 @@ windows_core::link!("user32.dll" "system" fn MonitorFromWindow(hwnd : HwndRaw, d
 windows_core::link!("user32.dll" "system" fn GetMonitorInfoW(hmonitor : Hmonitor, lpmi : *mut MonitorInfo) -> windows_core::BOOL);
 windows_core::link!("user32.dll" "system" fn SystemParametersInfoW(uiaction : u32, uiparam : u32, pvparam : *mut std::ffi::c_void, fwinini : u32) -> windows_core::BOOL);
 
-/// `MonitorFromWindow` 的取项：窗口没有落在任何显示器上时退回最近的那一个。
+/// `MonitorFromWindow` flag: fall back to the nearest monitor when the window is on none.
 const MONITOR_DEFAULTTONEAREST: u32 = 0x0000_0002;
-/// `SystemParametersInfoW` 的取项：主显示器的工作区。
+/// `SystemParametersInfoW` action: the primary monitor work area.
 const SPI_GETWORKAREA: u32 = 0x0030;
 
-/// Win32 `HMONITOR`：显示器句柄，只有系统认识的不透明指针。
+/// Win32 `HMONITOR`: a monitor handle, opaque except to the system.
 type Hmonitor = *mut std::ffi::c_void;
 
-/// Win32 `RECT`（物理像素）。只在本文件内部用，所以字段名按 Rust 习惯写。
+/// Win32 `RECT` in physical pixels. Private to this file, so the fields use Rust naming.
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 struct Rect {
@@ -57,8 +61,9 @@ impl Rect {
     }
 }
 
-/// Win32 `MONITORINFO`。字段顺序必须与 C 定义一致（`GetMonitorInfoW` 按内存布局写回），
-/// `cb_size` 也必须由调用方填成结构体大小，否则系统直接拒绝。
+/// Win32 `MONITORINFO`. The field order must match the C definition because
+/// `GetMonitorInfoW` writes back through the memory layout, and the caller must set `cb_size`
+/// to the struct size or the system rejects the call.
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 struct MonitorInfo {
@@ -69,7 +74,7 @@ struct MonitorInfo {
 }
 
 impl MonitorInfo {
-    /// 填好 `cb_size` 的空结构体。
+    /// A zeroed struct with `cb_size` filled in.
     fn new() -> Self {
         Self {
             cb_size: size_of::<Self>() as u32,
@@ -78,11 +83,12 @@ impl MonitorInfo {
     }
 }
 
-/// 显示器工作区：屏幕区域减去任务栏等系统保留区。
+/// A monitor work area: the screen rectangle minus the taskbar and other reserved regions.
 ///
-/// 坐标是**物理像素**，坐标系是虚拟屏幕（主显示器左上角为 `(0, 0)`，副显示器可以是负数），
-/// 与 Win32 `RECT`、`AppWindow.Position()`/`Size()` 同一套。声明层 [`WindowVisuals`] 收的是
-/// DIP，换算见 [`WorkArea::dips`]。
+/// Coordinates are **physical pixels** in the virtual screen space (the primary monitor
+/// top-left corner is `(0, 0)`, secondary monitors can be negative), the same space Win32
+/// `RECT` and `AppWindow.Position()`/`Size()` use. The declaration layer [`WindowVisuals`]
+/// takes DIP; see [`WorkArea::dips`] for the conversion.
 ///
 /// [`WindowVisuals`]: crate::WindowVisuals
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -103,10 +109,10 @@ impl WorkArea {
         }
     }
 
-    /// 把同一块区域换算成 DIP（`dpi` 是显示器缩放：96 是 100%，144 是 150%）。
+    /// Converts the same region to DIP (`dpi` is the display scale: 96 is 100%, 144 is 150%).
     ///
-    /// 直接把物理像素值喂给 [`WindowVisuals::initial_position`] / [`client_size`] 会在非 100%
-    /// 缩放的屏幕上落错位置，这一步就是那条换算。
+    /// Feeding physical pixel values to [`WindowVisuals::initial_position`] / [`client_size`]
+    /// misplaces the window on a display that is not at 100%; this is that conversion.
     ///
     /// [`WindowVisuals::initial_position`]: crate::WindowVisuals::initial_position
     /// [`client_size`]: crate::WindowVisuals::client_size
@@ -120,10 +126,12 @@ impl WorkArea {
         }
     }
 
-    /// 宽 `width`、高 `height` 的窗口在本工作区里居中时的左上角坐标。
+    /// Top-left corner for a window of `width` by `height` centered in this work area.
     ///
-    /// 入参与返回值都使用本工作区的单位（查询函数给的是物理像素），结果是整数坐标——
-    /// 半个像素没有意义。窗口比工作区还大时结果会是负偏移：那是居中本身的结果，不是错误。
+    /// Arguments and result use the units of this work area (the query functions return
+    /// physical pixels), and the result is whole coordinates because half a pixel means nothing.
+    /// A window larger than the work area yields a negative offset: that is what centering
+    /// produces, not an error.
     pub fn centered_origin(self, width: f64, height: f64) -> (f64, f64) {
         (
             (self.x + (self.width - width) / 2.0).round(),
@@ -132,14 +140,17 @@ impl WorkArea {
     }
 }
 
-/// 主显示器的工作区（已排除任务栏），物理像素。
+/// The primary monitor work area (taskbar excluded), in physical pixels.
 ///
-/// 主显示器左上角就是虚拟屏幕原点，所以它是"居中到主屏"这类算式的直接输入；多显示器下
-/// 要按窗口实际所在的显示器算，用 [`work_area_for_window`]。
+/// The primary monitor top-left corner is the virtual screen origin, so this value feeds
+/// directly into calculations such as centering on the primary display. With multiple monitors,
+/// compute against the monitor the window is actually on instead, using
+/// [`work_area_for_window`].
 ///
-/// 失败（系统拒绝查询）返回 `None`，调用方应退回一个保守默认值而不是就此失败。
+/// Returns `None` when the system rejects the query; callers should fall back to a conservative
+/// default rather than fail.
 ///
-/// 会调用系统 API，**不要在每帧渲染里调**——启动时查一次即可。
+/// Calls into the system API; **do not call this per rendered frame**. Query once at startup.
 pub fn primary_work_area() -> Option<WorkArea> {
     let mut rect = Rect::default();
     let ok = unsafe {
@@ -148,14 +159,17 @@ pub fn primary_work_area() -> Option<WorkArea> {
     ok.as_bool().then_some(WorkArea::from_rect(rect))
 }
 
-/// 主显示器工作区尺寸，按系统 DPI（`GetDpiForSystem`）换算成 DIP。
+/// The primary monitor work area size, converted to DIP with the system DPI
+/// (`GetDpiForSystem`).
 ///
-/// 这是 [`WindowVisuals::client_size`] 想要的单位：`client_size` 只收 DIP，拿物理像素尺寸
-/// 去声明会在非 100% 缩放的屏幕上开出一个更大的窗口。用它实现"工作区的 70%"这类比例尺寸。
+/// This is the unit [`WindowVisuals::client_size`] expects: that field takes DIP only, and
+/// declaring a physical pixel size opens a larger window on a display that is not at 100%. Use
+/// this value for proportional sizes such as 70 percent of the work area.
 ///
-/// 换算按**系统 DPI**：窗口若最终落在缩放比例不同的显示器上，声明值会按那块显示器的比例
-/// 重新解释，尺寸随该显示器的比例缩放。要严格贴合某块显示器，请用 [`WorkArea::dips`] 配合
-/// [`work_area_for_window`]（在窗口存在之后）。
+/// The conversion uses the **system DPI**. If the window ends up on a monitor with a different
+/// scale, the declared value is reinterpreted at that monitor scale, so the size follows it. To
+/// match one specific monitor exactly, use [`WorkArea::dips`] together with
+/// [`work_area_for_window`] (once the window exists).
 ///
 /// [`WindowVisuals::client_size`]: crate::WindowVisuals::client_size
 pub fn primary_work_area_dip() -> Option<(f64, f64)> {
@@ -165,25 +179,30 @@ pub fn primary_work_area_dip() -> Option<(f64, f64)> {
     Some((area.width, area.height))
 }
 
-/// `handle` 所在显示器的工作区（已排除任务栏），物理像素。
+/// The work area of the monitor `handle` is on (taskbar excluded), in physical pixels.
 ///
-/// 多显示器、副屏在主屏左边（负坐标）或缩放比例不同的场景用它；居中到**自己所在的那块屏**
-/// 就是 [`WorkArea::centered_origin`] 加窗口尺寸。
+/// Use this for multiple monitors, for a secondary display left of the primary (negative
+/// coordinates), or for mixed scale factors; centering on **the monitor the window is on** is
+/// [`WorkArea::centered_origin`] plus the window size.
 ///
-/// 按**借用**收 [`WindowHandle`]：一次 `run_window` 里往往要连着查好几项（工作区、当前
-/// 落点），而 `WindowHandle` 既不是 `Copy` 也不是 `Clone`，按值收就只能查一次。
+/// Takes [`WindowHandle`] **by reference**: a single `run_window` often queries several values
+/// in a row (the work area, the current position), and `WindowHandle` is neither `Copy` nor
+/// `Clone`, so taking it by value would allow one query only.
 ///
-/// 只收 [`WindowHandle`] 而不是裸 `HWND`：句柄失效时 `MonitorFromWindow` 会退回最近显示器，
-/// 算出来的位置就会莫名其妙，而 reactor 的这个句柄保证指向一个活着的窗口。
+/// Takes a [`WindowHandle`] rather than a raw `HWND`: when the handle is stale,
+/// `MonitorFromWindow` falls back to the nearest monitor and the computed position becomes
+/// arbitrary, while this reactor handle guarantees a live window.
 pub fn work_area_for_window(handle: &WindowHandle<'_>) -> Option<WorkArea> {
     work_area_of(handle.as_raw().cast())
 }
 
-/// `handle` 当前的位置：窗口**外框**（含边框与标题栏）左上角，单位 DIP。
+/// The current position of `handle`: the top-left corner of the window **frame** (border and
+/// title bar included), in DIP.
 ///
-/// 与 [`WindowVisuals::initial_position`] 是同一套单位与落点，所以"记住窗口上次在哪"就是
-/// 把这里的返回值存下来、启动时声明回去。DIP 换算用窗口自己的 DPI（`GetDpiForWindow`），
-/// 与声明层下发时的换算完全一致，来回一趟不会漂移。
+/// Same units and anchor point as [`WindowVisuals::initial_position`], so remembering where the
+/// window was means storing this value and declaring it back at startup. The DIP conversion uses
+/// the DPI of the window itself (`GetDpiForWindow`), the same conversion the declaration layer
+/// applies, so a round trip does not drift.
 ///
 /// [`WindowVisuals::initial_position`]: crate::WindowVisuals::initial_position
 pub fn window_placement_dip(handle: &WindowHandle<'_>) -> Option<(f64, f64)> {
@@ -194,14 +213,15 @@ pub fn window_placement_dip(handle: &WindowHandle<'_>) -> Option<(f64, f64)> {
     Some((f64::from(rect.left) * scale, f64::from(rect.top) * scale))
 }
 
-/// 窗口**外框**当前的矩形（物理像素）。
+/// The current rectangle of the window **frame**, in physical pixels.
 fn window_frame(hwnd: HwndRaw) -> Option<Rect> {
     let mut rect = Rect::default();
     let ok = unsafe { GetWindowRect(hwnd, &mut rect) };
     ok.as_bool().then_some(rect)
 }
 
-/// `hwnd` 所在显示器的工作区（物理像素）。[`work_area_for_window`] 的内部版本。
+/// The work area of the monitor `hwnd` is on, in physical pixels. Internal form of
+/// [`work_area_for_window`].
 pub(super) fn work_area_of(hwnd: HwndRaw) -> Option<WorkArea> {
     let monitor = unsafe { MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST) };
     if monitor.is_null() {
@@ -225,7 +245,8 @@ mod window_geometry_tests {
             height: 1040.0,
         };
         assert_eq!(area.centered_origin(1280.0, 800.0), (320.0, 120.0));
-        // 副屏在主屏左边：负原点同样参与居中。
+        // Secondary display left of the primary: a negative origin still takes part in
+        // centering.
         let secondary = WorkArea {
             x: -1920.0,
             y: 0.0,
@@ -233,7 +254,7 @@ mod window_geometry_tests {
             height: 1040.0,
         };
         assert_eq!(secondary.centered_origin(1280.0, 800.0), (-1600.0, 120.0));
-        // 奇数差值不产生半个像素。
+        // An odd difference does not produce half a pixel.
         let odd = WorkArea {
             x: 0.0,
             y: 0.0,
@@ -254,14 +275,15 @@ mod window_geometry_tests {
         assert_eq!(area.dips(96).width, 2560.0);
         assert_eq!(area.dips(192).width, 1280.0);
         assert_eq!(area.dips(120).height, 1152.0);
-        // 低于 96 的回报值当 96 处理：没有"负缩放"的显示器，除零式的放大只会更糟。
+        // A reported value below 96 is treated as 96: no display has a negative scale, and an
+        // unbounded magnification is worse than clamping.
         assert_eq!(area.dips(0).width, 2560.0);
     }
 
     #[test]
     fn work_area_size_matches_centered_origin_arithmetic() {
-        // `primary_work_area_dip` 只返回尺寸，宿主自己居中时要的也是这两个数：
-        // 尺寸减去窗口尺寸再除以二。
+        // `primary_work_area_dip` returns the size only, and those two numbers are what a host
+        // needs to center itself: size minus window size, divided by two.
         let area = WorkArea {
             x: 0.0,
             y: 0.0,

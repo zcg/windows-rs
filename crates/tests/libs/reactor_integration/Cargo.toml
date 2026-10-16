@@ -28,6 +28,10 @@ name = "application_menus"
 path = "src/application_menus.rs"
 
 [[bin]]
+name = "menu_lifetimes"
+path = "src/menu_lifetimes.rs"
+
+[[bin]]
 name = "canvas_integration"
 path = "src/canvas_integration.rs"
 
@@ -38,6 +42,14 @@ path = "src/webview_integration.rs"
 [[bin]]
 name = "window_state"
 path = "src/window_state.rs"
+
+[[bin]]
+name = "window_observers"
+path = "src/window_observers.rs"
+
+[[bin]]
+name = "window_theme"
+path = "src/window_theme.rs"
 
 [[bin]]
 name = "window_placement"
@@ -51,12 +63,16 @@ path = "src/tray_flyout.rs"
 name = "menu_position"
 path = "src/menu_position.rs"
 
+[[bin]]
+name = "title_bar"
+path = "src/title_bar.rs"
+
 [dependencies]
 windows-canvas = { workspace = true, features = ["composition", "reactor"] }
 windows-core = { workspace = true }
 windows-reactor = { workspace = true }
 windows-webview = { workspace = true, features = ["reactor"] }
-windows = { workspace = true, features = ["combaseapi", "objbase", "processthreadsapi", "shellapi", "uiautomationclient", "uiautomationcore", "winuser"] }
+windows = { workspace = true, features = ["combaseapi", "dwmapi", "objbase", "processthreadsapi", "shellapi", "uiautomationclient", "uiautomationcore", "wingdi", "winuser"] }
 
 [build-dependencies]
 windows-reactor-setup = { workspace = true }

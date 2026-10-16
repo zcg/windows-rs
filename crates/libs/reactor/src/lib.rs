@@ -68,13 +68,13 @@ pub use declaration::{
     ContentDialogResult, CornerRadius, DragDropAction, DragDropOperation, DragDropPolicy, DragKind,
     DroppedData, DroppedStorageItem, ElementFocusState, EncodedImage, ExitTransition, Flyout,
     FlyoutExt, FlyoutPlacement, FocusEventInfo, FontWeight, GridLength, Icon, ImageSource,
-    ItemsViewLayout,
-    InputModifiers, IntoPayloadCallback, IntoUnitCallback, IntoViews, Key, KeyAccelerator,
-    KeyAccelerators, KeyEventInfo, KeyedView, Menu, MenuExt, MenuItem, NavigationViewDisplayMode,
-    PhysicalKeyStatus, PointerEventInfo, RefreshDeferral, ResourceOverrides, ResourceValue,
-    RichText, RichTextHyperlink, RichTextInline, RichTextParagraph, RichTextRun, RoutedCallback,
-    ThemeBrush, ThemeTransition, Thickness, Tooltip, TooltipExt, TooltipPlacement, Vector3, View,
-    VirtualKey, VirtualSource, keyed, translation_y,
+    InputModifiers, IntoPayloadCallback, IntoUnitCallback, IntoViews, ItemsViewLayout, Key,
+    KeyAccelerator, KeyAccelerators, KeyEventInfo, KeyedView, Menu, MenuExt, MenuItem,
+    NavigationViewDisplayMode, PhysicalKeyStatus, PointerEventInfo, RefreshDeferral,
+    ResourceOverrides, ResourceValue, RichText, RichTextHyperlink, RichTextInline,
+    RichTextParagraph, RichTextRun, RoutedCallback, ThemeBrush, ThemeTransition, Thickness,
+    Tooltip, TooltipExt, TooltipPlacement, Vector3, View, VirtualKey, VirtualSource, keyed,
+    translation_y,
 };
 #[cfg(not(any(test, feature = "test")))]
 use generated::*;
@@ -85,19 +85,19 @@ use ir::*;
 #[cfg(any(test, feature = "test"))]
 pub use ir::*;
 pub use native::{App, AppCallback, AppContext, AppProxy, ScreenPoint, WindowTitleBarHeight};
-/// Global font-size scaling (the host settings "text size" slider): `set_font_scale` sets the
-/// factor that every `TextBlock` / `TextBox` / `RichTextBlock` font size and explicit line
-/// height is multiplied by. See [`font_scale`] for the fixed-pixel-layout caveat.
-pub use native::{font_scale, set_font_scale};
-pub use native::{
-    WorkArea, primary_work_area, primary_work_area_dip, window_placement_dip, work_area_for_window,
-};
 #[cfg(feature = "test")]
 pub use native::{
     LiveRenderingSubscription, LiveTickSubscription, bring_live_virtual_index,
     live_virtual_shell_counts, schedule_live_test_exit, subscribe_live_interval,
     subscribe_live_rendering, subscribe_live_tick,
 };
+pub use native::{
+    WorkArea, primary_work_area, primary_work_area_dip, window_placement_dip, work_area_for_window,
+};
+/// Global font-size scaling (the host settings "text size" slider): `set_font_scale` sets the
+/// factor that every `TextBlock` / `TextBox` / `RichTextBlock` font size and explicit line
+/// height is multiplied by. See [`font_scale`] for the fixed-pixel-layout caveat.
+pub use native::{font_scale, set_font_scale};
 #[cfg(not(any(test, feature = "test")))]
 use reconcile::*;
 #[cfg(any(test, feature = "test"))]

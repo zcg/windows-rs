@@ -58,7 +58,6 @@ impl Component for SwapChainPanelPage {
                     sample_card(
                         "Animated Direct2D surface",
                         Border::new().height(280.0).content(surface),
-                        "animated_canvas(|ctx| { ctx.clear(backdrop); ctx.draw_ellipse(..) })",
                     ),
                 ),
                 KeyedView::new(
@@ -77,7 +76,6 @@ impl Component for SwapChainPanelPage {
                                  monitor rebuilds the chain at the new scale.",
                             )
                             .is_open(true),
-                        "SwapChainPanel::new().element_ref(&panel)",
                     ),
                 ),
             ],

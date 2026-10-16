@@ -151,7 +151,6 @@ impl Component for JumpListPage {
                             )),
                         TextBlock::new().text(self.status.clone()).opacity(0.6),
                     )),
-                    "JumpList::LoadCurrentAsync() on a background thread",
                 ),
             )],
         )

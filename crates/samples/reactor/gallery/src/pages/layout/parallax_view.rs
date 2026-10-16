@@ -37,7 +37,6 @@ impl Component for ParallaxViewPage {
                         .horizontal_shift(100.0)
                         .child(backdrop)
                         .source(foreground),
-                    "ParallaxView::new().child(backdrop).source(list)",
                 ),
             )],
         )

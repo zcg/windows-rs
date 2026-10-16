@@ -27,7 +27,6 @@ impl Component for ItemContainerPage {
                                     .font_weight(FontWeight::SEMI_BOLD),
                             ),
                         ),
-                        "ItemContainer::new().child(view)",
                     ),
                 ),
                 KeyedView::new(
@@ -44,7 +43,6 @@ impl Component for ItemContainerPage {
                                  per bound object.",
                             )
                             .is_open(true),
-                        "ItemContainer::new()",
                     ),
                 ),
             ],

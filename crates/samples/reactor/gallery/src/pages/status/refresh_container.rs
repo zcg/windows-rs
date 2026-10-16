@@ -30,7 +30,6 @@ impl Component for RefreshContainerPage {
                     RefreshContainer::new()
                         .pull_direction(RefreshPullDirection::TopToBottom)
                         .content(ScrollViewer::new().height(300.0).content(list)),
-                    "RefreshContainer::new().content(list).pull_direction(RefreshPullDirection::TopToBottom)",
                 ),
             )],
         )

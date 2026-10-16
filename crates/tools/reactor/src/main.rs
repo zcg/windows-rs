@@ -169,6 +169,8 @@ impl std::fmt::Display for Validation {
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
 enum PropertyAdapter {
+    #[serde(rename = "datetime")]
+    DateTime,
     DropPolicy,
     FontFamily,
     GridColumns,
@@ -190,6 +192,8 @@ enum PropertyAdapter {
     MediaSource,
     NativeColor,
     NumberBoxValue,
+    #[serde(rename = "optional_datetime")]
+    OptionalDateTime,
     PathData,
     PointerCapture,
     PointerFocus,
@@ -207,6 +211,7 @@ enum PropertyAdapter {
 impl PropertyAdapter {
     fn value(self) -> &'static str {
         match self {
+            Self::DateTime => "DateTime",
             Self::DropPolicy => "DragDropPolicy",
             Self::FontFamily => "String",
             Self::GridColumns | Self::GridRows => "GridLengths",
@@ -225,6 +230,7 @@ impl PropertyAdapter {
             Self::MediaSource => "IUnknown",
             Self::NativeColor => "Color",
             Self::NumberBoxValue | Self::RatingValue => "OptionalF64",
+            Self::OptionalDateTime => "OptionalDateTime",
             Self::PointerCapture | Self::PointerFocus => "Bool",
             Self::ResourceOverrides => "ResourceOverrides",
             Self::ResourceStyle => "ButtonStyle",
@@ -249,7 +255,7 @@ impl PropertyAdapter {
     fn has_managed_state(self) -> bool {
         matches!(
             self,
-            Self::PointerCapture | Self::PointerFocus | Self::DropPolicy
+            Self::PointerCapture | Self::PointerFocus | Self::DropPolicy | Self::ImageUri
         )
     }
 
@@ -1088,8 +1094,16 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                     output.push_str(&format!("let {field} = Rc::new(Cell::new(false));\n"));
                 }
             }
+            let managed_source = object
+                .properties
+                .iter()
+                .find(|property| property.adapter == Some(PropertyAdapter::ImageUri))
+                .map(|property| snake_case(&property.name));
             for event in &object.events {
                 let field = snake_case(&event.name);
+                if let Some(source) = &managed_source {
+                    output.push_str(&format!("let managed_source = Rc::clone(&{source});\n"));
+                }
                 let selection = object
                     .selection
                     .as_ref()
@@ -1127,7 +1141,11 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                         match property.value.as_str() {
                             "String" => format!("{observed_read}.map(Rc::<str>::from)"),
                             "Bool" | "F64" => observed_read,
-                            "OptionalBool" => format!("{observed_read}.map(Some)"),
+                            "OptionalBool" | "OptionalDateTime" => format!(
+                                "match {observed_read} {{ Ok(value) => Ok(Some(value)), \
+                                 Err(error) if error.code().is_ok() => Ok(None), \
+                                 Err(error) => Err(error) }}"
+                            ),
                             "OptionalF64" => format!(
                                 "{observed_read}.map({})",
                                 if property.adapter == Some(PropertyAdapter::RatingValue) {
@@ -1313,6 +1331,10 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                          let observation = dispatch.then_some(observation);\n",
                         event.name
                     ));
+                } else if managed_source.is_some() {
+                    output.push_str(
+                        "let dispatch = !managed_source.get();\nlet observation = None;\n",
+                    );
                 } else if !event.routed {
                     output.push_str("let dispatch = true;\nlet observation = None;\n");
                 }
@@ -1422,69 +1444,30 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                     ));
                     continue;
                 }
-                match event.value.as_str() {
-                    "Bool" => output.push_str(&format!(
-                        "if dispatch {{ WinUiAdapter::dispatch_bool(&event_for_callback, \
-                         &event_queue_{field}, object, EventId::{}, observation, \
-                         {dispatch_value}); }}\n",
-                        event.name,
-                    )),
-                    "Color" => output.push_str(&format!(
-                        "if dispatch {{ WinUiAdapter::dispatch_color(&event_for_callback, \
-                         &event_queue_{field}, object, EventId::{}, observation, \
-                         {dispatch_value}); }}\n",
-                        event.name,
-                    )),
-                    "ContentDialogResult" => output.push_str(&format!(
-                        "match WinUiAdapter::content_dialog_closed(&event_queue_{field}, object) {{ \
-                         Ok(true) if dispatch => WinUiAdapter::dispatch_content_dialog_result(\
-                         &event_for_callback, &event_queue_{field}, object, EventId::{}, \
-                         observation, {dispatch_value}), Ok(_) => {{}}, Err(error) => \
-                         report_error(error.into()), }}\n",
-                        event.name,
-                    )),
-                    "F64" => output.push_str(&format!(
-                        "if dispatch {{ WinUiAdapter::dispatch_f64(&event_for_callback, \
-                         &event_queue_{field}, object, EventId::{}, observation, \
-                         {dispatch_value}); }}\n",
-                        event.name,
-                    )),
-                    "OptionalBool" => output.push_str(&format!(
-                        "if dispatch {{ WinUiAdapter::dispatch_optional_bool(&event_for_callback, \
-                         &event_queue_{field}, object, EventId::{}, observation, \
-                         {dispatch_value}); }}\n",
-                        event.name,
-                    )),
-                    "OptionalDateTime" => output.push_str(&format!(
-                        "if dispatch {{ WinUiAdapter::dispatch_optional_date_time(\
-                         &event_for_callback, &event_queue_{field}, object, EventId::{}, \
-                         observation, {dispatch_value}); }}\n",
-                        event.name,
-                    )),
-                    "OptionalF64" => output.push_str(&format!(
-                        "if dispatch {{ WinUiAdapter::dispatch_optional_f64(&event_for_callback, \
-                         &event_queue_{field}, object, EventId::{}, observation, \
-                         {dispatch_value}); }}\n",
-                        event.name,
-                    )),
-                    "OptionalTimeSpan" => output.push_str(&format!(
-                        "if dispatch {{ WinUiAdapter::dispatch_optional_time_span(\
-                         &event_for_callback, &event_queue_{field}, object, EventId::{}, \
-                         observation, {dispatch_value}); }}\n",
-                        event.name,
-                    )),
-                    "RefreshDeferral" => output.push_str(&format!(
-                        "if dispatch {{ WinUiAdapter::dispatch_refresh_deferral(\
-                         &event_for_callback, &event_queue_{field}, object, EventId::{}, \
-                         observation, {dispatch_value}); }}\n",
-                        event.name,
-                    )),
-                    "NavigationViewDisplayMode" => output.push_str(&format!(
-                        "if dispatch {{ WinUiAdapter::dispatch_navigation_view_display_mode(\
-                         &event_for_callback, &event_queue_{field}, object, EventId::{}, \
-                         observation, {dispatch_value}); }}\n",
-                        event.name,
-                    )),
+                let value = match event.value.as_str() {
+                    "Bool"
+                    | "Color"
+                    | "F64"
+                    | "OptionalBool"
+                    | "OptionalDateTime"
+                    | "OptionalF64"
+                    | "OptionalTimeSpan"
+                    | "NavigationViewDisplayMode"
+                    | "RefreshDeferral"
+                    | "SelectionIndex"
+                    | "String" => Some(dispatch_value),
+                    "Unit" => Some("()"),
+                    "ContentDialogResult" => {
+                        output.push_str(&format!(
+                            "match WinUiAdapter::content_dialog_closed(&event_queue_{field}, object) {{ \
+                             Ok(true) if dispatch => WinUiAdapter::dispatch(\
+                             &event_for_callback, &event_queue_{field}, object, EventId::{}, \
+                             observation, {dispatch_value}), Ok(_) => {{}}, Err(error) => \
+                             report_error(error.into()), }}\n",
+                            event.name,
+                        ));
+                        None
+                    }
                     "PointerEventInfo" => {
                         let capture_on_press = if event.name == "PointerPressed" {
                             "Some(capture_pointer_on_press_pointer_pressed.get())"
@@ -1506,12 +1489,9 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                              object, &source_{field}, args, {capture_on_press}, {release_capture}, \
                              {focus_on_release}, &pending_focus_states_{field}) {{ \
                              Ok(value) => value, Err(error) => {{ \
-                             report_error(error.into()); return; }} }};\n\
-                             if dispatch {{ WinUiAdapter::dispatch_pointer_event_info(\
-                             &event_for_callback, &event_queue_{field}, object, EventId::{}, \
-                             observation, value); }}\n",
-                            event.name
+                             report_error(error.into()); return; }} }};\n"
                         ));
+                        Some("value")
                     }
                     "FocusEventInfo" => {
                         let got_focus = event.name == "GotFocus";
@@ -1519,81 +1499,75 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
                             "let value = match WinUiAdapter::focus_event_info(\
                              object, &source_{field}, args, {got_focus}, \
                              &pending_focus_states_{field}) {{ Ok(value) => value, Err(error) => {{ \
-                             report_error(error.into()); return; }} }};\n\
-                             if dispatch {{ WinUiAdapter::dispatch_focus_event_info(\
+                             report_error(error.into()); return; }} }};\n"
+                        ));
+                        Some("value")
+                    }
+                    "DragKind" => {
+                        output.push_str(&format!(
+                            "let value = match WinUiAdapter::drag_kind(\
+                             args, &drop_policy_{field}) {{ Ok(value) => value, Err(error) => {{ \
+                             report_error(error.into()); return; }} }};\n"
+                        ));
+                        Some("value")
+                    }
+                    "DroppedData" => {
+                        output.push_str(&format!(
+                            "let _ = dispatch;\n\
+                             if let Err(error) = WinUiAdapter::dispatch_dropped_data(\
                              &event_for_callback, &event_queue_{field}, object, EventId::{}, \
-                             observation, value); }}\n",
+                             observation, args, &drop_policy_{field}) {{ \
+                             report_error(error.into()); }}\n",
                             event.name
                         ));
+                        None
                     }
-                    "DragKind" => output.push_str(&format!(
-                        "let value = match WinUiAdapter::drag_kind(\
-                         args, &drop_policy_{field}) {{ Ok(value) => value, Err(error) => {{ \
-                         report_error(error.into()); return; }} }};\n\
-                         if dispatch {{ WinUiAdapter::dispatch_drag_kind(\
-                         &event_for_callback, &event_queue_{field}, object, EventId::{}, \
-                         observation, value); }}\n",
-                        event.name
-                    )),
-                    "DroppedData" => output.push_str(&format!(
-                        "let _ = dispatch;\n\
-                         if let Err(error) = WinUiAdapter::dispatch_dropped_data(\
-                         &event_for_callback, &event_queue_{field}, object, EventId::{}, \
-                         observation, args, &drop_policy_{field}) {{ \
-                         report_error(error.into()); }}\n",
-                        event.name
-                    )),
-                    "StringList" => output.push_str(&format!(
-                        "let value = match WinUiAdapter::{}(&source_{field}) {{ \
-                         Ok(value) => value, Err(error) => {{ \
-                         report_error(error.into()); return; }} }};\n\
-                         if dispatch {{ WinUiAdapter::dispatch_string_list(\
-                         &event_for_callback, &event_queue_{field}, object, EventId::{}, \
-                         observation, value); }}\n",
-                        if object.name == "TabView" {
-                            "tab_item_tags"
-                        } else {
-                            "item_tags"
-                        },
-                        event.name
-                    )),
-                    "KeyEventInfo" => output.push_str(
-                        "let args = args.unwrap();\n\
-                         let value = match WinUiAdapter::key_event_info(args) { Ok(value) => value, \
-                         Err(error) => { report_error(error.into()); return; } };\n\
-                         let handled = event_for_callback.borrow().callback.as_ref()\
-                         .is_some_and(|callback| callback.call(value));\n\
-                         if let Err(error) = args.SetHandled(handled) { \
-                         report_error(error); }\n",
-                    ),
-                    "CharacterEventInfo" => output.push_str(
-                        "let args = args.unwrap();\n\
-                         let value = match WinUiAdapter::character_event_info(args) { \
-                         Ok(value) => value, Err(error) => { \
-                         report_error(error.into()); return; } };\n\
-                         let handled = event_for_callback.borrow().callback.as_ref()\
-                         .is_some_and(|callback| callback.call(value));\n\
-                         if let Err(error) = args.SetHandled(handled) { \
-                         report_error(error); }\n",
-                    ),
-                    "Unit" => output.push_str(&format!(
-                        "if dispatch {{ WinUiAdapter::dispatch_unit(&event_for_callback, \
-                         &event_queue_{field}, object, EventId::{}, observation); }}\n",
-                        event.name
-                    )),
-                    "SelectionIndex" => output.push_str(&format!(
-                        "if dispatch {{ WinUiAdapter::dispatch_selection_index(&event_for_callback, \
-                         &event_queue_{field}, object, EventId::{}, observation, \
-                         {dispatch_value}); }}\n",
-                        event.name,
-                    )),
-                    "String" => output.push_str(&format!(
-                        "if dispatch {{ WinUiAdapter::dispatch_string(&event_for_callback, \
-                         &event_queue_{field}, object, EventId::{}, observation, \
-                         {dispatch_value}); }}\n",
-                        event.name,
-                    )),
+                    "StringList" => {
+                        output.push_str(&format!(
+                            "let value = match WinUiAdapter::{}(&source_{field}) {{ \
+                             Ok(value) => value, Err(error) => {{ \
+                             report_error(error.into()); return; }} }};\n",
+                            if object.name == "TabView" {
+                                "tab_item_tags"
+                            } else {
+                                "item_tags"
+                            },
+                        ));
+                        Some("value")
+                    }
+                    "KeyEventInfo" => {
+                        output.push_str(
+                            "let args = args.unwrap();\n\
+                             let value = match WinUiAdapter::key_event_info(args) { Ok(value) => value, \
+                             Err(error) => { report_error(error.into()); return; } };\n\
+                             let handled = event_for_callback.borrow().callback.as_ref()\
+                             .is_some_and(|callback| callback.call(value));\n\
+                             if let Err(error) = args.SetHandled(handled) { \
+                             report_error(error); }\n",
+                        );
+                        None
+                    }
+                    "CharacterEventInfo" => {
+                        output.push_str(
+                            "let args = args.unwrap();\n\
+                             let value = match WinUiAdapter::character_event_info(args) { \
+                             Ok(value) => value, Err(error) => { \
+                             report_error(error.into()); return; } };\n\
+                             let handled = event_for_callback.borrow().callback.as_ref()\
+                             .is_some_and(|callback| callback.call(value));\n\
+                             if let Err(error) = args.SetHandled(handled) { \
+                             report_error(error); }\n",
+                        );
+                        None
+                    }
                     _ => unreachable!("unsupported generated native event"),
+                };
+                if let Some(value) = value {
+                    output.push_str(&format!(
+                        "if dispatch {{ WinUiAdapter::dispatch(&event_for_callback, \
+                         &event_queue_{field}, object, EventId::{}, observation, {value}); }}\n",
+                        event.name,
+                    ));
                 }
                 if event.property_changed {
                     output.push_str(&format!(
@@ -2198,7 +2172,8 @@ fn generate_native(schema: &Schema, metadata: &tool_reactor_metadata::MetadataRe
     output.push_str("_ => None,\n} }\n");
 
     output.push_str(
-        "fn set_property(&self, property: PropertyId, value: Option<&PropertyValue>) -> \
+        "fn set_property(&self, property: PropertyId, value: Option<&PropertyValue>, \
+         image_source: Option<&native::ImageSource>) -> \
                      Option<Result<(), WinUiError>> { match (self, property, value) {\n",
     );
     for object in &objects {
@@ -2671,20 +2646,7 @@ fn emit_native_property_arms(
         let clear = native_interface_call(target, target_class, interface, metadata, |object| {
             format!("{object}.Set{native}(None).map_err(Into::into)")
         });
-        let set = native_interface_call(target, target_class, interface, metadata, |object| {
-            format!(
-                "uri_image(value).and_then(|image| \
-                     {object}.Set{native}(&image).map_err(Into::into))"
-            )
-        });
-        output.push_str(&format!(
-            "{pattern}None) => Some({clear}),\n\
-             {pattern}Some(PropertyValue::ImageSource(value))) => match value.value() {{\n\
-             ImageSourceValue::Uri(value) => \
-             Some({set}),\n\
-             ImageSourceValue::Encoded(_) => None,\n\
-             }},\n"
-        ));
+        output.push_str(&format!("{pattern}None) => Some({clear}),\n"));
         return;
     }
     if matches!(
@@ -2709,7 +2671,7 @@ fn emit_native_property_arms(
         });
         let set = native_interface_call(target, target_class, interface, metadata, |object| {
             format!(
-                "{helper}(value).and_then(|icon| \
+                "{helper}(value, image_source).and_then(|icon| \
                      {object}.Set{native}(&icon).map_err(Into::into))"
             )
         });
@@ -2863,10 +2825,12 @@ fn emit_native_property_arms(
         // The generated code is included inside `native::winui`, where the
         // `native` module's items are already in scope.
         "F64" if scaled => ("F64", "*value * font_scale()"),
+        "DateTime" => ("DateTime", "*value"),
         "F64" => ("F64", "*value"),
         "FontWeight" => ("FontWeight", "native::FontWeight { weight: value.value() }"),
         "I32" => ("I32", "*value"),
         "OptionalBool" => ("OptionalBool", "*value"),
+        "OptionalDateTime" => ("OptionalDateTime", "*value"),
         "CornerRadius" => (
             "CornerRadius",
             "native::CornerRadius { top_left: value.top_left, top_right: value.top_right, \
@@ -2978,6 +2942,7 @@ fn generate(schema: &Schema, metadata: &tool_reactor_metadata::MetadataResolver)
              CharacterEventInfo,\n\
              Color,\n\
              CornerRadius,\n\
+             DateTime,\n\
              Duration,\n\
              DragDropPolicy,\n\
              DragKind,\n\
@@ -3595,8 +3560,13 @@ fn generate_declarations(
                      self.0 = self.0.property(PropertyId::{}, \
                      PropertyValue::ImageSource(ImageSource::encoded(value)));\n\
                      self\n\
+                     }}\n\
+                     pub fn {name}_svg(mut self, value: EncodedImage) -> Self {{\n\
+                     self.0 = self.0.property(PropertyId::{}, \
+                     PropertyValue::ImageSource(ImageSource::svg(value)));\n\
+                     self\n\
                      }}\n",
-                    property.name, property.name, property.name, property.name
+                    property.name, property.name, property.name, property.name, property.name
                 ));
                 continue;
             }
@@ -3952,6 +3922,7 @@ fn property_argument_parts(name: &str, value: &str) -> String {
         "KeyAccelerators" => format!("{name}: KeyAccelerators"),
         "OptionalF64" => format!("{name}: impl Into<Option<f64>>"),
         "OptionalBool" => format!("{name}: impl Into<Option<bool>>"),
+        "OptionalDateTime" => format!("{name}: impl Into<Option<DateTime>>"),
         "ResourceOverrides" => format!("{name}: ResourceOverrides"),
         "SelectionIndex" => format!("{name}: impl Into<Option<usize>>"),
         "StringList" => format!("{name}: impl IntoIterator<Item = impl Into<Rc<str>>>"),
@@ -3982,6 +3953,7 @@ fn property_value_parts(value: &str, name: &str) -> String {
         "ButtonStyle" => format!("PropertyValue::ButtonStyle({name})"),
         "Color" => format!("PropertyValue::Color({name})"),
         "CornerRadius" => format!("PropertyValue::CornerRadius({name})"),
+        "DateTime" => format!("PropertyValue::DateTime({name})"),
         "Duration" => format!("PropertyValue::Duration({name})"),
         "DragDropPolicy" => format!("PropertyValue::DragDropPolicy(Rc::new({name}))"),
         "F64" => format!("PropertyValue::F64({name})"),
@@ -3995,6 +3967,7 @@ fn property_value_parts(value: &str, name: &str) -> String {
         "KeyAccelerators" => format!("PropertyValue::KeyAccelerators({name})"),
         "OptionalF64" => format!("PropertyValue::OptionalF64({name}.into())"),
         "OptionalBool" => format!("PropertyValue::OptionalBool({name}.into())"),
+        "OptionalDateTime" => format!("PropertyValue::OptionalDateTime({name}.into())"),
         "SelectionIndex" => format!("PropertyValue::SelectionIndex({name}.into())"),
         "ResourceOverrides" => format!("PropertyValue::ResourceOverrides({name})"),
         "RichText" => format!("PropertyValue::RichText({name})"),
@@ -4227,6 +4200,7 @@ fn live_property_sample(
         "ButtonStyle" => "ButtonStyle::Default".to_string(),
         "Color" => "Color::rgb(1, 2, 3)".to_string(),
         "CornerRadius" => "CornerRadius::uniform(1.0)".to_string(),
+        "DateTime" | "OptionalDateTime" => "DateTime::now()".to_string(),
         "Duration" => "std::time::Duration::from_millis(1)".to_string(),
         "DragDropPolicy" => "DragDropPolicy::new()".to_string(),
         "FontWeight" => "FontWeight::SEMI_BOLD".to_string(),
@@ -4262,6 +4236,7 @@ fn live_property_sample(
         "Stretch" => "Stretch::Uniform".to_string(),
         "Symbol" => "Symbol::Previous".to_string(),
         "TeachingTipPlacementMode" => "TeachingTipPlacementMode::Top".to_string(),
+        "TextAlignment" => "TextAlignment::Center".to_string(),
         "TextTrimming" => "TextTrimming::CharacterEllipsis".to_string(),
         "TextWrapping" => "TextWrapping::Wrap".to_string(),
         "TreeViewSelectionMode" => "TreeViewSelectionMode::Single".to_string(),
@@ -4313,6 +4288,7 @@ fn is_builtin_value(value: &str) -> bool {
             | "ButtonStyle"
             | "Color"
             | "CornerRadius"
+            | "DateTime"
             | "Duration"
             | "DragDropPolicy"
             | "DragKind"
@@ -4384,4 +4360,3 @@ fn rustfmt(source: &str) -> String {
     assert!(output.status.success());
     String::from_utf8(output.stdout).unwrap()
 }
-

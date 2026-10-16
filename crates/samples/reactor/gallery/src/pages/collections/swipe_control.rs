@@ -45,7 +45,6 @@ impl Component for SwipeControlPage {
                         DataItem::new(sender, sender)
                             .content(SwipeControl::new().content(row(message)))
                     })),
-                    "SwipeControl::new().content(view)",
                 ),
             )],
         )

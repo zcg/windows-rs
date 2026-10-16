@@ -95,7 +95,6 @@ impl Component for ClipboardPage {
                             )),
                         TextBlock::new().text(self.status.clone()).opacity(0.6),
                     )),
-                    "Clipboard::SetContent(&package); Clipboard::GetContent()",
                 ),
             )],
         )

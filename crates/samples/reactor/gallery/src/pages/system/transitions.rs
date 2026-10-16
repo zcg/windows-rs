@@ -58,7 +58,6 @@ impl Component for TransitionsPage {
                             .on_toggled(context.callback(Message::Visible))
                             .header("Visible"),
                     )),
-                    "Border::new().opacity(v).opacity_transition(ms).scale(s).scale_transition(ms)",
                 ),
             )],
         )

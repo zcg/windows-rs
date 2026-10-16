@@ -296,6 +296,7 @@ pub enum FactData {
         variants: Vec<Variant>,
         fixed: bool,
         scoped: bool,
+        flags: bool,
     },
     EnumFlag {
         target: String,
@@ -533,6 +534,7 @@ impl Snapshot {
                     let projection = TypeProjection::new(
                         &plan.type_names,
                         &plan.interface_names,
+                        &plan.pointer_interface_aliases,
                         &plan.type_choices,
                         &fact.origin.tu,
                     );
@@ -566,6 +568,7 @@ impl Snapshot {
                     let projection = TypeProjection::new(
                         &plan.type_names,
                         &plan.interface_names,
+                        &plan.pointer_interface_aliases,
                         &plan.type_choices,
                         &fact.origin.tu,
                     );
@@ -582,6 +585,7 @@ impl Snapshot {
                     let projection = TypeProjection::new(
                         &plan.type_names,
                         &plan.interface_names,
+                        &plan.pointer_interface_aliases,
                         &plan.type_choices,
                         &fact.origin.tu,
                     );
@@ -595,11 +599,13 @@ impl Snapshot {
                     repr,
                     variants,
                     scoped,
+                    flags,
                     ..
                 } => {
-                    let flags = plan
-                        .flag_enums
-                        .contains(&(fact.origin.tu.clone(), planned.name.clone()));
+                    let flags = *flags
+                        || plan
+                            .flag_enums
+                            .contains(&(fact.origin.tu.clone(), planned.name.clone()));
                     let repr = if flags { unsigned_scalar(*repr) } else { *repr };
                     let mut item = format!(
                         "    #[repr({})]\n{}{}    enum {} {{\n",
@@ -628,6 +634,7 @@ impl Snapshot {
                     let projection = TypeProjection::new(
                         &plan.type_names,
                         &plan.interface_names,
+                        &plan.pointer_interface_aliases,
                         &plan.type_choices,
                         &fact.origin.tu,
                     );
@@ -648,6 +655,7 @@ impl Snapshot {
                     let projection = TypeProjection::new(
                         &plan.type_names,
                         &plan.interface_names,
+                        &plan.pointer_interface_aliases,
                         &plan.type_choices,
                         &fact.origin.tu,
                     );
@@ -696,6 +704,7 @@ impl Snapshot {
             let projection = TypeProjection::new(
                 &plan.type_names,
                 &plan.interface_names,
+                &plan.pointer_interface_aliases,
                 &plan.type_choices,
                 &function.origin.tu,
             );
@@ -1595,8 +1604,12 @@ impl Snapshot {
                     .into_iter()
                     .flatten()
                 {
+                    // An input may resolve the interface's typedefs from different headers, so match
+                    // the declaration rather than its data.
                     if matches!(fact.data, FactData::Interface { .. })
-                        && same_source_declaration(planned.fact, fact)
+                        && fact.kind == planned.fact.kind
+                        && fact.spelling == planned.fact.spelling
+                        && fact.definition == planned.fact.definition
                     {
                         interface_names.insert((fact.origin.tu.clone(), fact.name.clone()));
                     }
@@ -1647,7 +1660,7 @@ impl Snapshot {
         let mut pointer_interface_aliases = BTreeMap::new();
         for fact in &self.facts {
             let FactData::Typedef {
-                target: TypeRef::Pointer { target, .. },
+                target: TypeRef::Pointer { target, .. } | TypeRef::Reference { target, .. },
             } = &fact.data
             else {
                 continue;
@@ -1714,10 +1727,10 @@ impl Snapshot {
                         &TypeProjection::new(
                             &type_names,
                             &interface_names,
+                            &pointer_interface_aliases,
                             &type_choices,
                             &constant.root.tu,
                         ),
-                        &pointer_interface_aliases,
                     ),
                 }?;
                 Some(PlannedConstant { constant, ty })
@@ -1783,6 +1796,7 @@ impl Snapshot {
             constants,
             type_names,
             interface_names,
+            pointer_interface_aliases,
             type_choices,
             interface_guids,
             flag_enums,
@@ -1846,6 +1860,7 @@ struct Plan<'a> {
     constants: Vec<PlannedConstant<'a>>,
     type_names: BTreeMap<String, String>,
     interface_names: BTreeSet<(String, String)>,
+    pointer_interface_aliases: BTreeMap<String, String>,
     type_choices: BTreeMap<(&'a str, TypeEdge<'a>), TypeChoice<'a>>,
     interface_guids: BTreeMap<String, String>,
     flag_enums: BTreeSet<(String, String)>,
@@ -1854,6 +1869,7 @@ struct Plan<'a> {
 struct TypeProjection<'a> {
     type_names: &'a BTreeMap<String, String>,
     interface_names: &'a BTreeSet<(String, String)>,
+    pointer_interface_aliases: &'a BTreeMap<String, String>,
     type_choices: &'a BTreeMap<(&'a str, TypeEdge<'a>), TypeChoice<'a>>,
     tu: &'a str,
 }
@@ -1862,15 +1878,22 @@ impl<'a> TypeProjection<'a> {
     fn new(
         type_names: &'a BTreeMap<String, String>,
         interface_names: &'a BTreeSet<(String, String)>,
+        pointer_interface_aliases: &'a BTreeMap<String, String>,
         type_choices: &'a BTreeMap<(&'a str, TypeEdge<'a>), TypeChoice<'a>>,
         tu: &'a str,
     ) -> Self {
         Self {
             type_names,
             interface_names,
+            pointer_interface_aliases,
             type_choices,
             tu,
         }
+    }
+
+    fn is_interface(&self, name: &str) -> bool {
+        self.interface_names
+            .contains(&(self.tu.to_string(), name.to_string()))
     }
 
     fn name(&self, ty: &TypeRef) -> String {
@@ -1882,6 +1905,7 @@ impl<'a> TypeProjection<'a> {
             return ProjectedType {
                 name: "*mut *mut void".to_string(),
                 mutable: true,
+                interface: false,
             };
         }
         self.project(TypeEdge::Parameter(param))
@@ -1897,6 +1921,7 @@ impl<'a> TypeProjection<'a> {
                         .cloned()
                         .unwrap_or_else(|| (*name).to_string()),
                     mutable: *name == "*mut void",
+                    interface: self.is_interface(name),
                 };
             }
             Some(TypeChoice::Declared(ty)) if matches!(edge, TypeEdge::Parameter(_)) => {
@@ -1915,23 +1940,24 @@ impl<'a> TypeProjection<'a> {
             return ProjectedType {
                 name: "*mut u8".to_string(),
                 mutable: true,
+                interface: false,
             };
         }
         if let TypeRef::OpaquePointer { mutable, .. } = ty {
             return ProjectedType {
                 name: format!("*{} void", if *mutable { "mut" } else { "const" }),
                 mutable: *mutable,
+                interface: false,
             };
         }
         if let TypeRef::Reference { mutable, target } = ty {
             if let TypeRef::Named { name, .. } | TypeRef::Generic { name, .. } = target.as_ref()
-                && self
-                    .interface_names
-                    .contains(&(self.tu.to_string(), name.clone()))
+                && self.is_interface(name)
             {
                 return ProjectedType {
                     name: self.project(TypeEdge::Pointee(target, *mutable)).name,
                     mutable: false,
+                    interface: true,
                 };
             }
             return self.pointer(target, *mutable, 1);
@@ -1940,6 +1966,7 @@ impl<'a> TypeProjection<'a> {
             return ProjectedType {
                 name: format!("[{}; {len}]", self.name(target)),
                 mutable: false,
+                interface: false,
             };
         }
         if let TypeRef::Generic { name, args, .. } = ty {
@@ -1953,16 +1980,17 @@ impl<'a> TypeProjection<'a> {
                         .join(", ")
                 ),
                 mutable: false,
+                interface: false,
             };
         }
         let (mutable, depth, target) = pointer_run(ty);
         if depth != 0
             && let TypeRef::Named { name, .. } | TypeRef::Generic { name, .. } = target
-            && self
-                .interface_names
-                .contains(&(self.tu.to_string(), name.clone()))
+            && self.is_interface(name)
         {
-            return self.pointer(target, mutable, depth - 1);
+            let mut projected = self.pointer(target, mutable, depth - 1);
+            projected.interface = depth == 1;
+            return projected;
         }
         if depth != 0 {
             return self.pointer(target, mutable, depth);
@@ -1981,6 +2009,10 @@ impl<'a> TypeProjection<'a> {
                 _ => unreachable!(),
             },
             mutable: false,
+            interface: matches!(
+                ty,
+                TypeRef::Named { name, .. } if self.pointer_interface_aliases.contains_key(name)
+            ),
         }
     }
 
@@ -1992,6 +2024,7 @@ impl<'a> TypeProjection<'a> {
                 self.project(TypeEdge::Pointee(target, mutable)).name
             ),
             mutable: depth != 0 && mutable,
+            interface: false,
         }
     }
 }
@@ -1999,6 +2032,8 @@ impl<'a> TypeProjection<'a> {
 struct ProjectedType {
     name: String,
     mutable: bool,
+    /// The type is an interface passed by value, which RDL spells as a bare interface name.
+    interface: bool,
 }
 
 fn is_type_fact(fact: &Fact) -> bool {
@@ -2468,8 +2503,9 @@ fn choose_type_root_cached<'a>(
                                 variants,
                                 fixed,
                                 scoped,
+                                flags,
                             } => Some(type_shape(&format!(
-                                "enum:{repr:?}:{variants:?}:{fixed}:{scoped}"
+                                "enum:{repr:?}:{variants:?}:{fixed}:{scoped}:{flags}"
                             ))),
                             FactData::Callback {
                                 convention,
@@ -2816,6 +2852,64 @@ fn choose_type_root_cached<'a>(
                 })
     }
 
+    fn equivalent_interface(
+        left: &Fact,
+        right: &Fact,
+        facts_index: &HashMap<&str, Vec<&Fact>>,
+        shape_cache: &mut ShapeCache,
+    ) -> bool {
+        let (
+            FactData::Interface {
+                base: left_base,
+                guid: left_guid,
+                methods: left_methods,
+            },
+            FactData::Interface {
+                base: right_base,
+                guid: right_guid,
+                methods: right_methods,
+            },
+        ) = (&left.data, &right.data)
+        else {
+            return false;
+        };
+        let mut equivalent = |left_ty: &TypeRef, right_ty: &TypeRef| {
+            equivalent_type(
+                left_ty,
+                &left.origin.tu,
+                right_ty,
+                &right.origin.tu,
+                facts_index,
+                shape_cache,
+            )
+        };
+        // Only copies of one declaration merge, matching the interface names used for projection.
+        left.spelling == right.spelling
+            && left_guid == right_guid
+            && match (left_base, right_base) {
+                (None, None) => true,
+                (Some(left_base), Some(right_base)) => equivalent(left_base, right_base),
+                _ => false,
+            }
+            && left_methods.len() == right_methods.len()
+            && left_methods
+                .iter()
+                .zip(right_methods)
+                .all(|(left_method, right_method)| {
+                    left_method.name == right_method.name
+                        && left_method.special == right_method.special
+                        && left_method.params.len() == right_method.params.len()
+                        && equivalent(&left_method.result, &right_method.result)
+                        && left_method.params.iter().zip(&right_method.params).all(
+                            |(left_param, right_param)| {
+                                left_param.name == right_param.name
+                                    && left_param.annotation == right_param.annotation
+                                    && equivalent(&left_param.ty, &right_param.ty)
+                            },
+                        )
+                })
+    }
+
     let declarations: Vec<_> = distinct
         .iter()
         .copied()
@@ -2864,7 +2958,8 @@ fn choose_type_root_cached<'a>(
         let equivalent_definitions = definitions.iter().all(|fact| {
             fact.kind == root.kind
                 && ((fact.origin.tu == root.origin.tu && fact.data == root.data)
-                    || equivalent_record(root, fact, facts_index, shape_cache))
+                    || equivalent_record(root, fact, facts_index, shape_cache)
+                    || equivalent_interface(root, fact, facts_index, shape_cache))
         });
         let definitions_and_aliases = distinct.iter().all(|fact| {
             definitions.contains(fact)
@@ -3457,7 +3552,7 @@ fn write_params(
             let ty = projection.parameter(param);
             Ok(format!(
                 "{}{}: {}",
-                param_attributes(param, params, ty.mutable)?,
+                param_attributes(param, params, &ty)?,
                 rdl_ident(&param.name),
                 ty.name
             ))
@@ -3468,9 +3563,13 @@ fn write_params(
 fn param_attributes(
     param: &Parameter,
     params: &[Parameter],
-    emitted_mutable: bool,
+    ty: &ProjectedType,
 ) -> Result<String, Error> {
     let annotation = &param.annotation;
+    let emitted_mutable = ty.mutable;
+    // A callee cannot replace an interface passed by value, so an output annotation on one describes
+    // the object rather than the parameter, and the parameter stays an input.
+    let output = annotation.output && !ty.interface;
     if let Some(reason) = &annotation.unsupported {
         return Err(Error(reason.clone()));
     }
@@ -3506,10 +3605,10 @@ fn param_attributes(
     if annotation.com_out_ptr {
         result.push_str("#[iid_is] ");
     }
-    if annotation.input && (annotation.output || emitted_mutable) {
+    if annotation.input && (output || emitted_mutable) {
         result.push_str("#[in] ");
     }
-    if annotation.output && (annotation.input || !emitted_mutable) {
+    if output && (annotation.input || !emitted_mutable) {
         result.push_str("#[out] ");
     }
     if annotation.optional {
@@ -3937,20 +4036,14 @@ fn pointer_run(mut ty: &TypeRef) -> (bool, usize, &TypeRef) {
     (mutable, depth, ty)
 }
 
-fn constant_type_name(
-    ty: &TypeRef,
-    projection: &TypeProjection<'_>,
-    pointer_interface_aliases: &BTreeMap<String, String>,
-) -> Option<String> {
+fn constant_type_name(ty: &TypeRef, projection: &TypeProjection<'_>) -> Option<String> {
     let name = match ty {
         TypeRef::Scalar(Scalar::Bool) => "u32".to_string(),
-        TypeRef::Named { name, .. } if pointer_interface_aliases.contains_key(name) => {
+        TypeRef::Named { name, .. } if projection.pointer_interface_aliases.contains_key(name) => {
             return None;
         }
         TypeRef::Named { name, .. } | TypeRef::Generic { name, .. }
-            if projection
-                .interface_names
-                .contains(&(projection.tu.to_string(), name.clone())) =>
+            if projection.is_interface(name) =>
         {
             return None;
         }

@@ -41,7 +41,6 @@ impl Component for RadioButtonsPage {
                                 .text(format!("Selected: {label}"))
                                 .opacity(0.6),
                         )),
-                        "RadioButtons::new().items_source(options).selected_index(index)",
                     ),
                 ),
                 KeyedView::new(
@@ -53,7 +52,6 @@ impl Component for RadioButtonsPage {
                             .selected_index(1)
                             .max_columns(2)
                             .header("T-shirt size"),
-                        "RadioButtons::new().items_source(sizes).max_columns(2)",
                     ),
                 ),
             ],

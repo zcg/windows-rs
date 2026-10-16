@@ -70,7 +70,6 @@ impl Component for SemanticZoomPage {
                                     .content("Zoom out"),
                             )),
                     )),
-                    "SemanticZoom::new().slots([ZoomedInView, ZoomedOutView])",
                 ),
             )],
         )

@@ -29,7 +29,6 @@ impl Component for AppBarElementContainerPage {
                                     Slider::new().width(200.0).value(40.0),
                                 )),
                         ),
-                        "AppBarElementContainer::new().content(Slider::new())",
                     ),
                 ),
                 KeyedView::new(
@@ -46,7 +45,6 @@ impl Component for AppBarElementContainerPage {
                                  on the bar while keeping the command-bar measurements.",
                             )
                             .is_open(true),
-                        "CommandBar elements: AppBarButton, AppBarSeparator, AppBarElementContainer",
                     ),
                 ),
             ],

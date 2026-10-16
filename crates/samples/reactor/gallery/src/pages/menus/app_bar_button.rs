@@ -51,7 +51,6 @@ impl Component for AppBarButtonPage {
                             .text(format!("Clicked {} times", self.clicks))
                             .opacity(0.6),
                     )),
-                    "AppBarButton::new().label(\"Save\").on_click(handler)",
                 ),
             )],
         )

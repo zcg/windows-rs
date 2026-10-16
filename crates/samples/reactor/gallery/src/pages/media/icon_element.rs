@@ -34,7 +34,6 @@ impl Component for IconElementPage {
                             row(Symbol::Accept),
                             row(Symbol::Delete),
                         )),
-                        "SymbolIcon::new().symbol(Symbol::Add)",
                     ),
                 ),
                 KeyedView::new(
@@ -45,7 +44,6 @@ impl Component for IconElementPage {
                             FontIcon::new().glyph("\u{E700}"),
                             PathIcon::new().data("M 0 0 L 10 10 Z"),
                         )),
-                        "FontIcon::new().glyph(\"\\u{E700}\")",
                     ),
                 ),
             ],

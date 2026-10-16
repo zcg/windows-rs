@@ -1,6 +1,6 @@
 --in crates/libs/default/Windows.winmd
---in crates/tools/reactor/winmd/Microsoft.Windows.AppNotifications.winmd
---in crates/tools/reactor/winmd/Microsoft.Windows.BadgeNotifications.winmd
+--in crates/tools/reactor-metadata/winmd/Microsoft.Windows.AppNotifications.winmd
+--in crates/tools/reactor-metadata/winmd/Microsoft.Windows.BadgeNotifications.winmd
 --out crates/samples/reactor/gallery/src/notifications_bindings.rs
 --flat --minimal --dead-code
 

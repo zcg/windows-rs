@@ -25,7 +25,6 @@ impl Component for AnimatedIconPage {
                             .height(64.0)
                             .background(ThemeBrush::CardBackground)
                             .content(AnimatedIcon::new().width(40.0).height(40.0)),
-                        "AnimatedIcon::new()",
                     ),
                 ),
                 KeyedView::new(
@@ -43,7 +42,6 @@ impl Component for AnimatedIconPage {
                                  or FontIcon when no animation is available.",
                             )
                             .is_open(true),
-                        "AnimatedIcon::new().source(animated_visual_source)",
                     ),
                 ),
             ],

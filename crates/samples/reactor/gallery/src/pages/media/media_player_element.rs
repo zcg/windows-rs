@@ -25,7 +25,6 @@ impl Component for MediaPlayerElementPage {
                             .auto_play(false)
                             .width(480.0)
                             .height(270.0),
-                        "MediaPlayerElement::new().are_transport_controls_enabled(true).auto_play(false)",
                     ),
                 ),
                 KeyedView::new(
@@ -37,7 +36,6 @@ impl Component for MediaPlayerElementPage {
                             .stretch(Stretch::Uniform)
                             .width(320.0)
                             .height(180.0),
-                        "MediaPlayerElement::new().stretch(Stretch::Uniform)",
                     ),
                 ),
             ],

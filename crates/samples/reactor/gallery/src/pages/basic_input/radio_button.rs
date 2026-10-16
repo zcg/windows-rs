@@ -61,7 +61,6 @@ impl Component for RadioButtonPage {
                                 ))
                                 .opacity(0.6),
                         )),
-                        "RadioButton::new().group_name(group).is_checked(flag).on_checked(handler)",
                     ),
                 ),
                 KeyedView::new(
@@ -72,7 +71,6 @@ impl Component for RadioButtonPage {
                             .group_name("unavailable")
                             .is_enabled(false)
                             .content("Not available"),
-                        "RadioButton::new().is_enabled(false)",
                     ),
                 ),
             ],

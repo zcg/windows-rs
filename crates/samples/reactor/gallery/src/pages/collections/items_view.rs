@@ -65,7 +65,6 @@ impl Component for ItemsViewPage {
                                     .opacity(0.6),
                             )),
                     )),
-                    "ItemsView::new().items_source(items).on_item_invoked(handler)",
                 ),
             )],
         )

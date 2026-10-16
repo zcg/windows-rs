@@ -121,31 +121,26 @@ impl SwapChain {
     ///
     /// Returns `Ok(false)` if the device was lost.
     ///
-    /// # 为什么不在这里等 vblank（曾经的缺陷）
+    /// # Why this does not wait for vblank
     ///
-    /// 调用点是 [`CanvasRuntime::render_frame`](crate::reactor::CanvasRuntime)，
-    /// 而它由 WinUI 的 `CompositionTarget::Rendering` 合成回调驱动 —— 那是 **UI
-    /// 线程**，与 `WM_MOVING` / `WM_SIZING` / `WM_NCLBUTTONDOWN` 和全部鼠标输入
-    /// **共用同一个线程**。旧实现是 `Present(1, 0)`（sync interval = 1），即
-    /// **同步等待下一个 vblank 才返回**：
+    /// `present` runs on the UI thread: the caller is
+    /// [`CanvasRuntime::render_frame`](crate::reactor::CanvasRuntime), driven by the
+    /// WinUI `CompositionTarget::Rendering` callback, which shares that thread with
+    /// `WM_MOVING`, `WM_SIZING`, `WM_NCLBUTTONDOWN`, and all pointer input.
     ///
-    /// * 60Hz 屏：每帧在 UI 线程上白等 ≈16.7ms；
-    /// * 120Hz 屏：每帧白等 ≈8.3ms。
+    /// `Present(1, 0)` (sync interval 1) blocks until the next vblank, so every frame
+    /// idles the UI thread for about 16.7ms at 60Hz and about 8.3ms at 120Hz. Window
+    /// drag, resize, and minimize then only get serviced in the gaps between vblanks,
+    /// which shows up as a window that does not follow the pointer; the effect is
+    /// stronger the higher the canvas frame rate.
     ///
-    /// 于是一秒的帧预算被 present 吃掉 100%（按刷新率），窗口拖拽、边框缩放、
-    /// 最大化/最小化都只能挤在 vblank 之间的缝隙里处理 → 直接表现为"窗口操作
-    /// 不跟手"。画布应用帧率越高，这个缺陷越明显。
-    ///
-    /// 现在改为 `Present(0, DXGI_PRESENT_DO_NOT_WAIT)`：DXGI 队列仍被上一帧
-    /// 占用时**立即**返回 `DXGI_ERROR_WAS_STILL_DRAWING`，本帧丢弃而不是等待。
-    ///
-    /// 丢帧**不会丢内容**：
-    /// 1. 交换链保持上一帧，屏幕上不会闪黑或回退；
-    /// 2. 合成回调本来就按显示器刷新率持续驱动下一帧，下一个 vblank 后的第一
-    ///    次 `Rendering` 会把最新内容再画一遍。
-    ///
-    /// 因此这个丢弃是**有意的节流**，返回值按"成功"处理（`Ok(true)`）——它不是
-    /// 错误，调用方（尤其是 `Canvas::animated`）不需要、也不应该把它当失败重试。
+    /// `Present(0, DXGI_PRESENT_DO_NOT_WAIT)` returns
+    /// `DXGI_ERROR_WAS_STILL_DRAWING` immediately while the DXGI queue still holds the
+    /// previous frame, dropping this frame instead of waiting for it. Dropping loses no
+    /// content: the swap chain keeps showing the previous frame, and the composition
+    /// callback drives another frame after the next vblank, which redraws the latest
+    /// state. The drop is deliberate throttling, so it is reported as `Ok(true)`;
+    /// callers (including `Canvas::animated`) should not treat it as a failure.
     pub fn present(&self) -> Result<bool> {
         if self.device_lost_flag.get() {
             return Ok(false);
@@ -155,7 +150,7 @@ impl SwapChain {
             return Ok(false);
         }
         if result == DXGI_ERROR_WAS_STILL_DRAWING {
-            // 队列忙：本帧丢弃。见上方文档——这是设计行为，不是失败。
+            // Queue busy: drop this frame. See the docs above; this is by design.
             return Ok(true);
         }
         result.ok().map(|()| true)

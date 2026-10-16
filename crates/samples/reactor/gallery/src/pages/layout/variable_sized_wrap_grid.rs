@@ -31,7 +31,6 @@ impl Component for VariableSizedWrapGridPage {
                         .item_height(64.0)
                         .item_width(64.0)
                         .children(tiles),
-                    "VariableSizedWrapGrid::new().item_height(64.0).item_width(64.0).children([...])",
                 ),
             )],
         )

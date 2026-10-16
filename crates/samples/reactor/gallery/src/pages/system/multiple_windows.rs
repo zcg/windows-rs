@@ -48,7 +48,6 @@ impl Component for MultipleWindowsPage {
                             .text(format!("Windows opened: {}", self.opened))
                             .opacity(0.6),
                     )),
-                    "context.open_window::<CounterWindow>(n)",
                 ),
             )],
         )
@@ -83,25 +82,27 @@ impl Component for CounterWindow {
     fn view(&self, number: &u32, context: &mut ViewContext<Self>) -> View {
         context.window_title(format!("Counter window #{number}"));
         context.window_visuals(WindowVisuals::new().client_size(320.0, 220.0));
-        Border::new().padding(24.0).content(
-            StackPanel::new().spacing(12.0).children((
-                TextBlock::new().text("Independent counter").font_size(20.0),
-                TextBlock::new()
-                    .text(format!("Count: {}", self.count))
-                    .font_size(28.0),
-                StackPanel::new()
-                    .orientation(Orientation::Horizontal)
-                    .spacing(8.0)
-                    .children((
-                        Button::new()
-                            .on_click(context.message(CounterMessage::Decrement))
-                            .content("-"),
-                        Button::new()
-                            .on_click(context.message(CounterMessage::Increment))
-                            .content("+"),
-                    )),
-            )),
-        )
-        .into()
+        Border::new()
+            .padding(24.0)
+            .content(
+                StackPanel::new().spacing(12.0).children((
+                    TextBlock::new().text("Independent counter").font_size(20.0),
+                    TextBlock::new()
+                        .text(format!("Count: {}", self.count))
+                        .font_size(28.0),
+                    StackPanel::new()
+                        .orientation(Orientation::Horizontal)
+                        .spacing(8.0)
+                        .children((
+                            Button::new()
+                                .on_click(context.message(CounterMessage::Decrement))
+                                .content("-"),
+                            Button::new()
+                                .on_click(context.message(CounterMessage::Increment))
+                                .content("+"),
+                        )),
+                )),
+            )
+            .into()
     }
 }

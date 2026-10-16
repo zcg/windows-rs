@@ -89,6 +89,7 @@ pub struct ImageSource(ImageSourceValue);
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum ImageSourceValue {
     Encoded(EncodedImage),
+    Svg(EncodedImage),
     Uri(Rc<str>),
 }
 
@@ -105,6 +106,10 @@ impl ImageSource {
 
     pub fn encoded(value: EncodedImage) -> Self {
         Self(ImageSourceValue::Encoded(value))
+    }
+
+    pub fn svg(value: EncodedImage) -> Self {
+        Self(ImageSourceValue::Svg(value))
     }
 
     pub(crate) fn value(&self) -> &ImageSourceValue {
@@ -160,6 +165,10 @@ impl Icon {
 
     pub fn image_data(data: EncodedImage) -> Self {
         Self::image(ImageSource::encoded(data))
+    }
+
+    pub fn image_svg(data: EncodedImage) -> Self {
+        Self::image(ImageSource::svg(data))
     }
 
     pub fn path(data: impl Into<Rc<str>>) -> Self {
@@ -851,6 +860,10 @@ pub struct Menu {
 }
 
 impl Menu {
+    pub(crate) fn same_content(&self, other: &Self) -> bool {
+        self.items == other.items
+    }
+
     pub fn new(
         items: impl IntoIterator<Item = MenuItem>,
         on_click: impl IntoPayloadCallback<Key>,
@@ -965,6 +978,10 @@ pub struct CommandBarFlyout {
 }
 
 impl CommandBarFlyout {
+    pub(crate) fn same_content(&self, other: &Self) -> bool {
+        self.primary == other.primary && self.secondary == other.secondary
+    }
+
     pub fn new(
         primary: impl IntoIterator<Item = CommandBarCommand>,
         secondary: impl IntoIterator<Item = CommandBarCommand>,
@@ -1139,6 +1156,7 @@ pub enum PropertyValue {
     ButtonStyle(ButtonStyle),
     Color(Color),
     CornerRadius(CornerRadius),
+    DateTime(DateTime),
     Duration(Duration),
     DragDropPolicy(Rc<DragDropPolicy>),
     F64(f64),
@@ -1150,6 +1168,7 @@ pub enum PropertyValue {
     KeyAccelerators(KeyAccelerators),
     OptionalF64(Option<f64>),
     OptionalBool(Option<bool>),
+    OptionalDateTime(Option<DateTime>),
     ResourceOverrides(ResourceOverrides),
     RichText(RichText),
     SelectionIndex(Option<usize>),
@@ -1478,7 +1497,7 @@ impl RefreshDeferral {
 
     /// Completes the deferral; calling it more than once is a no-op.
     pub fn complete(&self) {
-        (self.0)()
+        (self.0)();
     }
 }
 

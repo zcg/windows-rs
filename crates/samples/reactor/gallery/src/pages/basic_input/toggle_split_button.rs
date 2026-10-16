@@ -51,7 +51,6 @@ impl Component for ToggleSplitButtonPage {
                             ))
                             .opacity(0.6),
                     )),
-                    "ToggleSplitButton::new().content(label).is_checked(value)",
                 ),
             )],
         )

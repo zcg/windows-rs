@@ -29,7 +29,6 @@ impl Component for TwoPaneViewPage {
                             "Folds away when the pane area gets too narrow.",
                         ))
                         .height(240.0),
-                    "TwoPaneView::new().pane1(view).pane2(view)",
                 ),
             )],
         )

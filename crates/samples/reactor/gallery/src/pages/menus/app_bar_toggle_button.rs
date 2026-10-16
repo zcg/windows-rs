@@ -49,7 +49,6 @@ impl Component for AppBarToggleButtonPage {
                             })
                             .opacity(0.6),
                     )),
-                    "AppBarToggleButton::new().label(\"Shuffle\").is_checked(value)",
                 ),
             )],
         )

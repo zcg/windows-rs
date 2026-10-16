@@ -51,7 +51,6 @@ impl Component for AnnotatedScrollBarPage {
                                     .opacity(0.6),
                             )),
                     )),
-                    "AnnotatedScrollBar::new().small_change(value)",
                 ),
             )],
         )

@@ -26,7 +26,6 @@ impl Component for RefreshVisualizerPage {
                                 .text("The visualizer shows its spinner while a refresh runs.")
                                 .opacity(0.6),
                         )),
-                        "RefreshVisualizer::new().orientation(RefreshVisualizerOrientation::Normal)",
                     ),
                 ),
                 KeyedView::new(
@@ -36,7 +35,6 @@ impl Component for RefreshVisualizerPage {
                         RefreshVisualizer::new()
                             .orientation(RefreshVisualizerOrientation::Normal)
                             .height(120.0),
-                        "RefreshVisualizerOrientation::Auto | Normal | Rotate90DegreesCounterclockwise",
                     ),
                 ),
             ],

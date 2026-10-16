@@ -3,11 +3,45 @@ use super::*;
 /// Material used behind a window's content.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum WindowBackdrop {
+    /// No system material. The window keeps the XAML theme background.
     #[default]
     None,
+    /// Mica drawn by the XAML `MicaBackdrop`.
     Mica,
+    /// Alternative Mica tint drawn by the XAML `MicaBackdrop`.
     MicaAlt,
+    /// Acrylic drawn by the XAML `DesktopAcrylicBackdrop`.
     Acrylic,
+    /// Thinner Acrylic, drawn by the composition backdrop controller.
+    ///
+    /// Only the controller exposes this material, so it is the one backdrop that reads
+    /// [`WindowBackdropTuning`]. A host whose controller reports no support falls back to
+    /// [`WindowBackdrop::None`].
+    AcrylicThin,
+    /// Opaque fill with no system material.
+    ///
+    /// The color comes from [`WindowBackdropTuning::fallback_color`], or the window theme
+    /// background when that is unset. Use it to keep a window opaque on a host that draws no
+    /// backdrop material.
+    Solid,
+}
+
+/// Parameters for the composition backdrop controller.
+///
+/// [`WindowBackdrop::AcrylicThin`] is drawn through the controller rather than through a XAML
+/// `SystemBackdrop`, and these are the properties that path exposes. A `None` field keeps the
+/// controller default. The XAML materials ([`WindowBackdrop::Mica`],
+/// [`WindowBackdrop::MicaAlt`], [`WindowBackdrop::Acrylic`]) do not read this value.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct WindowBackdropTuning {
+    /// Color the material tints the window content toward.
+    pub tint_color: Option<Color>,
+    /// Opacity of `tint_color`, from 0.0 (no tint) to 1.0.
+    pub tint_opacity: Option<f32>,
+    /// Opacity of the luminosity layer, from 0.0 to 1.0.
+    pub luminosity_opacity: Option<f32>,
+    /// Opaque color shown where the material cannot be composited.
+    pub fallback_color: Option<Color>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -100,6 +134,7 @@ impl WindowConstraints {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct WindowVisuals {
     pub(crate) backdrop: WindowBackdrop,
+    pub(crate) backdrop_tuning: WindowBackdropTuning,
     pub(crate) client_size: Option<(f64, f64)>,
     pub(crate) constraints: Option<WindowConstraints>,
     pub(crate) icon: Option<Rc<str>>,
@@ -115,6 +150,16 @@ impl WindowVisuals {
 
     pub fn backdrop(mut self, backdrop: WindowBackdrop) -> Self {
         self.backdrop = backdrop;
+        self
+    }
+
+    /// Sets the composition backdrop controller parameters.
+    ///
+    /// Read by [`WindowBackdrop::AcrylicThin`] and by the
+    /// [`WindowBackdropTuning::fallback_color`] of [`WindowBackdrop::Solid`]. The XAML
+    /// materials ignore it.
+    pub fn backdrop_tuning(mut self, tuning: WindowBackdropTuning) -> Self {
+        self.backdrop_tuning = tuning;
         self
     }
 

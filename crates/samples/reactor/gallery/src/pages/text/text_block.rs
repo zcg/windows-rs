@@ -37,15 +37,12 @@ impl Component for TextBlockPage {
                             .text("Segoe UI, semibold")
                             .font_weight(FontWeight::SEMI_BOLD)
                             .font_size(if self.large { 32.0 } else { 20.0 }),
-                        TextBlock::new()
-                            .text("Consolas monospace")
-                            .font_size(16.0),
+                        TextBlock::new().text("Consolas monospace").font_size(16.0),
                         ToggleSwitch::new()
                             .is_on(self.large)
                             .on_toggled(context.callback(Message::Large))
                             .header("Large"),
                     )),
-                    "TextBlock::new().text(t).font_weight(FontWeight::SEMI_BOLD)",
                 ),
             )],
         )

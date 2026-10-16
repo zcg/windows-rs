@@ -156,17 +156,9 @@ impl Component for CameraPage {
                                     TextBlock::new().text(self.status.clone()).opacity(0.6),
                                 )),
                         )),
-                        "MediaCapture::new()?; InitializeWithSettingsAsync(&settings)?.join()?",
                     ),
                 ),
-                KeyedView::new(
-                    "snapshot",
-                    sample_card(
-                        "Snapshot",
-                        snapshot,
-                        "MediaCapture::CapturePhotoToStorageFileAsync(&jpeg, &file)?.join()?",
-                    ),
-                ),
+                KeyedView::new("snapshot", sample_card("Snapshot", snapshot)),
                 KeyedView::new(
                     "identity",
                     sample_card(
@@ -182,7 +174,6 @@ impl Component for CameraPage {
                                  security > Camera.",
                             )
                             .is_open(true),
-                        "Package::Current()?; MediaFrameSourceGroup::FindAllAsync()?.join()?",
                     ),
                 ),
             ],

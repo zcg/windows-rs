@@ -1,5 +1,5 @@
 use super::*;
-use app_shim::{create_application, install_xaml_controls_resources};
+use app_shim::{create_application, install_theme_resources, install_xaml_controls_resources};
 use bindings::IElementFactory;
 use transient_menu::{MenuTheme, TransientMenuHost};
 use windows_collections::*;

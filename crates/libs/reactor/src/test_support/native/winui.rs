@@ -314,7 +314,7 @@ impl WinUiAdapter {
             .Document()?
             .SetText(native::TextSetOptions::None, text)?;
         let text = read_rich_edit_text(&value.value).map_err(WinUiError::from)?;
-        Self::dispatch_string(
+        Self::dispatch(
             &value.text_changed,
             &self.event_queue,
             object,
@@ -493,7 +493,7 @@ impl WinUiAdapter {
         let Some(event) = handle.unit_event(EventId::Click) else {
             return Err(WinUiError::InvalidObject(object));
         };
-        Self::dispatch_unit(event, &self.event_queue, object, EventId::Click, None);
+        Self::dispatch(event, &self.event_queue, object, EventId::Click, None, ());
         Ok(())
     }
 
@@ -596,7 +596,7 @@ impl WinUiAdapter {
             EventId::DragOver => &border.drag_over,
             _ => return Err(WinUiError::InvalidEvent(object, event)),
         };
-        Self::dispatch_drag_kind(native_event, &self.event_queue, object, event, None, value);
+        Self::dispatch(native_event, &self.event_queue, object, event, None, value);
         Ok(())
     }
 
@@ -609,7 +609,7 @@ impl WinUiAdapter {
         else {
             return Err(WinUiError::InvalidObject(object));
         };
-        Self::queue_dropped_data(
+        Self::queue_event(
             &border.drop,
             &self.event_queue,
             object,
@@ -631,7 +631,7 @@ impl WinUiAdapter {
             Some(Handle::ListView(list)) => &list.drag_items_completed,
             _ => return Err(WinUiError::InvalidObject(object)),
         };
-        Self::dispatch_string_list(
+        Self::dispatch(
             event,
             &self.event_queue,
             object,
@@ -655,7 +655,7 @@ impl WinUiAdapter {
             .cast::<native::ISelector>()?
             .SetSelectedIndex(native_selection_index(value)?)?;
         if self.event_queue.events.borrow().len() == queued {
-            Self::dispatch_selection_index(
+            Self::dispatch(
                 &list.selection_changed,
                 &self.event_queue,
                 object,
@@ -722,7 +722,7 @@ impl WinUiAdapter {
         let Some(Handle::TreeView(tree)) = self.handles.get(&object) else {
             return Err(WinUiError::InvalidObject(object));
         };
-        Self::dispatch_string(
+        Self::dispatch(
             &tree.item_invoked,
             &self.event_queue,
             object,
@@ -754,7 +754,7 @@ impl WinUiAdapter {
             ) => &value.tab_close_requested,
             _ => return Err(WinUiError::InvalidEvent(object, event)),
         };
-        Self::dispatch_string(
+        Self::dispatch(
             native_event,
             &self.event_queue,
             object,
@@ -778,7 +778,7 @@ impl WinUiAdapter {
             ) => &value.tab_items_changed,
             _ => return Err(WinUiError::InvalidEvent(object, event)),
         };
-        Self::dispatch_string_list(
+        Self::dispatch(
             native_event,
             &self.event_queue,
             object,
@@ -816,7 +816,7 @@ impl WinUiAdapter {
         {
             return Ok(());
         }
-        Self::dispatch_color(
+        Self::dispatch(
             &control.color_changed,
             &self.event_queue,
             object,
@@ -875,7 +875,7 @@ impl WinUiAdapter {
         else {
             return Err(WinUiError::InvalidObject(object));
         };
-        Self::dispatch_navigation_view_display_mode(
+        Self::dispatch(
             &control.display_mode_changed,
             &self.event_queue,
             object,
@@ -896,7 +896,7 @@ impl WinUiAdapter {
         else {
             return Err(WinUiError::InvalidObject(object));
         };
-        Self::dispatch_optional_date_time(
+        Self::dispatch(
             &control.selected_date_changed,
             &self.event_queue,
             object,
@@ -917,7 +917,7 @@ impl WinUiAdapter {
         else {
             return Err(WinUiError::InvalidObject(object));
         };
-        Self::dispatch_optional_time_span(
+        Self::dispatch(
             &control.selected_time_changed,
             &self.event_queue,
             object,
@@ -951,7 +951,7 @@ impl WinUiAdapter {
     }
 
     pub fn image_has_decode_failure_subscription(&self, object: ObjectId) -> bool {
-        self.encoded_image_failures.contains_key(&object)
+        self.image_subscriptions.contains_key(&object)
     }
 
     pub fn image_source_is_svg(&self, object: ObjectId) -> Result<bool, WinUiError> {
@@ -999,7 +999,7 @@ impl WinUiAdapter {
             .get(&target)
             .ok_or(WinUiError::InvalidObject(target))?;
         let flyout = menu
-            ._flyout
+            .flyout
             .as_ref()
             .ok_or(WinUiError::InvalidObject(target))?
             .cast::<native::IFlyoutBase>()?;
@@ -1016,7 +1016,7 @@ impl WinUiAdapter {
             .get(&target)
             .ok_or(WinUiError::InvalidObject(target))?;
         Ok(menu
-            ._flyout
+            .flyout
             .as_ref()
             .ok_or(WinUiError::InvalidObject(target))?
             .cast::<native::IFlyoutBase>()?
@@ -1028,7 +1028,7 @@ impl WinUiAdapter {
             .menus
             .get(&target)
             .ok_or(WinUiError::InvalidObject(target))?;
-        menu._flyout
+        menu.flyout
             .as_ref()
             .ok_or(WinUiError::InvalidObject(target))?
             .cast::<native::IFlyoutBase>()?
@@ -1041,7 +1041,7 @@ impl WinUiAdapter {
             .command_bar_flyouts
             .get(&target)
             .ok_or(WinUiError::InvalidObject(target))?
-            ._native
+            .native
             .cast::<native::IFlyoutBase>()?;
         let target = self
             .ui_element(target)?
@@ -1055,7 +1055,7 @@ impl WinUiAdapter {
             .command_bar_flyouts
             .get(&target)
             .ok_or(WinUiError::InvalidObject(target))?
-            ._native
+            .native
             .cast::<native::IFlyoutBase>()?
             .IsOpen()?)
     }
@@ -1064,7 +1064,7 @@ impl WinUiAdapter {
         self.command_bar_flyouts
             .get(&target)
             .ok_or(WinUiError::InvalidObject(target))?
-            ._native
+            .native
             .cast::<native::IFlyoutBase>()?
             .Hide()?;
         Ok(())
@@ -1140,14 +1140,7 @@ impl WinUiAdapter {
             EventId::LostFocus => &border.lost_focus,
             _ => return Err(WinUiError::InvalidEvent(object, event)),
         };
-        Self::dispatch_focus_event_info(
-            native_event,
-            &self.event_queue,
-            object,
-            event,
-            None,
-            value,
-        );
+        Self::dispatch(native_event, &self.event_queue, object, event, None, value);
         Ok(())
     }
 
@@ -1169,14 +1162,7 @@ impl WinUiAdapter {
             EventId::PointerReleased => &border.pointer_released,
             _ => return Err(WinUiError::InvalidEvent(object, event)),
         };
-        Self::dispatch_pointer_event_info(
-            native_event,
-            &self.event_queue,
-            object,
-            event,
-            None,
-            value,
-        );
+        Self::dispatch(native_event, &self.event_queue, object, event, None, value);
         Ok(())
     }
 
@@ -1416,6 +1402,41 @@ impl WinUiAdapter {
             value.value.Text()?,
             value.value.SelectionStart()?,
             value.value.SelectionLength()?,
+        ))
+    }
+
+    pub fn text_box_character_rect(
+        &self,
+        object: ObjectId,
+        index: i32,
+        trailing: bool,
+    ) -> Result<[f32; 4], WinUiError> {
+        let Some(Handle::TextBox(value)) = self.handles.get(&object) else {
+            return Err(WinUiError::InvalidObject(object));
+        };
+        let rect = value.value.GetRectFromCharacterIndex(index, trailing)?;
+        Ok([rect.x, rect.y, rect.width, rect.height])
+    }
+
+    pub fn text_box_editing_state(
+        &self,
+        object: ObjectId,
+    ) -> Result<(bool, TextAlignment, String), WinUiError> {
+        let Some(Handle::TextBox(value)) = self.handles.get(&object) else {
+            return Err(WinUiError::InvalidObject(object));
+        };
+        let alignment = match value.value.TextAlignment()? {
+            native::TextAlignment::Center => TextAlignment::Center,
+            native::TextAlignment::Left => TextAlignment::Left,
+            native::TextAlignment::Right => TextAlignment::Right,
+            native::TextAlignment::Justify => TextAlignment::Justify,
+            native::TextAlignment::DetectFromContent => TextAlignment::DetectFromContent,
+            _ => return Err(WinUiError::StateMismatch(object)),
+        };
+        Ok((
+            value.value.IsReadOnly()?,
+            alignment,
+            value.value.SelectedText()?,
         ))
     }
 

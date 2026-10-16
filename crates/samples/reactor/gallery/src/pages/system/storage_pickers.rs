@@ -67,7 +67,6 @@ impl Component for StoragePickersPage {
                             .content("Pick a .txt or .md file"),
                         TextBlock::new().text(self.status.clone()).opacity(0.6),
                     )),
-                    "FileOpenPicker::new()?.PickSingleFileAsync()?",
                 ),
             )],
         )

@@ -62,7 +62,6 @@ impl Component for ItemsRepeaterPage {
                                     .opacity(0.6),
                             )),
                     )),
-                    "ItemsRepeater::new().virtual_source(revision, len, key, view)",
                 ),
             )],
         )

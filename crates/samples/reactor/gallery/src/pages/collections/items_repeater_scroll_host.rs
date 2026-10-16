@@ -21,7 +21,6 @@ impl Component for ItemsRepeaterScrollHostPage {
                     sample_card(
                         "Repeater scroll host",
                         ItemsRepeaterScrollHost::new().height(160.0),
-                        "ItemsRepeaterScrollHost::new()",
                     ),
                 ),
                 KeyedView::new(
@@ -38,7 +37,6 @@ impl Component for ItemsRepeaterScrollHostPage {
                                  ScrollViewer, so most pages never need this control.",
                             )
                             .is_open(true),
-                        "ItemsRepeaterScrollHost::new()",
                     ),
                 ),
             ],

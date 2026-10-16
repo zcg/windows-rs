@@ -52,16 +52,6 @@ impl Component for MenuFlyoutPage {
                                 .text(format!("Last action: {}", self.last_action))
                                 .opacity(0.6),
                         )),
-                        r#"Button::new()
-    .content("Open Menu")
-    .menu(Menu::new(
-        [
-            MenuItem::item("cut", "Cut"),
-            MenuItem::item("copy", "Copy"),
-            MenuItem::item("paste", "Paste"),
-        ],
-        context.callback(|label| ("action".to_string(), label)),
-    ))"#,
                     ),
                 ),
                 KeyedView::new(
@@ -84,18 +74,6 @@ impl Component for MenuFlyoutPage {
                                 .text(format!("Last format: {}", self.last_format))
                                 .opacity(0.6),
                         )),
-                        r#"Button::new()
-    .content("Format")
-    .menu(Menu::new(
-        [
-            MenuItem::item("bold", "Bold"),
-            MenuItem::item("italic", "Italic"),
-            MenuItem::separator("separator"),
-            MenuItem::item("underline", "Underline"),
-            MenuItem::item("strikethrough", "Strikethrough"),
-        ],
-        context.callback(|label| ("format".to_string(), label)),
-    ))"#,
                     ),
                 ),
                 KeyedView::new(
@@ -128,8 +106,6 @@ impl Component for MenuFlyoutPage {
                                 .text(format!("Last state: {}", self.last_state))
                                 .opacity(0.6),
                         )),
-                        r#"MenuItem::submenu(key, label, items)
-MenuItem::disabled(key, label)"#,
                     ),
                 ),
             ],
