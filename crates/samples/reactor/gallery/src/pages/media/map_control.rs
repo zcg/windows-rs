@@ -44,7 +44,8 @@ impl Component for MapControlPage {
                             .zoom_level(4.0)
                             .map_service_token(self.token.clone())
                             .height(320.0),
-                        TextBox::new(self.token.clone())
+                        TextBox::new()
+                            .text(self.token.clone())
                             .placeholder_text("Map service token")
                             .on_text_changed(context.callback(|value: std::rc::Rc<str>| {
                                 Message::Token(value.to_string())

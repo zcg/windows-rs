@@ -61,6 +61,61 @@ impl AutomationHeadingLevel {
 }
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AutomationLiveSetting {
+    Off,
+    Polite,
+    Assertive,
+}
+impl AutomationLiveSetting {
+    pub(crate) fn property_value(self) -> PropertyValue {
+        match self {
+            Self::Off => PropertyValue::Enum {
+                kind: "AutomationLiveSetting",
+                variant: "Off",
+            },
+            Self::Polite => PropertyValue::Enum {
+                kind: "AutomationLiveSetting",
+                variant: "Polite",
+            },
+            Self::Assertive => PropertyValue::Enum {
+                kind: "AutomationLiveSetting",
+                variant: "Assertive",
+            },
+        }
+    }
+}
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ContentDialogButton {
+    None,
+    Primary,
+    Secondary,
+    Close,
+}
+impl ContentDialogButton {
+    pub(crate) fn property_value(self) -> PropertyValue {
+        match self {
+            Self::None => PropertyValue::Enum {
+                kind: "ContentDialogButton",
+                variant: "None",
+            },
+            Self::Primary => PropertyValue::Enum {
+                kind: "ContentDialogButton",
+                variant: "Primary",
+            },
+            Self::Secondary => PropertyValue::Enum {
+                kind: "ContentDialogButton",
+                variant: "Secondary",
+            },
+            Self::Close => PropertyValue::Enum {
+                kind: "ContentDialogButton",
+                variant: "Close",
+            },
+        }
+    }
+}
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HorizontalAlignment {
     Left,
     Center,
@@ -235,6 +290,31 @@ impl NavigationViewPaneDisplayMode {
             Self::LeftMinimal => PropertyValue::Enum {
                 kind: "NavigationViewPaneDisplayMode",
                 variant: "LeftMinimal",
+            },
+        }
+    }
+}
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum NumberBoxSpinButtonPlacementMode {
+    Hidden,
+    Compact,
+    Inline,
+}
+impl NumberBoxSpinButtonPlacementMode {
+    pub(crate) fn property_value(self) -> PropertyValue {
+        match self {
+            Self::Hidden => PropertyValue::Enum {
+                kind: "NumberBoxSpinButtonPlacementMode",
+                variant: "Hidden",
+            },
+            Self::Compact => PropertyValue::Enum {
+                kind: "NumberBoxSpinButtonPlacementMode",
+                variant: "Compact",
+            },
+            Self::Inline => PropertyValue::Enum {
+                kind: "NumberBoxSpinButtonPlacementMode",
+                variant: "Inline",
             },
         }
     }
@@ -1689,55 +1769,8 @@ impl VerticalAlignment {
         }
     }
 }
-macro_rules! enabled_methods {
+macro_rules! attached_methods {
     () => {
-        pub fn is_enabled(mut self, is_enabled: bool) -> Self {
-            self.0 = self
-                .0
-                .property(PropertyId::IsEnabled, PropertyValue::Bool(is_enabled));
-            self
-        }
-    };
-}
-macro_rules! focus_methods {
-    ($type:ty) => {
-        pub fn element_ref<R>(mut self, reference: &R) -> Self
-        where
-            R: CompatibleElementRef<$type>,
-        {
-            self.0.reference = Some(reference.erased_ref());
-            self
-        }
-    };
-}
-macro_rules! reference_methods {
-    ($type:ty) => {
-        pub fn element_ref<R>(mut self, reference: &R) -> Self
-        where
-            R: CompatibleElementRef<$type>,
-        {
-            self.0.reference = Some(reference.erased_ref());
-            self
-        }
-    };
-}
-macro_rules! window_title_bar_methods {
-    () => {
-        pub fn preferred_height(mut self, height: WindowTitleBarHeight) -> Self {
-            self.0.window_title_bar = Some(height);
-            self
-        }
-    };
-}
-macro_rules! visual_methods {
-    () => {
-        pub fn exit_transition(mut self, transition: Option<ExitTransition>) -> Self {
-            self.0.exit_transition = transition;
-            self
-        }
-        pub fn exit_fade(self, duration: std::time::Duration) -> Self {
-            self.exit_transition(ExitTransition::fade(duration))
-        }
         pub fn canvas_left(mut self, canvas_left: f64) -> Self {
             self.0 = self
                 .0
@@ -1838,6 +1871,33 @@ macro_rules! visual_methods {
             self.0 = self.0.property(
                 PropertyId::AutomationHeadingLevel,
                 automation_heading_level.property_value(),
+            );
+            self
+        }
+        pub fn automation_help_text(mut self, automation_help_text: impl AsRef<str>) -> Self {
+            self.0 = self.0.property(
+                PropertyId::AutomationHelpText,
+                PropertyValue::String(Rc::from(automation_help_text.as_ref())),
+            );
+            self
+        }
+        pub fn automation_full_description(
+            mut self,
+            automation_full_description: impl AsRef<str>,
+        ) -> Self {
+            self.0 = self.0.property(
+                PropertyId::AutomationFullDescription,
+                PropertyValue::String(Rc::from(automation_full_description.as_ref())),
+            );
+            self
+        }
+        pub fn automation_live_setting(
+            mut self,
+            automation_live_setting: AutomationLiveSetting,
+        ) -> Self {
+            self.0 = self.0.property(
+                PropertyId::AutomationLiveSetting,
+                automation_live_setting.property_value(),
             );
             self
         }
@@ -1943,9 +2003,10 @@ impl TextBlock {
             font_size.is_finite() && font_size > 0.0,
             "TextBlock.FontSize requires finite_positive"
         );
-        self.0 = self
-            .0
-            .property(PropertyId::FontSize, PropertyValue::F64(font_size));
+        self.0 = self.0.property(
+            PropertyId::FontSize,
+            PropertyValue::F64(font_size * font_scale()),
+        );
         self
     }
     pub fn font_weight(mut self, font_weight: FontWeight) -> Self {
@@ -1959,6 +2020,13 @@ impl TextBlock {
         self.0 = self.0.property(
             PropertyId::FontFamily,
             PropertyValue::String(Rc::from(font_family.as_ref())),
+        );
+        self
+    }
+    pub fn character_spacing(mut self, character_spacing: i32) -> Self {
+        self.0 = self.0.property(
+            PropertyId::CharacterSpacing,
+            PropertyValue::I32(character_spacing),
         );
         self
     }
@@ -1982,12 +2050,13 @@ impl TextBlock {
     }
     pub fn line_height(mut self, line_height: f64) -> Self {
         assert!(
-            line_height.is_finite() && line_height > 0.0,
-            "TextBlock.LineHeight requires finite_positive"
+            line_height.is_finite() && line_height >= 0.0,
+            "TextBlock.LineHeight requires finite_non_negative"
         );
-        self.0 = self
-            .0
-            .property(PropertyId::LineHeight, PropertyValue::F64(line_height));
+        self.0 = self.0.property(
+            PropertyId::LineHeight,
+            PropertyValue::F64(line_height * font_scale()),
+        );
         self
     }
     pub fn text_wrapping(mut self, text_wrapping: TextWrapping) -> Self {
@@ -2014,6 +2083,12 @@ impl TextBlock {
         self.0 = self
             .0
             .property(PropertyId::MaxLines, PropertyValue::I32(max_lines));
+        self
+    }
+    pub fn text_alignment(mut self, text_alignment: TextAlignment) -> Self {
+        self.0 = self
+            .0
+            .property(PropertyId::TextAlignment, text_alignment.property_value());
         self
     }
     pub fn is_hit_test_visible(mut self, is_hit_test_visible: bool) -> Self {
@@ -2047,13 +2122,16 @@ pub struct TextBox(Declaration);
 impl Sealed for TextBox {}
 impl ReferenceElement for TextBox {}
 impl TextBox {
-    pub fn new(text: impl AsRef<str>) -> Self {
+    pub fn new() -> Self {
         let declaration = Declaration::new(ObjectType::TextBox);
-        let declaration = declaration.property(
+        Self(declaration)
+    }
+    pub fn text(mut self, text: impl AsRef<str>) -> Self {
+        self.0 = self.0.property(
             PropertyId::Text,
             PropertyValue::String(Rc::from(text.as_ref())),
         );
-        Self(declaration)
+        self
     }
     pub fn placeholder_text(mut self, placeholder_text: impl AsRef<str>) -> Self {
         self.0 = self.0.property(
@@ -2129,9 +2207,10 @@ impl TextBox {
             font_size.is_finite() && font_size > 0.0,
             "TextBox.FontSize requires finite_positive"
         );
-        self.0 = self
-            .0
-            .property(PropertyId::FontSize, PropertyValue::F64(font_size));
+        self.0 = self.0.property(
+            PropertyId::FontSize,
+            PropertyValue::F64(font_size * font_scale()),
+        );
         self
     }
     pub fn resource_overrides(mut self, resource_overrides: ResourceOverrides) -> Self {
@@ -2142,13 +2221,13 @@ impl TextBox {
         self
     }
     enabled_methods!();
-    focus_methods!(TextBox);
+    reference_methods!(TextBox);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
     /// ```compile_fail
     /// use windows_reactor::*;
-    /// let _ = TextBox::new("Text").header(TreeNode::new("node", "Node"));
+    /// let _ = TextBox::new().header(TreeNode::new("node", "Node"));
     /// ```
     pub fn header(mut self, content: impl Into<View>) -> Self {
         self.0 = self.0.relation(
@@ -2163,6 +2242,11 @@ impl TextBox {
             EventValue::String(callback.into_payload_callback()),
         );
         self
+    }
+}
+impl Default for TextBox {
+    fn default() -> Self {
+        Self::new()
     }
 }
 impl From<TextBox> for View {
@@ -2269,7 +2353,7 @@ impl Button {
         );
         self
     }
-    focus_methods!(Button);
+    reference_methods!(Button);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -2338,7 +2422,7 @@ impl CheckBox {
         );
         self
     }
-    focus_methods!(CheckBox);
+    reference_methods!(CheckBox);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -2483,11 +2567,15 @@ impl Border {
         );
         self
     }
-    pub fn translation(mut self, translation: impl Into<Option<Vector3>>) -> Self {
-        self.0 = self.0.property(
-            PropertyId::Translation,
-            PropertyValue::Vector3(translation.into()),
+    pub fn translation(mut self, x: f64, y: f64) -> Self {
+        let translation = [x, y];
+        assert!(
+            translation.iter().all(|value| (*value as f32).is_finite()),
+            "Border.Translation requires finite"
         );
+        self.0 = self
+            .0
+            .property(PropertyId::Translation, PropertyValue::Vector2(translation));
         self
     }
     pub fn translation_transition(mut self, translation_transition: Duration) -> Self {
@@ -2525,7 +2613,7 @@ impl Border {
         );
         self
     }
-    focus_methods!(Border);
+    reference_methods!(Border);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -3196,7 +3284,7 @@ impl Slider {
         );
         self
     }
-    focus_methods!(Slider);
+    reference_methods!(Slider);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -3407,10 +3495,10 @@ impl ListView {
         );
         self
     }
-    pub fn on_reordered(mut self, callback: impl IntoPayloadCallback<Vec<String>>) -> Self {
+    pub fn on_reordered(mut self, callback: impl IntoPayloadCallback<Vec<Key>>) -> Self {
         self.0 = self.0.event(
             EventId::DragItemsCompleted,
-            EventValue::StringList(callback.into_payload_callback()),
+            EventValue::Keys(callback.into_payload_callback()),
         );
         self
     }
@@ -3460,34 +3548,14 @@ impl HyperlinkButton {
         let declaration = Declaration::new(ObjectType::HyperlinkButton);
         Self(declaration)
     }
-    pub fn navigate_uri(mut self, value: impl Into<Rc<str>>) -> windows_core::Result<Self> {
-        let value = value.into();
-        validate_uri(&value)?;
-        self.0 = self
-            .0
-            .property(PropertyId::NavigateUri, PropertyValue::String(value));
-        Ok(self)
-    }
-    pub fn navigate_uri_optional<T>(mut self, value: Option<T>) -> windows_core::Result<Self>
-    where
-        T: Into<Rc<str>>,
-    {
-        if let Some(value) = value {
-            let value = value.into();
-            validate_uri(&value)?;
-            self.0 = self
-                .0
-                .property(PropertyId::NavigateUri, PropertyValue::String(value));
-        }
-        Ok(self)
-    }
+    uri_methods!(navigate_uri, navigate_uri_optional, NavigateUri);
     pub fn is_enabled(mut self, is_enabled: bool) -> Self {
         self.0 = self
             .0
             .property(PropertyId::IsEnabled, PropertyValue::Bool(is_enabled));
         self
     }
-    focus_methods!(HyperlinkButton);
+    reference_methods!(HyperlinkButton);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -3740,7 +3808,7 @@ impl AutoSuggestBox {
         );
         self
     }
-    focus_methods!(AutoSuggestBox);
+    reference_methods!(AutoSuggestBox);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -3823,7 +3891,7 @@ impl PasswordBox {
         );
         self
     }
-    focus_methods!(PasswordBox);
+    reference_methods!(PasswordBox);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -3889,6 +3957,26 @@ impl NumberBox {
             .property(PropertyId::Value, PropertyValue::OptionalF64(value.into()));
         self
     }
+    pub fn small_change(mut self, small_change: f64) -> Self {
+        assert!(
+            small_change.is_finite(),
+            "NumberBox.SmallChange requires finite"
+        );
+        self.0 = self
+            .0
+            .property(PropertyId::SmallChange, PropertyValue::F64(small_change));
+        self
+    }
+    pub fn spin_button_placement_mode(
+        mut self,
+        spin_button_placement_mode: NumberBoxSpinButtonPlacementMode,
+    ) -> Self {
+        self.0 = self.0.property(
+            PropertyId::SpinButtonPlacementMode,
+            spin_button_placement_mode.property_value(),
+        );
+        self
+    }
     pub fn resource_overrides(mut self, resource_overrides: ResourceOverrides) -> Self {
         self.0 = self.0.property(
             PropertyId::Resources,
@@ -3896,7 +3984,7 @@ impl NumberBox {
         );
         self
     }
-    focus_methods!(NumberBox);
+    reference_methods!(NumberBox);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -4491,7 +4579,7 @@ impl ToggleSwitch {
         );
         self
     }
-    focus_methods!(ToggleSwitch);
+    reference_methods!(ToggleSwitch);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -4579,7 +4667,7 @@ impl ToggleButton {
         );
         self
     }
-    focus_methods!(ToggleButton);
+    reference_methods!(ToggleButton);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -4651,7 +4739,7 @@ impl RadioButton {
         );
         self
     }
-    focus_methods!(RadioButton);
+    reference_methods!(RadioButton);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -4961,51 +5049,18 @@ impl Image {
         let declaration = Declaration::new(ObjectType::Image);
         Self(declaration)
     }
-    pub fn source(mut self, value: impl Into<Rc<str>>) -> windows_core::Result<Self> {
-        self.0 = self.0.property(
-            PropertyId::Source,
-            PropertyValue::ImageSource(ImageSource::uri(value)?),
-        );
-        Ok(self)
-    }
-    pub fn source_optional<T>(mut self, value: Option<T>) -> windows_core::Result<Self>
-    where
-        T: Into<Rc<str>>,
-    {
-        if let Some(value) = value {
-            self.0 = self.0.property(
-                PropertyId::Source,
-                PropertyValue::ImageSource(ImageSource::uri(value)?),
-            );
-        }
-        Ok(self)
-    }
-    pub fn source_file(mut self, path: impl AsRef<Path>) -> windows_core::Result<Self> {
-        self.0 = self.0.property(
-            PropertyId::Source,
-            PropertyValue::ImageSource(ImageSource::file(path)?),
-        );
-        Ok(self)
-    }
-    pub fn source_data(mut self, value: EncodedImage) -> Self {
-        self.0 = self.0.property(
-            PropertyId::Source,
-            PropertyValue::ImageSource(ImageSource::encoded(value)),
-        );
-        self
-    }
-    pub fn source_svg(mut self, value: EncodedImage) -> Self {
-        self.0 = self.0.property(
-            PropertyId::Source,
-            PropertyValue::ImageSource(ImageSource::svg(value)),
-        );
-        self
-    }
-    pub fn decode_width(mut self, decode_width: impl Into<Option<i32>>) -> Self {
-        self.0 = self.0.property(
-            PropertyId::DecodeWidth,
-            PropertyValue::I32(Into::<Option<i32>>::into(decode_width).unwrap_or(-1)),
-        );
+    image_uri_methods!(
+        source,
+        source_optional,
+        source_file,
+        source_data,
+        source_svg,
+        Source
+    );
+    pub fn decode_width(mut self, decode_width: i32) -> Self {
+        self.0 = self
+            .0
+            .property(PropertyId::DecodeWidth, PropertyValue::I32(decode_width));
         self
     }
     pub fn stretch(mut self, stretch: Stretch) -> Self {
@@ -5358,46 +5413,14 @@ impl ImageIcon {
         let declaration = Declaration::new(ObjectType::ImageIcon);
         Self(declaration)
     }
-    pub fn source(mut self, value: impl Into<Rc<str>>) -> windows_core::Result<Self> {
-        self.0 = self.0.property(
-            PropertyId::Source,
-            PropertyValue::ImageSource(ImageSource::uri(value)?),
-        );
-        Ok(self)
-    }
-    pub fn source_optional<T>(mut self, value: Option<T>) -> windows_core::Result<Self>
-    where
-        T: Into<Rc<str>>,
-    {
-        if let Some(value) = value {
-            self.0 = self.0.property(
-                PropertyId::Source,
-                PropertyValue::ImageSource(ImageSource::uri(value)?),
-            );
-        }
-        Ok(self)
-    }
-    pub fn source_file(mut self, path: impl AsRef<Path>) -> windows_core::Result<Self> {
-        self.0 = self.0.property(
-            PropertyId::Source,
-            PropertyValue::ImageSource(ImageSource::file(path)?),
-        );
-        Ok(self)
-    }
-    pub fn source_data(mut self, value: EncodedImage) -> Self {
-        self.0 = self.0.property(
-            PropertyId::Source,
-            PropertyValue::ImageSource(ImageSource::encoded(value)),
-        );
-        self
-    }
-    pub fn source_svg(mut self, value: EncodedImage) -> Self {
-        self.0 = self.0.property(
-            PropertyId::Source,
-            PropertyValue::ImageSource(ImageSource::svg(value)),
-        );
-        self
-    }
+    image_uri_methods!(
+        source,
+        source_optional,
+        source_file,
+        source_data,
+        source_svg,
+        Source
+    );
     visual_methods!();
 }
 impl Default for ImageIcon {
@@ -5421,6 +5444,23 @@ impl FontIcon {
         self.0 = self.0.property(
             PropertyId::Glyph,
             PropertyValue::String(Rc::from(glyph.as_ref())),
+        );
+        self
+    }
+    pub fn font_size(mut self, font_size: f64) -> Self {
+        assert!(
+            font_size.is_finite() && font_size > 0.0,
+            "FontIcon.FontSize requires finite_positive"
+        );
+        self.0 = self
+            .0
+            .property(PropertyId::FontSize, PropertyValue::F64(font_size));
+        self
+    }
+    pub fn foreground(mut self, foreground: impl Into<Brush>) -> Self {
+        self.0 = self.0.property(
+            PropertyId::Foreground,
+            PropertyValue::Brush(foreground.into()),
         );
         self
     }
@@ -5450,27 +5490,7 @@ impl BitmapIcon {
         );
         self
     }
-    pub fn uri_source(mut self, value: impl Into<Rc<str>>) -> windows_core::Result<Self> {
-        let value = value.into();
-        validate_uri(&value)?;
-        self.0 = self
-            .0
-            .property(PropertyId::UriSource, PropertyValue::String(value));
-        Ok(self)
-    }
-    pub fn uri_source_optional<T>(mut self, value: Option<T>) -> windows_core::Result<Self>
-    where
-        T: Into<Rc<str>>,
-    {
-        if let Some(value) = value {
-            let value = value.into();
-            validate_uri(&value)?;
-            self.0 = self
-                .0
-                .property(PropertyId::UriSource, PropertyValue::String(value));
-        }
-        Ok(self)
-    }
+    uri_methods!(uri_source, uri_source_optional, UriSource);
     visual_methods!();
 }
 impl Default for BitmapIcon {
@@ -5588,7 +5608,7 @@ impl RatingControl {
             .property(PropertyId::Value, PropertyValue::OptionalF64(value.into()));
         self
     }
-    focus_methods!(RatingControl);
+    reference_methods!(RatingControl);
     visual_methods!();
     pub fn on_value_changed(mut self, callback: impl IntoPayloadCallback<Option<f64>>) -> Self {
         self.0 = self.0.event(
@@ -5754,7 +5774,7 @@ impl ComboBox {
         );
         self
     }
-    focus_methods!(ComboBox);
+    reference_methods!(ComboBox);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -6126,17 +6146,17 @@ impl TabView {
         );
         self
     }
-    pub fn on_close_requested(mut self, callback: impl IntoPayloadCallback<Rc<str>>) -> Self {
+    pub fn on_close_requested(mut self, callback: impl IntoPayloadCallback<Key>) -> Self {
         self.0 = self.0.event(
             EventId::TabCloseRequested,
-            EventValue::String(callback.into_payload_callback()),
+            EventValue::Key(callback.into_payload_callback()),
         );
         self
     }
-    pub fn on_reordered(mut self, callback: impl IntoPayloadCallback<Vec<String>>) -> Self {
+    pub fn on_reordered(mut self, callback: impl IntoPayloadCallback<Vec<Key>>) -> Self {
         self.0 = self.0.event(
             EventId::TabItemsChanged,
-            EventValue::StringList(callback.into_payload_callback()),
+            EventValue::Keys(callback.into_payload_callback()),
         );
         self
     }
@@ -6915,6 +6935,12 @@ impl ContentDialog {
         );
         self
     }
+    pub fn default_button(mut self, default_button: ContentDialogButton) -> Self {
+        self.0 = self
+            .0
+            .property(PropertyId::DefaultButton, default_button.property_value());
+        self
+    }
     /// Rejects values outside this relation's generated type contract.
     ///
     /// ```compile_fail
@@ -7102,10 +7128,10 @@ impl GridView {
         );
         self
     }
-    pub fn on_reordered(mut self, callback: impl IntoPayloadCallback<Vec<String>>) -> Self {
+    pub fn on_reordered(mut self, callback: impl IntoPayloadCallback<Vec<Key>>) -> Self {
         self.0 = self.0.event(
             EventId::DragItemsCompleted,
-            EventValue::StringList(callback.into_payload_callback()),
+            EventValue::Keys(callback.into_payload_callback()),
         );
         self
     }
@@ -7233,7 +7259,7 @@ impl RichEditBox {
             .property(PropertyId::IsEnabled, PropertyValue::Bool(is_enabled));
         self
     }
-    focus_methods!(RichEditBox);
+    reference_methods!(RichEditBox);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -7297,9 +7323,10 @@ impl RichTextBlock {
             font_size.is_finite() && font_size > 0.0,
             "RichTextBlock.FontSize requires finite_positive"
         );
-        self.0 = self
-            .0
-            .property(PropertyId::FontSize, PropertyValue::F64(font_size));
+        self.0 = self.0.property(
+            PropertyId::FontSize,
+            PropertyValue::F64(font_size * font_scale()),
+        );
         self
     }
     pub fn font_family(mut self, font_family: impl AsRef<str>) -> Self {
@@ -7656,10 +7683,10 @@ impl MapControl {
         let declaration = Declaration::new(ObjectType::MapControl);
         Self(declaration)
     }
-    pub fn center(mut self, latitude: f64, longitude: f64) -> Self {
+    pub fn center(mut self, center: impl AsRef<str>) -> Self {
         self.0 = self.0.property(
             PropertyId::Center,
-            PropertyValue::String(Rc::from(format!("{latitude},{longitude}"))),
+            PropertyValue::String(Rc::from(center.as_ref())),
         );
         self
     }
@@ -7831,10 +7858,10 @@ impl PipsPager {
         );
         self
     }
-    pub fn selected_page_index(mut self, selected_page_index: impl Into<Option<usize>>) -> Self {
+    pub fn selected_page_index(mut self, selected_page_index: i32) -> Self {
         self.0 = self.0.property(
             PropertyId::SelectedPageIndex,
-            PropertyValue::SelectionIndex(selected_page_index.into()),
+            PropertyValue::I32(selected_page_index),
         );
         self
     }
@@ -7850,13 +7877,10 @@ impl PipsPager {
         self
     }
     visual_methods!();
-    pub fn on_selected_index_changed(
-        mut self,
-        callback: impl IntoPayloadCallback<Option<usize>>,
-    ) -> Self {
+    pub fn on_selected_index_changed(mut self, callback: impl IntoUnitCallback) -> Self {
         self.0 = self.0.event(
             EventId::SelectedIndexChanged,
-            EventValue::SelectionIndex(callback.into_payload_callback()),
+            EventValue::Unit(callback.into_unit_callback()),
         );
         self
     }
@@ -8068,7 +8092,7 @@ impl ToggleSplitButton {
             .property(PropertyId::IsEnabled, PropertyValue::Bool(is_enabled));
         self
     }
-    focus_methods!(ToggleSplitButton);
+    reference_methods!(ToggleSplitButton);
     visual_methods!();
     /// Rejects values outside this relation's generated type contract.
     ///
@@ -8151,20 +8175,5 @@ impl Default for TwoPaneView {
 impl From<TwoPaneView> for View {
     fn from(value: TwoPaneView) -> Self {
         Self(DeclaredNode::Object(value.0))
-    }
-}
-impl From<&str> for View {
-    fn from(value: &str) -> Self {
-        TextBlock::new().text(value).into()
-    }
-}
-impl From<String> for View {
-    fn from(value: String) -> Self {
-        TextBlock::new().text(value).into()
-    }
-}
-impl From<Rc<str>> for View {
-    fn from(value: Rc<str>) -> Self {
-        TextBlock::new().text(value).into()
     }
 }

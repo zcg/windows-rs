@@ -72,18 +72,31 @@ flag = true
 name = "AutomationName"
 owner = "Microsoft.UI.Xaml.Automation.AutomationProperties"
 native = "Name"
-default = ""
 
 [[attached_properties]]
 name = "AutomationId"
 owner = "Microsoft.UI.Xaml.Automation.AutomationProperties"
 native = "AutomationId"
-default = ""
 
 [[attached_properties]]
 name = "AutomationHeadingLevel"
 owner = "Microsoft.UI.Xaml.Automation.AutomationProperties"
 native = "HeadingLevel"
+
+[[attached_properties]]
+name = "AutomationHelpText"
+owner = "Microsoft.UI.Xaml.Automation.AutomationProperties"
+native = "HelpText"
+
+[[attached_properties]]
+name = "AutomationFullDescription"
+owner = "Microsoft.UI.Xaml.Automation.AutomationProperties"
+native = "FullDescription"
+
+[[attached_properties]]
+name = "AutomationLiveSetting"
+owner = "Microsoft.UI.Xaml.Automation.AutomationProperties"
+native = "LiveSetting"
 
 [[visual_properties]]
 name = "Width"
@@ -135,11 +148,9 @@ name = "TextBlock"
 
 [[objects.properties]]
 name = "Text"
-default = ""
 
 [[objects.properties]]
 name = "FontSize"
-default = "14.0"
 validation = "finite_positive"
 scaled = true
 
@@ -152,17 +163,19 @@ name = "FontFamily"
 adapter = "font_family"
 
 [[objects.properties]]
+name = "CharacterSpacing"
+
+[[objects.properties]]
 name = "Foreground"
 adapter = "theme_brush"
 
 [[objects.properties]]
 name = "Padding"
-default = "default"
 validation = "finite_non_negative"
 
 [[objects.properties]]
 name = "LineHeight"
-validation = "finite_positive"
+validation = "finite_non_negative"
 scaled = true
 
 [[objects.properties]]
@@ -179,6 +192,9 @@ name = "MaxLines"
 validation = "non_negative"
 
 [[objects.properties]]
+name = "TextAlignment"
+
+[[objects.properties]]
 name = "IsHitTestVisible"
 
 [[objects.events]]
@@ -188,13 +204,12 @@ name = "Tapped"
 name = "TextBox"
 enabled = true
 focus = true
-handwritten = true
 
 [[objects.properties]]
 name = "Text"
+adapter = "edit_text"
 controlled = "TextChanged"
-feedback = "exact"
-required = true
+feedback = "deferred_exact"
 
 [[objects.properties]]
 name = "PlaceholderText"
@@ -233,7 +248,6 @@ observes = "Text"
 
 [[objects.properties]]
 name = "Padding"
-default = "default"
 validation = "finite_non_negative"
 [[objects.properties]]
 name = "FontSize"
@@ -281,11 +295,9 @@ name = "Click"
 
 [[objects.properties]]
 name = "Padding"
-default = "default"
 validation = "finite_non_negative"
 [[objects.properties]]
 name = "CornerRadius"
-default = "default"
 validation = "finite_non_negative"
 [[objects.properties]]
 name = "Foreground"
@@ -305,7 +317,6 @@ name = "IsChecked"
 value = "OptionalBool"
 controlled = "IsCheckedChanged"
 feedback = "exact"
-default = "false"
 
 [[objects.properties]]
 name = "IsEnabled"
@@ -344,17 +355,14 @@ adapter = "theme_brush"
 
 [[objects.properties]]
 name = "BorderThickness"
-default = "default"
 validation = "finite_non_negative"
 
 [[objects.properties]]
 name = "CornerRadius"
-default = "default"
 validation = "finite_non_negative"
 
 [[objects.properties]]
 name = "Padding"
-default = "default"
 validation = "finite_non_negative"
 
 [[objects.properties]]
@@ -379,6 +387,7 @@ adapter = "implicit_scale_transition"
 [[objects.properties]]
 name = "Translation"
 adapter = "implicit_translation"
+validation = "finite"
 
 [[objects.properties]]
 name = "TranslationTransition"
@@ -468,6 +477,7 @@ name = "DragLeave"
 [[objects.events]]
 name = "Drop"
 adapter = "dropped_data"
+active_properties = ["drop_policy"]
 
 
 [[objects.properties]]
@@ -524,11 +534,9 @@ name = "StackPanel"
 
 [[objects.properties]]
 name = "Spacing"
-default = "0.0"
 
 [[objects.properties]]
 name = "Orientation"
-default = "Vertical"
 
 [[objects.relations]]
 name = "Children"
@@ -574,11 +582,9 @@ window_title_bar = true
 
 [[objects.properties]]
 name = "Title"
-default = ""
 
 [[objects.properties]]
 name = "Subtitle"
-default = ""
 
 [[objects.properties]]
 name = "IsBackButtonVisible"
@@ -616,21 +622,18 @@ focus = true
 
 [[objects.properties]]
 name = "Minimum"
-coerces = "ValueChanged"
+coerces = "Value"
 feedback = "normalized"
-default = "0.0"
 
 [[objects.properties]]
 name = "Maximum"
-coerces = "ValueChanged"
+coerces = "Value"
 feedback = "normalized"
-default = "100.0"
 
 [[objects.properties]]
 name = "Value"
 controlled = "ValueChanged"
 feedback = "normalized"
-default = "0.0"
 
 [[objects.properties]]
 name = "IsEnabled"
@@ -660,7 +663,6 @@ value_field = "width"
 name = "IsThumbToolTipEnabled"
 [[objects.properties]]
 name = "CornerRadius"
-default = "default"
 validation = "finite_non_negative"
 [[objects.properties]]
 name = "Resources"
@@ -715,7 +717,6 @@ item = "TreeNode"
 [[objects]]
 name = "ListView"
 enabled = true
-handwritten = true
 
 [[objects.properties]]
 name = "SelectionMode"
@@ -733,6 +734,7 @@ name = "AllowDrop"
 name = "SelectedIndex"
 adapter = "selection_index"
 controlled = "SelectionChanged"
+indexes = "Items"
 feedback = "deferred_exact"
 
 [[objects.relations]]
@@ -750,7 +752,7 @@ observes = "SelectedIndex"
 [[objects.events]]
 name = "DragItemsCompleted"
 field = "on_reordered"
-adapter = "string_list"
+reorders = "Items"
 
 [[objects]]
 name = "DataItem"
@@ -853,8 +855,9 @@ adapter = "inspectable_string_list"
 
 [[objects.properties]]
 name = "Text"
+adapter = "edit_text"
 controlled = "TextChanged"
-feedback = "exact"
+feedback = "deferred_exact"
 
 [[objects.properties]]
 name = "QueryIcon"
@@ -893,7 +896,7 @@ name = "IsEnabled"
 [[objects.properties]]
 name = "Password"
 controlled = "PasswordChanged"
-feedback = "exact"
+feedback = "deferred_exact"
 
 [[objects.relations]]
 name = "Header"
@@ -912,12 +915,12 @@ name = "IsEnabled"
 
 [[objects.properties]]
 name = "Minimum"
-coerces = "ValueChanged"
+coerces = "Value"
 feedback = "normalized"
 
 [[objects.properties]]
 name = "Maximum"
-coerces = "ValueChanged"
+coerces = "Value"
 feedback = "normalized"
 
 [[objects.properties]]
@@ -925,6 +928,13 @@ name = "Value"
 adapter = "number_box_value"
 controlled = "ValueChanged"
 feedback = "normalized"
+
+[[objects.properties]]
+name = "SmallChange"
+validation = "finite"
+
+[[objects.properties]]
+name = "SpinButtonPlacementMode"
 
 [[objects.relations]]
 name = "Header"
@@ -1117,7 +1127,6 @@ name = "IsEnabled"
 
 [[objects.properties]]
 name = "CornerRadius"
-default = "default"
 validation = "finite_non_negative"
 [[objects.properties]]
 name = "Foreground"
@@ -1210,6 +1219,11 @@ name = "Content"
 name = "Checked"
 observes = "IsChecked"
 
+[[objects.events]]
+name = "Unchecked"
+observes = "IsChecked"
+observe_only = true
+
 [[objects]]
 name = "RadioButtons"
 
@@ -1224,7 +1238,9 @@ adapter = "inspectable_string_list"
 name = "SelectedIndex"
 adapter = "selection_index"
 controlled = "SelectionChanged"
-feedback = "normalized"
+indexes = "ItemsSource"
+realize_items = true
+feedback = "deferred_exact"
 
 [[objects.relations]]
 name = "Header"
@@ -1447,6 +1463,14 @@ name = "FontIcon"
 [[objects.properties]]
 name = "Glyph"
 
+[[objects.properties]]
+name = "FontSize"
+validation = "finite_positive"
+
+[[objects.properties]]
+name = "Foreground"
+adapter = "theme_brush"
+
 [[objects]]
 name = "BitmapIcon"
 
@@ -1489,7 +1513,7 @@ name = "IsReadOnly"
 
 [[objects.properties]]
 name = "MaxRating"
-coerces = "ValueChanged"
+coerces = "Value"
 feedback = "normalized"
 
 [[objects.properties]]
@@ -1550,7 +1574,8 @@ adapter = "inspectable_string_list"
 name = "SelectedIndex"
 adapter = "selection_index"
 controlled = "SelectionChanged"
-feedback = "exact"
+indexes = "ItemsSource"
+feedback = "deferred_exact"
 
 [[objects.relations]]
 name = "Header"
@@ -1562,7 +1587,6 @@ observes = "SelectedIndex"
 
 [[objects.properties]]
 name = "CornerRadius"
-default = "default"
 validation = "finite_non_negative"
 [[objects.properties]]
 name = "IsHitTestVisible"
@@ -1580,7 +1604,9 @@ adapter = "inspectable_string"
 name = "SelectedIndex"
 adapter = "selection_index"
 controlled = "SelectionChanged"
-feedback = "exact"
+indexes = "Items"
+requires_selection = true
+feedback = "deferred_exact"
 
 [[objects.relations]]
 name = "Items"
@@ -1608,7 +1634,8 @@ name = "FlipView"
 name = "SelectedIndex"
 adapter = "selection_index"
 controlled = "SelectionChanged"
-feedback = "exact"
+indexes = "Items"
+feedback = "deferred_exact"
 
 [[objects.relations]]
 name = "Items"
@@ -1664,7 +1691,8 @@ name = "IsAddTabButtonVisible"
 name = "SelectedIndex"
 adapter = "selection_index"
 controlled = "SelectionChanged"
-feedback = "exact"
+indexes = "TabItems"
+feedback = "deferred_exact"
 
 [[objects.relations]]
 name = "TabItems"
@@ -1681,12 +1709,12 @@ observes = "SelectedIndex"
 name = "TabCloseRequested"
 field = "on_close_requested"
 payload = "Tab"
-payload_adapter = "item_tag"
+payload_adapter = "item_key"
 
 [[objects.events]]
 name = "TabItemsChanged"
 field = "on_reordered"
-adapter = "string_list"
+reorders = "TabItems"
 
 [[objects]]
 name = "TabViewItem"
@@ -1959,6 +1987,9 @@ name = "IsSecondaryButtonEnabled"
 name = "Title"
 adapter = "inspectable_string"
 
+[[objects.properties]]
+name = "DefaultButton"
+
 [[objects.relations]]
 name = "Content"
 
@@ -2006,7 +2037,8 @@ name = "AllowDrop"
 name = "SelectedIndex"
 adapter = "selection_index"
 controlled = "SelectionChanged"
-feedback = "exact"
+indexes = "Items"
+feedback = "deferred_exact"
 
 [[objects.relations]]
 name = "Items"
@@ -2019,7 +2051,7 @@ observes = "SelectedIndex"
 [[objects.events]]
 name = "DragItemsCompleted"
 field = "on_reordered"
-adapter = "string_list"
+reorders = "Items"
 
 [[objects]]
 name = "GridViewItem"
@@ -2231,7 +2263,8 @@ validation = "non_negative"
 
 [[objects.properties]]
 name = "SelectedPageIndex"
-adapter = "selection_index"
+value = "I32"
+controlled = "SelectedIndexChanged"
 
 [[objects.properties]]
 name = "MaxVisiblePips"
@@ -2239,7 +2272,7 @@ validation = "non_negative"
 
 [[objects.events]]
 name = "SelectedIndexChanged"
-observes = "SelectedPageIndex"
+value = "Unit"
 
 [[objects]]
 name = "RefreshContainer"

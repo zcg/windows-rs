@@ -3,6 +3,7 @@ mod Windows {
     mod UI {
         mod Xaml {
             mod Navigation {
+                #[unsealed]
                 #[Windows::Foundation::Metadata::Composable(IFrameNavigationOptionsFactory, Public, 458752, "Windows.Foundation.UniversalApiContract")]
                 #[Windows::Foundation::Metadata::ContractVersion(super::super::super::Foundation::UniversalApiContract, 458752)]
                 #[Windows::Foundation::Metadata::MarshalingBehavior(Agile)]
@@ -121,6 +122,7 @@ mod Windows {
                 #[Windows::Foundation::Metadata::WebHostHidden]
                 class NavigatingCancelEventArgs {
                     INavigatingCancelEventArgs,
+                    #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                     INavigatingCancelEventArgs2,
                 }
                 #[guid(0x75d6a78f_a302_4489_9898_24ea49182910)]
@@ -140,6 +142,7 @@ mod Windows {
                 #[Windows::Foundation::Metadata::WebHostHidden]
                 class NavigationEventArgs {
                     INavigationEventArgs,
+                    #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                     INavigationEventArgs2,
                 }
                 #[Windows::Foundation::Metadata::ContractVersion(super::super::super::Foundation::UniversalApiContract, 65536)]

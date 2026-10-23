@@ -72,6 +72,7 @@ mod Windows {
                 IAppointmentsProviderAddAppointmentActivatedEventArgs,
                 IAppointmentsProviderActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -80,6 +81,7 @@ mod Windows {
                 IAppointmentsProviderRemoveAppointmentActivatedEventArgs,
                 IAppointmentsProviderActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -88,6 +90,7 @@ mod Windows {
                 IAppointmentsProviderReplaceAppointmentActivatedEventArgs,
                 IAppointmentsProviderActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -96,6 +99,7 @@ mod Windows {
                 IAppointmentsProviderShowAppointmentDetailsActivatedEventArgs,
                 IAppointmentsProviderActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -104,6 +108,7 @@ mod Windows {
                 IAppointmentsProviderShowTimeFrameActivatedEventArgs,
                 IAppointmentsProviderActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 196608)]
@@ -123,6 +128,7 @@ mod Windows {
             class CachedFileUpdaterActivatedEventArgs {
                 ICachedFileUpdaterActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(ActivationCameraSettingsContract, 65536)]
@@ -199,8 +205,11 @@ mod Windows {
             class DeviceActivatedEventArgs {
                 IDeviceActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IApplicationViewActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IViewSwitcherProvider,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 131072)]
@@ -208,6 +217,7 @@ mod Windows {
             class DevicePairingActivatedEventArgs {
                 IDevicePairingActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -218,6 +228,7 @@ mod Windows {
                 IActivatedEventArgs,
                 IApplicationViewActivatedEventArgs,
                 IViewSwitcherProvider,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -225,10 +236,15 @@ mod Windows {
             class FileActivatedEventArgs {
                 IFileActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IFileActivatedEventArgsWithNeighboringFiles,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IFileActivatedEventArgsWithCallerPackageFamilyName,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IApplicationViewActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IViewSwitcherProvider,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -236,7 +252,9 @@ mod Windows {
             class FileOpenPickerActivatedEventArgs {
                 IFileOpenPickerActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IFileOpenPickerActivatedEventArgs2,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -246,6 +264,7 @@ mod Windows {
                 IFileOpenPickerContinuationEventArgs,
                 IContinuationActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -253,7 +272,9 @@ mod Windows {
             class FileSavePickerActivatedEventArgs {
                 IFileSavePickerActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IFileSavePickerActivatedEventArgs2,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -263,6 +284,7 @@ mod Windows {
                 IFileSavePickerContinuationEventArgs,
                 IContinuationActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -272,6 +294,7 @@ mod Windows {
                 IFolderPickerContinuationEventArgs,
                 IContinuationActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[guid(0xcf651713_cd08_4fd8_b697_a281b6544e2e)]
@@ -520,9 +543,9 @@ mod Windows {
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
             #[Windows::Foundation::Metadata::Deprecated("IFileOpenPickerContinuationEventArgs is deprecated and might not work on all platforms. For more info, see MSDN.", Deprecate, 655360, "Windows.Foundation.UniversalApiContract")]
             interface IFileOpenPickerContinuationEventArgs: IContinuationActivatedEventArgs + IActivatedEventArgs {
-                #[special]
+                #[get]
                 #[Windows::Foundation::Metadata::Deprecated("IFileOpenPickerContinuationEventArgs is deprecated and might not work on all platforms. For more info, see MSDN.", Deprecate, 655360, "Windows.Foundation.UniversalApiContract")]
-                fn get_Files(&self) -> super::super::Foundation::Collections::IVectorView<super::super::Storage::StorageFile>;
+                Files: super::super::Foundation::Collections::IVectorView<super::super::Storage::StorageFile>;
             }
             #[guid(0x81c19cf1_74e6_4387_82eb_bb8fd64b4346)]
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -542,17 +565,17 @@ mod Windows {
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
             #[Windows::Foundation::Metadata::Deprecated("IFileSavePickerContinuationEventArgs is deprecated and might not work on all platforms. For more info, see MSDN.", Deprecate, 655360, "Windows.Foundation.UniversalApiContract")]
             interface IFileSavePickerContinuationEventArgs: IContinuationActivatedEventArgs + IActivatedEventArgs {
-                #[special]
+                #[get]
                 #[Windows::Foundation::Metadata::Deprecated("IFileSavePickerContinuationEventArgs is deprecated and might not work on all platforms. For more info, see MSDN.", Deprecate, 655360, "Windows.Foundation.UniversalApiContract")]
-                fn get_File(&self) -> super::super::Storage::StorageFile;
+                File: super::super::Storage::StorageFile;
             }
             #[guid(0x51882366_9f4b_498f_beb0_42684f6e1c29)]
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
             #[Windows::Foundation::Metadata::Deprecated("IFolderPickerContinuationEventArgs is deprecated and might not work on all platforms. For more info, see MSDN.", Deprecate, 655360, "Windows.Foundation.UniversalApiContract")]
             interface IFolderPickerContinuationEventArgs: IContinuationActivatedEventArgs + IActivatedEventArgs {
-                #[special]
+                #[get]
                 #[Windows::Foundation::Metadata::Deprecated("IFolderPickerContinuationEventArgs is deprecated and might not work on all platforms. For more info, see MSDN.", Deprecate, 655360, "Windows.Foundation.UniversalApiContract")]
-                fn get_Folder(&self) -> super::super::Storage::StorageFolder;
+                Folder: super::super::Storage::StorageFolder;
             }
             #[guid(0xfbc93e26_a14a_4b4f_82b0_33bed920af52)]
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -707,15 +730,15 @@ mod Windows {
             #[Windows::Foundation::Metadata::ContractVersion(super::Wallet::WalletContract, 65536)]
             #[Windows::Foundation::Metadata::Deprecated("IWalletActionActivatedEventArgs is deprecated and might not work on all platforms. For more info, see MSDN.", Deprecate, 131072, "Windows.ApplicationModel.Wallet.WalletContract")]
             interface IWalletActionActivatedEventArgs: IActivatedEventArgs {
-                #[special]
+                #[get]
                 #[Windows::Foundation::Metadata::Deprecated("IWalletActionActivatedEventArgs is deprecated and might not work on all platforms. For more info, see MSDN.", Deprecate, 131072, "Windows.ApplicationModel.Wallet.WalletContract")]
-                fn get_ItemId(&self) -> String;
-                #[special]
+                ItemId: String;
+                #[get]
                 #[Windows::Foundation::Metadata::Deprecated("IWalletActionActivatedEventArgs is deprecated and might not work on all platforms. For more info, see MSDN.", Deprecate, 131072, "Windows.ApplicationModel.Wallet.WalletContract")]
-                fn get_ActionKind(&self) -> super::Wallet::WalletActionKind;
-                #[special]
+                ActionKind: super::Wallet::WalletActionKind;
+                #[get]
                 #[Windows::Foundation::Metadata::Deprecated("IWalletActionActivatedEventArgs is deprecated and might not work on all platforms. For more info, see MSDN.", Deprecate, 131072, "Windows.ApplicationModel.Wallet.WalletContract")]
-                fn get_ActionId(&self) -> String;
+                ActionId: String;
             }
             #[guid(0x72b71774_98ea_4ccf_9752_46d9051004f1)]
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -734,10 +757,15 @@ mod Windows {
             class LaunchActivatedEventArgs {
                 ILaunchActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IApplicationViewActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IPrelaunchActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IViewSwitcherProvider,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 ILaunchActivatedEventArgs2,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -746,6 +774,7 @@ mod Windows {
             class LockScreenActivatedEventArgs {
                 ILockScreenActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(ActivatedEventsContract, 65536)]
@@ -755,6 +784,7 @@ mod Windows {
                 ILaunchActivatedEventArgs,
                 IActivatedEventArgs,
                 IApplicationViewActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.ApplicationModel.Activation.ActivatedEventsContract", 65536)]
                 IViewSwitcherProvider,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 262144)]
@@ -793,9 +823,13 @@ mod Windows {
             class ProtocolActivatedEventArgs {
                 IProtocolActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IProtocolActivatedEventArgsWithCallerPackageFamilyNameAndData,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IApplicationViewActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IViewSwitcherProvider,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -807,6 +841,7 @@ mod Windows {
                 IProtocolActivatedEventArgsWithCallerPackageFamilyNameAndData,
                 IApplicationViewActivatedEventArgs,
                 IViewSwitcherProvider,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -814,6 +849,7 @@ mod Windows {
             class RestrictedLaunchActivatedEventArgs {
                 IRestrictedLaunchActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -821,9 +857,13 @@ mod Windows {
             class SearchActivatedEventArgs {
                 ISearchActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IApplicationViewActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 ISearchActivatedEventArgsWithLinguisticDetails,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 65536)]
                 IViewSwitcherProvider,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -831,6 +871,7 @@ mod Windows {
             class ShareTargetActivatedEventArgs {
                 IShareTargetActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]
@@ -854,7 +895,9 @@ mod Windows {
             class ToastNotificationActivatedEventArgs {
                 IToastNotificationActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 262144)]
                 IApplicationViewActivatedEventArgs,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 196608)]
@@ -868,6 +911,7 @@ mod Windows {
             class VoiceCommandActivatedEventArgs {
                 IVoiceCommandActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::Wallet::WalletContract, 65536)]
@@ -882,6 +926,7 @@ mod Windows {
             class WebAccountProviderActivatedEventArgs {
                 IWebAccountProviderActivatedEventArgs,
                 IActivatedEventArgs,
+                #[Windows::Foundation::Metadata::ContractVersion("Windows.Foundation.UniversalApiContract", 196608)]
                 IActivatedEventArgsWithUser,
             }
             #[Windows::Foundation::Metadata::ContractVersion(super::super::Foundation::UniversalApiContract, 65536)]

@@ -133,6 +133,10 @@ impl WinUiAdapter {
             None | Some(ButtonStyle::Default) => None,
             Some(value) => Some(value),
         };
+        // State exists only while a style is applied, so clearing without state is a no-op.
+        if base.is_none() && !self.style_states.contains_key(&object) {
+            return Ok(());
+        }
         self.style_states.entry(object).or_default().base = base;
         self.apply_style_state(object)
     }
@@ -143,6 +147,9 @@ impl WinUiAdapter {
         property: PropertyId,
         value: Option<ThemeBrush>,
     ) -> Result<(), WinUiError> {
+        if value.is_none() && !self.style_states.contains_key(&object) {
+            return Ok(());
+        }
         let state = self.style_states.entry(object).or_default();
         if let Some(value) = value {
             state.brushes.insert(property, value);
@@ -244,7 +251,6 @@ impl WinUiAdapter {
             .SetStyle(&background_style)?;
         surface.SetChild(&root)?;
         window.SetContent(&surface)?;
-        self.apply_window_policy(&window, &surface.cast()?, policy)?;
         let state = Rc::new(NativeWindowState {
             window,
             root: root_object,
@@ -260,17 +266,18 @@ impl WinUiAdapter {
             placement_callback: RefCell::new(None),
             last_placement: Cell::new(None),
         });
-        self.windows.borrow_mut().push(Rc::downgrade(&state));
         if let Some((object, height)) = self.window_title_bar
             && self.owns(state.root, object)
         {
             self.apply_title_bar_to_window(&state, object, height)?;
         }
+        self.apply_window_policy(&state.window, &state.surface.cast()?, policy)?;
+        self.windows.borrow_mut().push(Rc::downgrade(&state));
         Ok(NativeWindow {
             state,
             actual_theme_changed: None,
             closed: None,
-            published_title: false,
+            published_title: None,
             published_visuals: false,
             size_changed: None,
             placement_changed: None,
@@ -736,7 +743,7 @@ impl WinUiAdapter {
                         Some(QueuedEvent {
                             object: target,
                             event: EventId::CommandInvoked,
-                            revision,
+                            handler: QueuedHandler::Presentation(revision),
                             payload: EventPayload::Key(clicked_key.clone()),
                         }),
                     );
@@ -769,6 +776,27 @@ impl WinUiAdapter {
                 return Err(WinUiError::StillOwned(dialog));
             }
             let owner_element = self.ui_element(owner)?;
+            let framework = owner_element.cast::<native::IFrameworkElement>()?;
+            let value = self
+                .event_queue
+                .content_dialogs
+                .borrow()
+                .dialogs
+                .get(&dialog)
+                .ok_or(WinUiError::MissingObject(dialog))?
+                .value
+                .clone();
+            let dialog_element = value.cast::<native::IFrameworkElement>()?;
+            let themed_dialog = dialog_element.clone();
+            let theme_changed = framework.ActualThemeChanged(move |sender, _| {
+                let Some(sender) = sender.as_ref() else {
+                    return;
+                };
+                themed_dialog
+                    .SetRequestedTheme(sender.ActualTheme().unwrap())
+                    .unwrap();
+            })?;
+            dialog_element.SetRequestedTheme(framework.ActualTheme()?)?;
             {
                 let mut scheduler = self.event_queue.content_dialogs.borrow_mut();
                 let state = scheduler
@@ -776,6 +804,7 @@ impl WinUiAdapter {
                     .get_mut(&dialog)
                     .ok_or(WinUiError::MissingObject(dialog))?;
                 state.owner = Some(owner);
+                state.theme_changed = Some(theme_changed);
             }
             match owner_element.XamlRoot() {
                 Ok(root) => {
@@ -784,26 +813,13 @@ impl WinUiAdapter {
                     scheduler.start_next_for_dialog(dialog)?;
                 }
                 Err(error) if error.code().is_ok() => {
-                    let framework = owner_element.cast::<native::IFrameworkElement>()?;
                     let event_queue = Rc::clone(&self.event_queue);
                     let loaded_element = owner_element;
                     let loaded = framework.Loaded(move |_, _| {
-                        let result = loaded_element.XamlRoot().and_then(|root| {
-                            let mut scheduler = event_queue.content_dialogs.borrow_mut();
-                            scheduler
-                                .set_root(dialog, root)
-                                .and_then(|_| scheduler.start_next_for_dialog(dialog))
-                                .map_err(|error| match error {
-                                    WinUiError::Native(error) => error,
-                                    error => windows_core::Error::new(
-                                        native::E_FAIL,
-                                        format!("{error:?}"),
-                                    ),
-                                })
-                        });
-                        if let Err(error) = result {
-                            event_queue.errors.borrow_mut().push_back(error.into());
-                        }
+                        let root = loaded_element.XamlRoot().unwrap();
+                        let mut scheduler = event_queue.content_dialogs.borrow_mut();
+                        scheduler.set_root(dialog, root).unwrap();
+                        scheduler.start_next_for_dialog(dialog).unwrap();
                     })?;
                     self.event_queue
                         .content_dialogs
@@ -834,6 +850,7 @@ impl WinUiAdapter {
             if let Some(state) = scheduler.dialogs.get_mut(&previous) {
                 state.owner = None;
                 state.loaded = None;
+                state.theme_changed = None;
                 if state.pending_generation.is_none() {
                     state.root = None;
                 }
@@ -881,27 +898,14 @@ impl WinUiAdapter {
         let queue = native::DispatcherQueue::GetForCurrentThread()?;
         let deferred_queue = Rc::clone(event_queue);
         let handler = native::DispatcherQueueHandler::new(move || {
-            let result = {
-                let mut scheduler = deferred_queue.content_dialogs.borrow_mut();
-                scheduler.cleanup_retired();
-                root.as_ref()
-                    .map_or(Ok(()), |root| scheduler.start_next(root))
-            };
-            if let Err(error) = result {
-                deferred_queue.errors.borrow_mut().push_back(error);
+            let mut scheduler = deferred_queue.content_dialogs.borrow_mut();
+            scheduler.cleanup_retired();
+            if let Some(root) = &root {
+                scheduler.start_next(root).unwrap();
             }
         });
-        match queue.TryEnqueueWithPriority(native::DispatcherQueuePriority::Normal, &handler) {
-            Ok(true) => {}
-            Ok(false) => {
-                return Err(windows_core::Error::new(
-                    native::E_FAIL,
-                    "DispatcherQueue rejected the ContentDialog continuation",
-                )
-                .into());
-            }
-            Err(error) => return Err(error.into()),
-        }
+        // A dispatcher that is shutting down rejects the continuation; no dialog will show again.
+        queue.TryEnqueueWithPriority(native::DispatcherQueuePriority::Normal, &handler)?;
         Ok(dispatch)
     }
 
@@ -980,10 +984,13 @@ impl WinUiAdapter {
             }
 
             if let Some((width, height)) = policy.client_size {
-                client_window.ResizeClient(native::SizeInt32 {
-                    width: pixels(width),
-                    height: pixels(height),
-                })?;
+                resize_window_client(
+                    &app_window,
+                    native::SizeInt32 {
+                        width: pixels(width),
+                        height: pixels(height),
+                    },
+                )?;
             }
         }
         Ok(())

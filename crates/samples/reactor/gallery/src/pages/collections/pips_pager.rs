@@ -7,7 +7,7 @@ pub struct PipsPagerPage {
 
 #[derive(Clone)]
 pub enum Message {
-    Selected(Option<usize>),
+    Selected,
     Previous,
     Next,
 }
@@ -24,8 +24,7 @@ impl Component for PipsPagerPage {
 
     fn update(&mut self, message: Message, _: &ComponentContext<Self>) {
         match message {
-            Message::Selected(Some(page)) => self.page = page.min(PAGE_COUNT - 1),
-            Message::Selected(None) => {}
+            Message::Selected => {}
             Message::Previous => self.page = self.page.saturating_sub(1),
             Message::Next => self.page = (self.page + 1).min(PAGE_COUNT - 1),
         }
@@ -42,9 +41,9 @@ impl Component for PipsPagerPage {
                     StackPanel::new().spacing(8.0).children((
                         PipsPager::new()
                             .number_of_pages(PAGE_COUNT as i32)
-                            .selected_page_index(Some(self.page))
+                            .selected_page_index(self.page as i32)
                             .max_visible_pips(5)
-                            .on_selected_index_changed(context.callback(Message::Selected)),
+                            .on_selected_index_changed(context.callback(|_| Message::Selected)),
                         StackPanel::new()
                             .orientation(Orientation::Horizontal)
                             .spacing(8.0)

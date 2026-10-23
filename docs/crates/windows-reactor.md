@@ -108,6 +108,11 @@ native event -> typed message -> update state -> describe the next view
 strings convert directly to text views. The button callbacks enqueue messages for `update`; they
 do not mutate state inside the native event callback.
 
+A callback may capture values from the render that declared it, such as a row index. Input that
+queues while the UI thread is busy reaches the callback that was declared when the input arrived,
+even if a later render replaces it. Removing the callback, even briefly, or replacing the control
+drops input still queued for it.
+
 `context.window_frame` publishes the window title and returns the standard title-bar layout. For a
 static view with no state or events, call `App::run(view)` instead.
 
@@ -117,7 +122,7 @@ To drive an editable control from component state, declare its current value and
 back as messages.
 
 ```rust,ignore
-TextBox::new(self.name.clone())
+TextBox::new().text(self.name.clone())
     .placeholder_text("Type your name")
     .on_text_changed(context.callback(Message::SetName))
 ```
@@ -130,7 +135,35 @@ a previously declared property clears its native assignment once. An explicit `N
 value, not an omitted property. Store values in component state when they must survive control
 replacement.
 
+A ranged value such as `Slider::value` follows the declared range: a range that excludes it clamps
+the control without a callback, and the declared value returns when the range allows it again.
+For a choice among options, declare `RadioButtons::selected_index`, or derive each grouped
+`RadioButton::is_checked` from one selected value. `on_checked` reports only the button the user
+checks; Reactor records the buttons WinUI unchecks without reporting them, so a rejected choice
+restores the declared button.
+
 The [`controlled`](../../crates/samples/reactor/controlled) sample shows the complete pattern.
+
+Item collections follow the same rule. `ListView`, `GridView`, and `TabView` report user
+reorders through `on_reordered` as the item keys in their new order, and a `TabView` close
+request carries the key of the tab. Give items stable keys with `keyed` so the payload identifies
+them. To keep a reorder, sort the state to match the payload. Otherwise the next render restores
+the declared order. Reactor's own inserts and moves, and drops that leave the order unchanged, are
+not reported.
+
+```rust,ignore
+Message::Reordered(order) => self
+    .tabs
+    .sort_by_key(|tab| order.iter().position(|key| *key == Key::from(tab.id))),
+```
+
+A declared `selected_index` on `ListView`, `GridView`, `ComboBox`, `RadioButtons`, `Pivot`,
+`FlipView`, or `TabView` is applied after the items it indexes. When Reactor inserts, removes, or
+moves those items, it applies the index again, and the native selection moves in between are not
+reported. An index past the end selects nothing, except on `Pivot`, which always shows an item and
+falls back to the first. Without a declared index, `on_selection_changed` reports the selection that
+results from item changes. Selector items cannot use an exit transition, since a fading item would
+keep its native slot and stay selectable; removing such an item panics.
 
 ## Split up the view
 
@@ -293,6 +326,19 @@ The [`image-sources`](../../crates/samples/reactor/image-sources) sample compare
 builders across images and icon slots. [`image-reuse`](../../crates/samples/reactor/image-reuse)
 shows page replacement with shared sources.
 
+## Animate a visual
+
+`Border` pairs `opacity`, `scale`, and `translation(x, y)` with matching
+`opacity_transition`, `scale_transition`, and `translation_transition` durations. Translation uses
+DIPs and changes visual position without changing layout space.
+
+New or replaced visuals start at their declared values without animating from native defaults.
+Later transition settings apply before target changes in the same render, regardless of builder order.
+Removing a target restores its default using the current transition. Removing a transition affects
+future target changes; an animation already running can finish. Native transitions respect the
+Windows animation setting. See the
+[translation sample](../../crates/samples/reactor/translation-transition) for sliding and reversal.
+
 ## Add icon content
 
 Use `Icon` to supply a control's icon content:
@@ -352,12 +398,47 @@ content and visibility settings.
 
 Controls are generated from `crates/tools/reactor/src/schema.toml` and the committed WinUI metadata.
 Edit the schema or generator, not the generated files. `tool-reactor-metadata` refreshes the
-metadata; `tool-reactor` generates declarations, native adapters, bindings, and control coverage.
+metadata; `tool-reactor` generates declarations, native adapters, and bindings.
 The native binding filter is `crates/tools/reactor/src/bindings.txt`.
+
+Most properties are applied through WinUI dependency properties. The generator emits a table that
+maps each property to its `DependencyProperty` and value conversion, and
+`native/winui/dependency.rs` boxes the value and calls `SetValue`. Clearing a property calls
+`ClearValue`, so the style or theme value applies again. Properties that need more than a value,
+such as theme brushes and image sources, use the adapters in `native/winui`.
 
 Use metadata names unless a shared Reactor name matches the public value, role, and behavior.
 Container names distinguish one owned visual (`content`), ordered visuals (`children`), and item
 declarations (`items`).
+
+A controlled index property names what it indexes with `indexes = "<relation or property>"`, where
+the property is a string list such as `ItemsSource`. Reactor writes the index after those items
+change, and the WinUI adapter drops the owner's selection notifications during item changes that
+the same batch follows with an index write.
+
+A range property names the controlled value it clamps with `coerces = "<property>"`. Reactor
+writes the declared value again after any change to that range, because some controls, such as
+`RatingControl`, clamp their value without raising its change event.
+
+| Key | Use |
+| --- | --- |
+| `requires_selection = true` | The control always selects an item, so an index past the end selects the first item. |
+| `realize_items = true` | The control selects only realized item containers, so the adapter runs layout before writing the index. |
+
+An event with `observe_only = true` records its `observes` property in the retained graph but has
+no callback. `RadioButton` uses it for `Unchecked`: WinUI unchecks the rest of a group as a side
+effect, never as direct user input, but Reactor must still see it to restore a rejected choice.
+
+Reactor fails fast. It does not roll back the retained graph or poison the runtime after a
+failure; it panics instead. A panic on the UI thread crosses a WinUI callback and aborts the
+process. `Result` is kept only where the caller can act:
+
+| Failure | Outcome |
+| --- | --- |
+| Invalid declaration (including duplicate or undeclared window, icon, or menu keys), internal bug, or failed native call after startup | Panic |
+| Startup failure, or error returned from an app closure (`run_with`, `AppContext::callback`, `AppProxy::dispatch`) | `App::run` returns the error |
+| Native failure in an imperative request such as `request_focus_result` | `Err(IntegrationError)` passed to the completion |
+| Dispatcher rejects work during shutdown, or the notification icon event queue is full | The work is dropped |
 
 After a generator or schema change, regenerate and inspect the output:
 
@@ -367,15 +448,4 @@ cargo check -p windows-reactor --quiet
 cargo test -p windows-reactor --all-features --lib
 ```
 
-The `test` feature exposes internal hosts, runtime records, and diagnostics for framework tests
-and benchmarks. Application code does not need it.
-
-| Location | Purpose |
-| --- | --- |
-| `crates/libs/reactor/src/tests` | Private unit tests, scoped beneath their owning modules |
-| `crates/libs/reactor/src/test_support` | Recording adapters, diagnostics, and live-test helpers |
-| `crates/tests/libs/reactor_selftest` | Privileged live WinUI coverage |
-| [`test-reactor-integration`](../../crates/tests/libs/reactor_integration/readme.md) | Public application and companion-crate fixtures |
-
-Build public integration fixtures separately from packages using the `test` feature to avoid
-Cargo feature unification. Changes to the public API also require updating `public-api.txt`.
+Changes to the public API also require updating `public-api.txt`.

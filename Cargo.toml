@@ -4,7 +4,9 @@ members = [
     "crates/libs/*",
     "crates/tools/*",
     "crates/samples/*/*",
-    "crates/tests/*/*",
+    "crates/tests/interop",
+    "crates/tests/libs/*",
+    "crates/tests/misc/*",
 ]
 
 [profile.release]
@@ -25,6 +27,7 @@ missing_unsafe_on_extern = "warn"
 unused_qualifications = "warn"
 
 [workspace.lints.clippy]
+self_named_module_files = "warn"
 type_complexity = "allow"
 manual_c_str_literals = "allow" # windows-bindgen needs to switch to signed char for this to work
 try_from_instead_of_from_str = "allow" # `GUID: TryFrom<&str>` is public API; switching to `FromStr` is a breaking change

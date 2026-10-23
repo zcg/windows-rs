@@ -14,14 +14,21 @@ pub fn write_class(item: &metadata::reader::TypeDef) -> Result<TokenStream, Erro
         quote! { : #ty }
     };
 
+    let unsealed =
+        (!item.flags().contains(metadata::TypeAttributes::Sealed)).then(|| quote! { #[unsealed] });
+
     let custom_attrs = write_custom_attributes(item.attributes(), namespace, item.index())?;
 
     let mut impls: Vec<_> = item.interface_impls().collect();
     impls.sort_by_key(|imp| !imp.has_attribute("DefaultAttribute"));
 
-    let interfaces = impls.iter().map(|imp| write_interface(namespace, imp));
+    let interfaces = impls
+        .iter()
+        .map(|imp| write_interface(namespace, imp))
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(quote! {
+        #unsealed
         #(#custom_attrs)*
         class #name #extends {
             #(#interfaces)*
@@ -29,10 +36,22 @@ pub fn write_class(item: &metadata::reader::TypeDef) -> Result<TokenStream, Erro
     })
 }
 
-fn write_interface(namespace: &str, imp: &metadata::reader::InterfaceImpl) -> TokenStream {
+fn write_interface(
+    namespace: &str,
+    imp: &metadata::reader::InterfaceImpl,
+) -> Result<TokenStream, Error> {
     let interface = write_type(namespace, &imp.interface(&[]));
 
-    quote! {
+    // The default interface is the first one listed rather than an attribute.
+    let attrs = write_custom_attributes_except(
+        imp.attributes(),
+        namespace,
+        imp.index(),
+        &["DefaultAttribute"],
+    )?;
+
+    Ok(quote! {
+        #(#attrs)*
         #interface,
-    }
+    })
 }

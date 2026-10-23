@@ -1,19 +1,152 @@
 use super::*;
 
-#[path = "images.rs"]
-mod images;
+#[test]
+fn image_load_subscriptions_complete_once_and_do_not_retain_controls() {
+    let state = ImageLoadState::default();
+    let values = Rc::new(RefCell::new(Vec::new()));
+    let result = Rc::clone(&values);
+    let callback: Rc<dyn Fn(bool)> = Rc::new(move |value| result.borrow_mut().push(value));
+    let removed: Rc<dyn Fn(bool)> = Rc::new(|_| panic!("removed subscription"));
+    assert_eq!(state.subscribe(&removed), None);
+    drop(removed);
+    assert_eq!(state.subscribe(&callback), None);
+    state.complete(true);
+    state.complete(false);
+    assert_eq!(*values.borrow(), [true]);
+    assert_eq!(state.subscribe(&callback), Some(true));
+    assert_eq!(*values.borrow(), [true]);
+    assert!(state.subscribers.borrow().is_empty());
+}
 
-#[path = "lifecycle.rs"]
-mod lifecycle;
+#[test]
+fn native_queue_preview_uses_current_callback_and_preserves_order() {
+    let object = ObjectId::test(1);
+    let first = Callback::new(|_: Key| panic!("preview must not invoke callbacks"));
+    let second = Callback::new(|_: Key| panic!("preview must not invoke callbacks"));
+    let mut adapter = WinUiAdapter::default();
+    adapter.menus.insert(
+        object,
+        NativeMenu {
+            menu: Menu::new([], first),
+            revision: 1,
+            flyout: None,
+            _revokers: Vec::new(),
+        },
+    );
+    let observation = Observation::SetProperty {
+        object,
+        property: Property {
+            id: PropertyId::Text,
+            value: PropertyValue::String(Rc::from("Before")),
+        },
+    };
+    adapter.event_queue.queue(
+        None,
+        Some(QueuedEvent {
+            object,
+            event: EventId::MenuItemInvoked,
+            handler: QueuedHandler::Presentation(0),
+            payload: EventPayload::Key("stale".into()),
+        }),
+    );
+    adapter.event_queue.queue(Some(observation.clone()), None);
+    adapter.event_queue.queue(
+        None,
+        Some(QueuedEvent {
+            object,
+            event: EventId::MenuItemInvoked,
+            handler: QueuedHandler::Presentation(1),
+            payload: EventPayload::Key("current".into()),
+        }),
+    );
+    adapter.event_queue.queue(Some(observation.clone()), None);
 
-#[path = "calendar.rs"]
-mod calendar;
+    let stale = adapter.peek_native_event();
+    assert_eq!(stale, Some(NativeEvent::new(None, None)));
+    assert_eq!(adapter.event_queue.events.borrow().len(), 4);
+    assert_eq!(adapter.pop_native_event(), stale);
+    assert_eq!(
+        adapter.pop_native_event(),
+        Some(NativeEvent::new(Some(observation.clone()), None))
+    );
 
-#[path = "ownership.rs"]
-mod ownership;
+    // Callback replacement preserves the menu presentation revision.
+    adapter.menus.get_mut(&object).unwrap().menu.on_click = second.clone();
+    let current = Some(NativeEvent::new(
+        None,
+        Some(EventDispatch::new(
+            object,
+            EventId::MenuItemInvoked,
+            EventValue::Key(second),
+            EventPayload::Key("current".into()),
+        )),
+    ));
+    assert_eq!(adapter.peek_native_event(), current);
+    assert_eq!(adapter.pop_native_event(), current);
+    assert_eq!(
+        adapter.pop_native_event(),
+        Some(NativeEvent::new(Some(observation), None))
+    );
+    assert_eq!(adapter.pop_native_event(), None);
+}
 
-#[path = "text_box.rs"]
-mod text_box;
+#[test]
+fn image_source_change_discards_only_queued_load_results() {
+    let image = ObjectId::test(1);
+    let other = ObjectId::test(2);
+    let queue = NativeEventQueue::default();
+    let event = |object, event| QueuedEvent {
+        object,
+        event,
+        handler: QueuedHandler::Callback {
+            callback: EventValue::Unit(Callback::new(|()| {})),
+            live: Rc::new(Cell::new(true)),
+        },
+        payload: EventPayload::Unit,
+    };
+    queue.queue(None, Some(event(image, EventId::ImageOpened)));
+    queue.queue(None, Some(event(image, EventId::ImageFailed)));
+    queue.queue(None, Some(event(image, EventId::PointerPressed)));
+    queue.queue(None, Some(event(other, EventId::ImageOpened)));
+
+    queue.discard_events(image, &IMAGE_SOURCE_EVENTS);
+
+    let events = queue.events.borrow();
+    let remaining: Vec<_> = events
+        .iter()
+        .map(|queued| {
+            let event = queued.event.as_ref().unwrap();
+            (event.object, event.event)
+        })
+        .collect();
+    assert_eq!(
+        remaining,
+        [
+            (image, EventId::PointerPressed),
+            (other, EventId::ImageOpened)
+        ]
+    );
+}
+
+#[test]
+fn replacement_discards_queued_reorders_without_callbacks() {
+    let replaced = ObjectId::test(1);
+    let other = ObjectId::test(2);
+    let queue = NativeEventQueue::default();
+    let reorder = |object| Observation::Reorder {
+        object,
+        relation: RelationId::Items,
+        children: Vec::new(),
+    };
+    queue.queue(Some(reorder(replaced)), None);
+    queue.queue(Some(reorder(other)), None);
+
+    queue.discard_object(replaced);
+
+    let events = queue.events.borrow();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].observation, Some(reorder(other)));
+}
 
 #[test]
 fn placement_coordinates_round_trip_negative_monitors_and_taskbar_offsets() {
@@ -391,6 +524,8 @@ fn window_visual_changes_only_apply_changed_contracts() {
     assert!(!changes.constraints);
     assert!(!changes.icon);
     assert!(changes.theme);
+    assert!(changes.any());
+    assert!(!window_visual_changes(&next, &next).any());
 }
 
 #[test]
@@ -401,14 +536,13 @@ fn window_visual_changes_detect_icon_removal() {
 }
 
 #[test]
-fn pointer_event_queue_preserves_payload_and_revision() {
+fn pointer_event_queue_preserves_payload_and_callback() {
     let mut runtime = Runtime::new(RecordingAdapter::default());
-    runtime.update(Border::new()).unwrap();
+    runtime.update(Border::new());
     let object = runtime.graph().root().unwrap();
-    let event = Rc::new(RefCell::new(NativePointerEventInfoEvent {
-        revision: 7,
-        callback: Some(Callback::new(|_| {})),
-    }));
+    let callback = Callback::new(|_| {});
+    let event = Rc::new(RefCell::new(NativePointerEventInfoEvent::default()));
+    event.borrow_mut().set(Some(callback.clone()));
     let event_queue = Rc::new(NativeEventQueue::default());
     let payload = PointerEventInfo {
         pointer_id: 42,
@@ -432,84 +566,69 @@ fn pointer_event_queue_preserves_payload_and_revision() {
     let event = queued[0].event.as_ref().unwrap();
     assert_eq!(event.object, object);
     assert_eq!(event.event, EventId::PointerReleased);
-    assert_eq!(event.revision, 7);
+    assert!(matches!(
+        &event.handler,
+        QueuedHandler::Callback {
+            callback: EventValue::PointerEventInfo(queued),
+            ..
+        } if *queued == callback
+    ));
     assert_eq!(event.payload, EventPayload::PointerEventInfo(payload));
 }
 
 #[test]
-#[ignore = "requires an interactive WinUI desktop"]
-fn event_dispatch_wakes_only_when_queued() {
-    // WinUI supports one Application lifetime per process.
-    if std::env::var_os("REACTOR_EVENT_WAKE_TEST_CHILD").is_none() {
-        let status = std::process::Command::new(std::env::current_exe().unwrap())
-            .args([
-                "--exact",
-                "native::winui::tests::event_dispatch_wakes_only_when_queued",
-                "--ignored",
-                "--nocapture",
-            ])
-            .env("REACTOR_EVENT_WAKE_TEST_CHILD", "1")
-            .status()
-            .unwrap();
-        assert!(status.success());
-        return;
-    }
-    let completed = Rc::new(Cell::new(false));
-    let finished = Rc::clone(&completed);
-    let result = App::run_with(move |app| {
-        let mut runtime = Runtime::new(RecordingAdapter::default());
-        runtime.update(Border::new()).unwrap();
-        let object = runtime.graph().root().unwrap();
-        let wakes = Rc::new(Cell::new(0));
-        let event_queue = Rc::new(NativeEventQueue::default());
-        *event_queue.waker.borrow_mut() = Some(Rc::new({
-            let wakes = Rc::clone(&wakes);
-            move || wakes.set(wakes.get() + 1)
-        }));
-
-        // An unsupported drop with no subscriber or observation must not wake.
-        let unsubscribed = Rc::new(RefCell::new(NativeDroppedDataEvent::default()));
-        WinUiAdapter::dispatch(
-            &unsubscribed,
-            &event_queue,
+fn queued_occurrences_follow_their_subscription() {
+    let object = ObjectId::test(1);
+    let first = Callback::new(|_: ()| {});
+    let second = Callback::new(|_: ()| {});
+    let third = Callback::new(|_: ()| {});
+    let event = Rc::new(RefCell::new(NativeUnitEvent::default()));
+    let mut adapter = WinUiAdapter::default();
+    let queue = |adapter: &WinUiAdapter| {
+        assert!(WinUiAdapter::queue_event(
+            &event,
+            &adapter.event_queue,
             object,
-            EventId::Drop,
+            EventId::Click,
             None,
-            DroppedData::Unsupported,
-        );
-        assert!(event_queue.events.borrow().is_empty());
-        assert!(!event_queue.wake_pending.get());
-
-        let subscribed = Rc::new(RefCell::new(NativeDroppedDataEvent {
-            revision: 1,
-            callback: Some(Callback::new(|_| {})),
-        }));
-        WinUiAdapter::dispatch(
-            &subscribed,
-            &event_queue,
-            object,
-            EventId::Drop,
+            (),
+        ));
+    };
+    let delivered = |callback: &Callback<()>| {
+        Some(NativeEvent::new(
             None,
-            DroppedData::Unsupported,
-        );
-        assert_eq!(event_queue.events.borrow().len(), 1);
-        assert!(event_queue.wake_pending.get());
+            Some(EventDispatch::new(
+                object,
+                EventId::Click,
+                EventValue::Unit(callback.clone()),
+                EventPayload::Unit,
+            )),
+        ))
+    };
 
-        let timer = native::DispatcherQueue::GetForCurrentThread()?.CreateTimer()?;
-        timer.SetInterval(TimeSpan::try_from(Duration::from_millis(100)).unwrap())?;
-        let app = app.clone();
-        let tick = timer.Tick(move |sender, _| {
-            assert_eq!(wakes.get(), 1);
-            assert!(!event_queue.wake_pending.get());
-            sender.ok().unwrap().Stop().unwrap();
-            finished.set(true);
-            app.exit().unwrap();
-        })?;
-        timer.Start()?;
-        Ok((timer, tick))
-    });
-    result.unwrap();
-    assert!(completed.get());
+    // Replacing the callback keeps the subscription, so the occurrence reaches the callback
+    // subscribed when it fired.
+    event.borrow_mut().set(Some(first.clone()));
+    queue(&adapter);
+    event.borrow_mut().set(Some(second));
+    assert_eq!(adapter.pop_native_event(), delivered(&first));
+
+    // Removing the event ends the subscription even if it is re-added before delivery.
+    queue(&adapter);
+    event.borrow_mut().set(None);
+    event.borrow_mut().set(Some(third.clone()));
+    assert_eq!(
+        adapter.pop_native_event(),
+        Some(NativeEvent::new(None, None))
+    );
+
+    queue(&adapter);
+    assert_eq!(adapter.pop_native_event(), delivered(&third));
+
+    // An occurrence completing asynchronously captures its handler when the event fires.
+    let pending = event.borrow().handler().unwrap();
+    event.borrow_mut().set(None);
+    assert!(matches!(pending, QueuedHandler::Callback { live, .. } if !live.get()));
 }
 
 #[test]

@@ -3,6 +3,7 @@ use super::*;
 mod context;
 mod lifecycle;
 mod messaging;
+mod native_queue;
 mod reconcile;
 mod virtualization;
 mod window;
@@ -153,74 +154,5 @@ impl Component for ContextReader {
             0
         };
         TextBlock::new().text(value.to_string()).into()
-    }
-}
-
-#[derive(Clone)]
-struct StatefulInput {
-    changes: Rc<Cell<usize>>,
-    value: usize,
-}
-
-impl PartialEq for StatefulInput {
-    fn eq(&self, other: &Self) -> bool {
-        self.value == other.value && Rc::ptr_eq(&self.changes, &other.changes)
-    }
-}
-
-struct StatefulInputComponent;
-
-impl Component for StatefulInputComponent {
-    type Input = StatefulInput;
-    type Message = ();
-
-    fn create(_input: &Self::Input, _context: &ComponentContext<Self>) -> Self {
-        Self
-    }
-
-    fn input_changed(&mut self, input: &Self::Input, _context: &ComponentContext<Self>) {
-        input.changes.set(input.changes.get() + 1);
-    }
-
-    fn view(&self, input: &Self::Input, _context: &mut ViewContext<Self>) -> View {
-        TextBlock::new().text(input.value.to_string()).into()
-    }
-}
-
-struct ControlledApplyAdapter {
-    fail_after: Rc<Cell<Option<usize>>>,
-    inner: RecordingAdapter,
-    successful: Rc<Cell<usize>>,
-}
-
-impl Adapter for ControlledApplyAdapter {
-    type Error = ();
-
-    fn preview_native_events(&self, events: &mut Vec<NativeEvent>) {
-        self.inner.preview_native_events(events);
-    }
-
-    fn pop_native_event(&mut self) -> Option<NativeEvent> {
-        self.inner.pop_native_event()
-    }
-
-    fn validate(&self, mutations: &[Mutation]) -> Result<(), Self::Error> {
-        self.inner.validate(mutations).map_err(|_| ())
-    }
-
-    fn apply(&mut self, mutations: &[Mutation]) -> Result<(), Self::Error> {
-        if let Some(remaining) = self.fail_after.get() {
-            if remaining == 0 {
-                return Err(());
-            }
-            self.fail_after.set(Some(remaining - 1));
-        }
-        self.inner.apply(mutations).map_err(|_| ())?;
-        self.successful.set(self.successful.get() + 1);
-        Ok(())
-    }
-
-    fn focus(&mut self, object: ObjectId) -> Result<bool, Self::Error> {
-        self.inner.focus(object).map_err(|_| ())
     }
 }

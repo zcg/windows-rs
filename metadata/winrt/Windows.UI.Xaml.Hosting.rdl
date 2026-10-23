@@ -16,6 +16,7 @@ mod Windows {
                 #[Windows::Foundation::Metadata::WebHostHidden]
                 class DesignerAppManager {
                     IDesignerAppManager,
+                    #[Windows::Foundation::Metadata::ContractVersion("Windows.UI.Xaml.Hosting.HostingContract", 131072)]
                     super::super::super::Foundation::IClosable,
                 }
                 #[Windows::Foundation::Metadata::ContractVersion(HostingContract, 131072)]
@@ -23,6 +24,7 @@ mod Windows {
                 #[Windows::Foundation::Metadata::WebHostHidden]
                 class DesignerAppView {
                     IDesignerAppView,
+                    #[Windows::Foundation::Metadata::ContractVersion("Windows.UI.Xaml.Hosting.HostingContract", 131072)]
                     super::super::super::Foundation::IClosable,
                 }
                 #[repr(i32)]
@@ -32,6 +34,7 @@ mod Windows {
                     Visible = 0,
                     Hidden = 1,
                 }
+                #[unsealed]
                 #[Windows::Foundation::Metadata::Composable(IDesktopWindowXamlSourceFactory, Public, 196608, "Windows.UI.Xaml.Hosting.HostingContract")]
                 #[Windows::Foundation::Metadata::ContractVersion(HostingContract, 196608)]
                 #[Windows::Foundation::Metadata::MarshalingBehavior(Agile)]
@@ -39,6 +42,7 @@ mod Windows {
                 #[Windows::Foundation::Metadata::WebHostHidden]
                 class DesktopWindowXamlSource {
                     IDesktopWindowXamlSource,
+                    #[Windows::Foundation::Metadata::ContractVersion("Windows.UI.Xaml.Hosting.HostingContract", 196608)]
                     super::super::super::Foundation::IClosable,
                 }
                 #[Windows::Foundation::Metadata::ContractVersion(HostingContract, 196608)]
@@ -279,6 +283,7 @@ mod Windows {
                 #[Windows::Foundation::Metadata::WebHostHidden]
                 class WindowsXamlManager {
                     IWindowsXamlManager,
+                    #[Windows::Foundation::Metadata::ContractVersion("Windows.UI.Xaml.Hosting.HostingContract", 196608)]
                     super::super::super::Foundation::IClosable,
                 }
                 #[repr(i32)]

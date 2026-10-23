@@ -53,7 +53,7 @@ pub fn set_font_scale(scale: f64) -> bool {
     non_camel_case_types,
     non_snake_case,
     non_upper_case_globals,
-    // The merged filter intentionally covers more controls than this build references.
+    // The generated filter intentionally covers more APIs than any single build references.
     dead_code
 )]
 mod bindings;

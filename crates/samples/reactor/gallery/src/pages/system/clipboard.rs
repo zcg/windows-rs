@@ -77,7 +77,8 @@ impl Component for ClipboardPage {
                 sample_card(
                     "Copy and Paste",
                     StackPanel::new().spacing(8.0).children((
-                        TextBox::new(self.text.clone())
+                        TextBox::new()
+                            .text(self.text.clone())
                             .on_text_changed(context.callback(|value: std::rc::Rc<str>| {
                                 Message::Text(value.to_string())
                             }))

@@ -1,19 +1,145 @@
 use super::*;
 
 #[test]
+fn font_icon_font_size_requires_finite_positive_values() {
+    for value in [0.0, -1.0, f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert!(std::panic::catch_unwind(|| FontIcon::new().font_size(value)).is_err());
+    }
+    FontIcon::new().font_size(16.0);
+}
+
+#[test]
+fn text_block_alignment_shares_the_text_box_contract_and_clears() {
+    assert_eq!(
+        property_contract(ObjectType::TextBlock, PropertyId::TextAlignment),
+        property_contract(ObjectType::TextBox, PropertyId::TextAlignment)
+    );
+    let mut runtime = Runtime::new(RecordingAdapter::default());
+    runtime.update(TextBlock::new().text_alignment(TextAlignment::Center));
+    let root = runtime.graph().root().unwrap();
+    assert!(
+        runtime
+            .update(TextBlock::new().text_alignment(TextAlignment::Center))
+            .is_empty()
+    );
+    let mutations = runtime.update(TextBlock::new().text_alignment(TextAlignment::Right));
+    assert!(matches!(
+        mutations.as_slice(),
+        [Mutation::SetProperties { object, set, clear }]
+            if *object == root && clear.is_empty()
+                && set.as_ref() == [Property {
+                    id: PropertyId::TextAlignment,
+                    value: TextAlignment::Right.property_value(),
+                }]
+    ));
+    let mutations = runtime.update(TextBlock::new());
+    assert!(matches!(
+        mutations.as_slice(),
+        [Mutation::SetProperties { object, set, clear }]
+            if *object == root && set.is_empty() && clear.as_ref() == [PropertyId::TextAlignment]
+    ));
+    assert!(runtime.update(TextBlock::new()).is_empty());
+}
+
+#[test]
+fn text_block_typography_updates_and_clears_without_replacement() {
+    let first = || {
+        TextBlock::new()
+            .font_family("Consolas")
+            .character_spacing(-50)
+            .line_height(24.0)
+    };
+    let mut runtime = Runtime::new(RecordingAdapter::default());
+    runtime.update(first());
+    let root = runtime.graph().root().unwrap();
+    for (id, value) in [
+        (
+            PropertyId::FontFamily,
+            PropertyValue::String("Consolas".into()),
+        ),
+        (PropertyId::CharacterSpacing, PropertyValue::I32(-50)),
+        (PropertyId::LineHeight, PropertyValue::F64(24.0)),
+    ] {
+        assert!(
+            runtime
+                .graph()
+                .properties(root)
+                .unwrap()
+                .contains(&Property { id, value })
+        );
+    }
+    assert!(runtime.update(first()).is_empty());
+    let mutations = runtime.update(
+        TextBlock::new()
+            .font_family(String::from("Arial"))
+            .character_spacing(200)
+            .line_height(0.0),
+    );
+    let [Mutation::SetProperties { object, set, clear }] = mutations.as_slice() else {
+        panic!("expected a retained property update");
+    };
+    assert_eq!(*object, root);
+    assert!(clear.is_empty());
+    assert_eq!(set.len(), 3);
+    for (id, value) in [
+        (
+            PropertyId::FontFamily,
+            PropertyValue::String("Arial".into()),
+        ),
+        (PropertyId::CharacterSpacing, PropertyValue::I32(200)),
+        (PropertyId::LineHeight, PropertyValue::F64(0.0)),
+    ] {
+        assert!(set.contains(&Property { id, value }));
+    }
+    let mutations = runtime.update(TextBlock::new());
+    let [Mutation::SetProperties { object, set, clear }] = mutations.as_slice() else {
+        panic!("expected a retained property clear");
+    };
+    assert_eq!(*object, root);
+    assert!(set.is_empty());
+    assert_eq!(clear.len(), 3);
+    for id in [
+        PropertyId::FontFamily,
+        PropertyId::CharacterSpacing,
+        PropertyId::LineHeight,
+    ] {
+        assert!(clear.contains(&id));
+    }
+    assert!(runtime.update(TextBlock::new()).is_empty());
+}
+
+#[test]
+fn text_block_line_height_requires_finite_non_negative_values() {
+    for value in [-1.0, f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert!(std::panic::catch_unwind(|| TextBlock::new().line_height(value)).is_err());
+    }
+    for value in [0.0, 0.5, 24.0] {
+        TextBlock::new().line_height(value);
+    }
+}
+
+#[test]
+fn number_box_small_change_requires_finite_values() {
+    for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert!(std::panic::catch_unwind(|| NumberBox::new().small_change(value)).is_err());
+    }
+    for value in [-0.5, 0.0, 0.25, 2.0] {
+        NumberBox::new().small_change(value);
+    }
+}
+
+#[test]
 fn calendar_date_properties_order_update_and_clear() {
     let min = DateTime::from_unix_secs(1_700_000_000);
     let max = DateTime::from_unix_secs(1_800_000_000);
     let date = DateTime::from_unix_secs(1_750_000_000);
     let mut runtime = Runtime::new(RecordingAdapter::default());
-    runtime
-        .update(
-            CalendarDatePicker::new()
-                .date(date)
-                .max_date(max)
-                .min_date(min),
-        )
-        .unwrap();
+    runtime.update(
+        CalendarDatePicker::new()
+            .date(date)
+            .max_date(max)
+            .min_date(min),
+    );
     let root = runtime.graph().root().unwrap();
     assert_eq!(
         runtime.graph().properties(root).unwrap(),
@@ -40,12 +166,9 @@ fn calendar_date_properties_order_update_and_clear() {
                     .max_date(max)
                     .date(Some(date))
             )
-            .unwrap()
             .is_empty()
     );
-    let mutations = runtime
-        .update(CalendarDatePicker::new().date(None))
-        .unwrap();
+    let mutations = runtime.update(CalendarDatePicker::new().date(None));
     assert!(matches!(
         mutations.as_slice(),
         [Mutation::SetProperties { object, set, clear }]
@@ -56,18 +179,13 @@ fn calendar_date_properties_order_update_and_clear() {
                 }]
                 && clear.as_ref() == [PropertyId::MinDate, PropertyId::MaxDate]
     ));
-    let mutations = runtime.update(CalendarDatePicker::new()).unwrap();
+    let mutations = runtime.update(CalendarDatePicker::new());
     assert!(matches!(
         mutations.as_slice(),
         [Mutation::SetProperties { object, set, clear }]
             if *object == root && set.is_empty() && clear.as_ref() == [PropertyId::Date]
     ));
-    assert!(
-        runtime
-            .update(CalendarDatePicker::new())
-            .unwrap()
-            .is_empty()
-    );
+    assert!(runtime.update(CalendarDatePicker::new()).is_empty());
 }
 
 #[test]
@@ -76,7 +194,7 @@ fn navigation_view_flags_set_update_and_clear_independently() {
     let view = NavigationView::new()
         .is_back_enabled(true)
         .is_pane_visible(false);
-    runtime.update(view.clone()).unwrap();
+    runtime.update(view.clone());
     let root = runtime.graph().root().unwrap();
     assert_eq!(
         runtime.graph().properties(root).unwrap(),
@@ -91,15 +209,13 @@ fn navigation_view_flags_set_update_and_clear_independently() {
             },
         ]
     );
-    assert!(runtime.update(view).unwrap().is_empty());
+    assert!(runtime.update(view).is_empty());
 
-    let mutations = runtime
-        .update(
-            NavigationView::new()
-                .is_back_enabled(false)
-                .is_pane_visible(true),
-        )
-        .unwrap();
+    let mutations = runtime.update(
+        NavigationView::new()
+            .is_back_enabled(false)
+            .is_pane_visible(true),
+    );
     assert_eq!(mutations.len(), 1);
     let Mutation::SetProperties { object, set, clear } = &mutations[0] else {
         panic!("expected property mutation");
@@ -120,16 +236,14 @@ fn navigation_view_flags_set_update_and_clear_independently() {
     );
     assert!(clear.is_empty());
 
-    let mutations = runtime
-        .update(NavigationView::new().is_pane_visible(true))
-        .unwrap();
+    let mutations = runtime.update(NavigationView::new().is_pane_visible(true));
     assert_eq!(mutations.len(), 1);
     assert!(matches!(
         &mutations[0],
         Mutation::SetProperties { object, set, clear }
             if *object == root && set.is_empty() && clear.as_ref() == [PropertyId::IsBackEnabled]
     ));
-    let mutations = runtime.update(NavigationView::new()).unwrap();
+    let mutations = runtime.update(NavigationView::new());
     assert_eq!(mutations.len(), 1);
     assert!(matches!(
         &mutations[0],
@@ -144,20 +258,15 @@ fn navigation_view_flags_set_update_and_clear_independently() {
 fn navigation_view_pane_header_updates_replaces_and_detaches() {
     let mut runtime = Runtime::new(RecordingAdapter::default());
     let view = || NavigationView::new().pane_footer("Footer").content("Body");
-    runtime.update(view().pane_header("Header")).unwrap();
+    runtime.update(view().pane_header("Header"));
     let root = runtime.graph().root().unwrap();
     let header = runtime.graph().child(root, RelationId::PaneHeader).unwrap();
     let footer = runtime.graph().child(root, RelationId::PaneFooter).unwrap();
     let content = runtime.graph().child(root, RelationId::Content).unwrap();
     assert_eq!(runtime.graph().kind(header), Some(ObjectType::TextBlock));
-    assert!(
-        runtime
-            .update(view().pane_header("Header"))
-            .unwrap()
-            .is_empty()
-    );
+    assert!(runtime.update(view().pane_header("Header")).is_empty());
 
-    runtime.update(view().pane_header("Updated")).unwrap();
+    runtime.update(view().pane_header("Updated"));
     assert_eq!(
         runtime.graph().child(root, RelationId::PaneHeader),
         Some(header)
@@ -169,15 +278,13 @@ fn navigation_view_pane_header_updates_replaces_and_detaches() {
             value: PropertyValue::String("Updated".into()),
         }]
     );
-    runtime
-        .update(view().pane_header(Button::new().content("Replacement")))
-        .unwrap();
+    runtime.update(view().pane_header(Button::new().content("Replacement")));
     let replacement = runtime.graph().child(root, RelationId::PaneHeader).unwrap();
     assert_ne!(replacement, header);
     assert_eq!(runtime.graph().kind(header), None);
     assert_eq!(runtime.graph().kind(replacement), Some(ObjectType::Button));
 
-    runtime.update(view()).unwrap();
+    runtime.update(view());
     assert_eq!(runtime.graph().child(root, RelationId::PaneHeader), None);
     assert_eq!(runtime.graph().kind(replacement), None);
     assert_eq!(
@@ -215,7 +322,7 @@ fn callbacks_clone_without_clone_payloads() {
 #[test]
 fn strings_convert_to_text_visuals() {
     let mut runtime = Runtime::new(RecordingAdapter::default());
-    runtime.update("Text").unwrap();
+    runtime.update("Text");
 
     let root = runtime.graph().root().unwrap();
     assert_eq!(runtime.graph().kind(root), Some(ObjectType::TextBlock));
@@ -316,7 +423,8 @@ fn shared_value_builders_cover_the_public_family() {
             ),
             keyed(
                 "input",
-                TextBox::new("Text")
+                TextBox::new()
+                    .text("Text")
                     .background(Color::rgb(7, 8, 9))
                     .border_brush(ThemeBrush::Accent)
                     .border_thickness(Thickness::uniform(2.0)),
@@ -358,10 +466,10 @@ fn shared_values_record_set_update_clear_and_unchanged_updates() {
         .style(ButtonStyle::Subtle)
         .key_accelerators(accelerators.clone());
     let mut runtime = Runtime::new(RecordingAdapter::default());
-    runtime.update(initial.clone()).unwrap();
+    runtime.update(initial.clone());
     let button = runtime.graph().root().unwrap();
 
-    assert!(runtime.update(initial).unwrap().is_empty());
+    assert!(runtime.update(initial).is_empty());
     assert_eq!(
         runtime.graph().properties(button).unwrap(),
         [
@@ -384,9 +492,7 @@ fn shared_values_record_set_update_clear_and_unchanged_updates() {
         ]
     );
 
-    let mutations = runtime
-        .update(Button::new().background(Color::rgb(20, 30, 40)))
-        .unwrap();
+    let mutations = runtime.update(Button::new().background(Color::rgb(20, 30, 40)));
     let Mutation::SetProperties { set, clear, .. } = &mutations[0] else {
         panic!("expected property mutation");
     };
@@ -405,19 +511,13 @@ fn shared_values_record_set_update_clear_and_unchanged_updates() {
             PropertyId::KeyboardAccelerators,
         ]
     );
-    assert!(
-        runtime
-            .update(Button::new())
-            .unwrap()
-            .iter()
-            .any(|mutation| {
-                matches!(
-                    mutation,
-                    Mutation::SetProperties { clear, .. }
-                        if clear.as_ref() == [PropertyId::Background]
-                )
-            })
-    );
+    assert!(runtime.update(Button::new()).iter().any(|mutation| {
+        matches!(
+            mutation,
+            Mutation::SetProperties { clear, .. }
+                if clear.as_ref() == [PropertyId::Background]
+        )
+    }));
 }
 
 #[test]
@@ -427,10 +527,10 @@ fn icon_slots_record_set_update_clear_and_unchanged_updates() {
         .content("Search")
         .icon(initial_icon.clone());
     let mut runtime = Runtime::new(RecordingAdapter::default());
-    runtime.update(initial.clone()).unwrap();
+    runtime.update(initial.clone());
     let item = runtime.graph().root().unwrap();
 
-    assert!(runtime.update(initial).unwrap().is_empty());
+    assert!(runtime.update(initial).is_empty());
     assert_eq!(
         runtime.graph().properties(item).unwrap(),
         [Property {
@@ -440,13 +540,11 @@ fn icon_slots_record_set_update_clear_and_unchanged_updates() {
     );
 
     let path = Icon::path("M 0,0 L 8,8");
-    let mutations = runtime
-        .update(
-            NavigationViewItem::new()
-                .content("Search")
-                .icon(path.clone()),
-        )
-        .unwrap();
+    let mutations = runtime.update(
+        NavigationViewItem::new()
+            .content("Search")
+            .icon(path.clone()),
+    );
     let Mutation::SetProperties { set, clear, .. } = &mutations[0] else {
         panic!("expected property mutation");
     };
@@ -459,9 +557,7 @@ fn icon_slots_record_set_update_clear_and_unchanged_updates() {
     );
     assert!(clear.is_empty());
 
-    let mutations = runtime
-        .update(NavigationViewItem::new().content("Search"))
-        .unwrap();
+    let mutations = runtime.update(NavigationViewItem::new().content("Search"));
     assert!(mutations.iter().any(|mutation| {
         matches!(
             mutation,
@@ -471,16 +567,46 @@ fn icon_slots_record_set_update_clear_and_unchanged_updates() {
 }
 
 #[test]
+fn text_box_text_builder_sets_replaces_and_clears() {
+    assert_eq!(TextBox::new(), TextBox::default());
+    let mut runtime = Runtime::new(RecordingAdapter::default());
+    runtime.update(TextBox::new());
+    let object = runtime.graph().root().unwrap();
+    assert!(runtime.graph().properties(object).unwrap().is_empty());
+
+    let text_box = TextBox::new().text("First").text("Last");
+    let mutations = runtime.update(text_box.clone());
+    assert!(matches!(
+        mutations.as_slice(),
+        [Mutation::SetProperties { object: target, set, clear }]
+            if *target == object && clear.is_empty() && set.as_ref() == [
+                Property {
+                    id: PropertyId::Text,
+                    value: PropertyValue::String(Rc::from("Last")),
+                },
+            ]
+    ));
+    assert!(runtime.update(text_box).is_empty());
+
+    let mutations = runtime.update(TextBox::new());
+    assert!(matches!(
+        mutations.as_slice(),
+        [Mutation::SetProperties { object: target, set, clear }]
+            if *target == object && set.is_empty() && clear.as_ref() == [PropertyId::Text]
+    ));
+    assert!(runtime.update(TextBox::default()).is_empty());
+}
+
+#[test]
 fn text_box_appearance_records_set_and_clear() {
     let mut runtime = Runtime::new(RecordingAdapter::default());
-    runtime
-        .update(
-            TextBox::new("Text")
-                .placeholder_text("Enter text")
-                .accepts_return(true)
-                .text_wrapping(TextWrapping::Wrap),
-        )
-        .unwrap();
+    runtime.update(
+        TextBox::new()
+            .text("Text")
+            .placeholder_text("Enter text")
+            .accepts_return(true)
+            .text_wrapping(TextWrapping::Wrap),
+    );
     let text_box = runtime.graph().root().unwrap();
 
     assert_eq!(
@@ -508,7 +634,7 @@ fn text_box_appearance_records_set_and_clear() {
         ]
     );
 
-    let mutations = runtime.update(TextBox::new("Text")).unwrap();
+    let mutations = runtime.update(TextBox::new().text("Text"));
     let Mutation::SetProperties { set, clear, .. } = &mutations[0] else {
         panic!("expected property mutation");
     };
@@ -526,22 +652,22 @@ fn text_box_appearance_records_set_and_clear() {
 #[test]
 fn text_box_read_only_and_alignment_update_and_clear() {
     let view = || {
-        TextBox::new("Text")
+        TextBox::new()
+            .text("Text")
             .is_read_only(true)
             .text_alignment(TextAlignment::Center)
     };
     let mut runtime = Runtime::new(RecordingAdapter::default());
-    runtime.update(view()).unwrap();
+    runtime.update(view());
     let object = runtime.graph().root().unwrap();
-    assert!(runtime.update(view()).unwrap().is_empty());
+    assert!(runtime.update(view()).is_empty());
 
-    let mutations = runtime
-        .update(
-            TextBox::new("Text")
-                .is_read_only(false)
-                .text_alignment(TextAlignment::Right),
-        )
-        .unwrap();
+    let mutations = runtime.update(
+        TextBox::new()
+            .text("Text")
+            .is_read_only(false)
+            .text_alignment(TextAlignment::Right),
+    );
     assert!(matches!(
         mutations.as_slice(),
         [Mutation::SetProperties { object: target, set, clear }]
@@ -556,18 +682,36 @@ fn text_box_read_only_and_alignment_update_and_clear() {
                 },
             ]
     ));
-    let mutations = runtime.update(TextBox::new("Text")).unwrap();
+    let mutations = runtime.update(TextBox::new().text("Text"));
     assert!(matches!(
         mutations.as_slice(),
         [Mutation::SetProperties { object: target, set, clear }]
             if *target == object && set.is_empty()
                 && clear.as_ref() == [PropertyId::IsReadOnly, PropertyId::TextAlignment]
     ));
-    assert!(runtime.update(TextBox::new("Text")).unwrap().is_empty());
+    assert!(runtime.update(TextBox::new().text("Text")).is_empty());
 }
 
 #[test]
 fn shared_value_validation_rejects_invalid_inputs() {
+    for (x, y) in [
+        (f64::NAN, 0.0),
+        (0.0, f64::INFINITY),
+        (f64::MAX, 0.0),
+        (0.0, -f64::MAX),
+    ] {
+        assert!(std::panic::catch_unwind(|| Border::new().translation(x, y)).is_err());
+        assert!(
+            std::panic::catch_unwind(|| validate_property(
+                ObjectType::Border,
+                &Property {
+                    id: PropertyId::Translation,
+                    value: PropertyValue::Vector2([x, y]),
+                }
+            ))
+            .is_err()
+        );
+    }
     assert!(HyperlinkButton::new().navigate_uri("not a uri").is_err());
     assert!(BitmapIcon::new().uri_source("").is_err());
     assert!(
@@ -581,6 +725,49 @@ fn shared_value_validation_rejects_invalid_inputs() {
             ResourceOverrides::new().set("Bad", Thickness::uniform(f64::NAN));
         })
         .is_err()
+    );
+}
+
+#[test]
+fn translation_updates_both_axes_and_clears_independently() {
+    let mut runtime = Runtime::new(RecordingAdapter::default());
+    let view = || {
+        Border::new()
+            .translation(-120.0, 40.0)
+            .translation_transition(Duration::from_secs(1))
+    };
+    runtime.update(view());
+    assert!(runtime.update(view()).is_empty());
+    assert!(
+        runtime
+            .update(
+                Border::new()
+                    .translation_transition(Duration::from_secs(1))
+                    .translation(-120.0, 40.0),
+            )
+            .is_empty()
+    );
+    let mutations = runtime.update(
+        Border::new()
+            .translation(80.0, -20.0)
+            .translation_transition(Duration::from_secs(1)),
+    );
+    assert!(
+        matches!(mutations.as_slice(), [Mutation::SetProperties { set, clear, .. }]
+        if clear.is_empty() && set.as_ref() == [Property {
+            id: PropertyId::Translation,
+            value: PropertyValue::Vector2([80.0, -20.0]),
+        }])
+    );
+    let mutations = runtime.update(Border::new().translation_transition(Duration::from_secs(1)));
+    assert!(
+        matches!(mutations.as_slice(), [Mutation::SetProperties { set, clear, .. }]
+        if set.is_empty() && clear.as_ref() == [PropertyId::Translation])
+    );
+    let mutations = runtime.update(Border::new());
+    assert!(
+        matches!(mutations.as_slice(), [Mutation::SetProperties { set, clear, .. }]
+        if set.is_empty() && clear.as_ref() == [PropertyId::TranslationTransition])
     );
 }
 
@@ -627,7 +814,7 @@ fn grid_definitions_update_and_clear_as_value_properties() {
     let initial = Grid::new()
         .rows([GridLength::Auto, GridLength::Star(2.0)])
         .columns([GridLength::Pixel(20.0).min(10.0)]);
-    let mutations = runtime.update(initial.clone()).unwrap();
+    let mutations = runtime.update(initial.clone());
     assert_eq!(
         mutations
             .iter()
@@ -638,11 +825,9 @@ fn grid_definitions_update_and_clear_as_value_properties() {
             .sum::<usize>(),
         2
     );
-    assert!(runtime.update(initial).unwrap().is_empty());
+    assert!(runtime.update(initial).is_empty());
 
-    let mutations = runtime
-        .update(Grid::new().rows([GridLength::Pixel(10.0)]))
-        .unwrap();
+    let mutations = runtime.update(Grid::new().rows([GridLength::Pixel(10.0)]));
     assert_eq!(
         mutations
             .iter()
@@ -670,13 +855,12 @@ fn grid_definitions_update_and_clear_as_value_properties() {
 #[test]
 fn shared_visual_properties_apply_to_handwritten_objects() {
     let mut runtime = Runtime::new(RecordingAdapter::default());
-    runtime
-        .update(
-            TextBox::new("Text")
-                .width(240.0)
-                .margin(Thickness::uniform(12.0)),
-        )
-        .unwrap();
+    runtime.update(
+        TextBox::new()
+            .text("Text")
+            .width(240.0)
+            .margin(Thickness::uniform(12.0)),
+    );
     let text_box = runtime.graph().root().unwrap();
     assert!(
         runtime
@@ -690,7 +874,7 @@ fn shared_visual_properties_apply_to_handwritten_objects() {
     );
 
     assert_eq!(
-        runtime.update(TextBox::new("Text")).unwrap(),
+        runtime.update(TextBox::new().text("Text")),
         [Mutation::SetProperties {
             object: text_box,
             set: Rc::from([]),
@@ -705,25 +889,23 @@ fn shared_capabilities_record_exact_property_and_focus_changes() {
     let mut adapter = RecordingAdapter::default();
     adapter.record_batches(true);
     let mut runtime = Runtime::new(adapter);
-    runtime
-        .update(
-            StackPanel::new().children([
-                Button::new()
-                    .element_ref(&reference)
-                    .is_enabled(false)
-                    .grid_row(2)
-                    .relative_align_left()
-                    .automation_name("action")
-                    .into(),
-                TextBlock::new()
-                    .text("Text")
-                    .min_width(20.0)
-                    .max_height(80.0)
-                    .font_weight(FontWeight::SEMI_BOLD)
-                    .into(),
-            ]),
-        )
-        .unwrap();
+    runtime.update(
+        StackPanel::new().children([
+            Button::new()
+                .element_ref(&reference)
+                .is_enabled(false)
+                .grid_row(2)
+                .relative_align_left()
+                .automation_name("action")
+                .into(),
+            TextBlock::new()
+                .text("Text")
+                .min_width(20.0)
+                .max_height(80.0)
+                .font_weight(FontWeight::SEMI_BOLD)
+                .into(),
+        ]),
+    );
     let root = runtime.graph().root().unwrap();
     let children = runtime
         .graph()
@@ -746,15 +928,13 @@ fn shared_capabilities_record_exact_property_and_focus_changes() {
             .sum::<usize>(),
         8
     );
-    assert!(runtime.focus(&reference).unwrap());
+    assert!(runtime.focus(&reference));
     assert_eq!(runtime.adapter().focuses(), [children[0]]);
 
-    let mutations = runtime
-        .update(StackPanel::new().children([
-            Button::new().element_ref(&reference).into(),
-            TextBlock::new().text("Text").into(),
-        ]))
-        .unwrap();
+    let mutations = runtime.update(StackPanel::new().children([
+        Button::new().element_ref(&reference).into(),
+        TextBlock::new().text("Text").into(),
+    ]));
     assert_eq!(mutations.len(), 2);
     assert_eq!(
         mutations
@@ -775,13 +955,11 @@ fn button_content_and_click_use_generated_contracts() {
     let callback_calls = Rc::clone(&calls);
     let callback = Callback::new(move |()| callback_calls.set(callback_calls.get() + 1));
     let mut runtime = Runtime::new(RecordingAdapter::default());
-    runtime
-        .update(
-            Button::new()
-                .content(TextBlock::new().text("Deal"))
-                .on_click(callback.clone()),
-        )
-        .unwrap();
+    runtime.update(
+        Button::new()
+            .content(TextBlock::new().text("Deal"))
+            .on_click(callback.clone()),
+    );
     let button = runtime.graph().root().unwrap();
     let content = runtime.graph().child(button, RelationId::Content).unwrap();
     assert_eq!(runtime.graph().kind(button), Some(ObjectType::Button));
@@ -793,7 +971,7 @@ fn button_content_and_click_use_generated_contracts() {
         EventValue::Unit(callback),
         EventPayload::Unit,
     ));
-    assert_eq!(runtime.dispatch_native_events().unwrap(), 1);
+    assert_eq!(runtime.dispatch_native_events(), 1);
     assert_eq!(calls.get(), 1);
 }
 
@@ -810,7 +988,7 @@ fn svg_sources_preserve_format_and_byte_value_identity() {
     ];
     for view in views {
         let mut runtime = Runtime::new(RecordingAdapter::default());
-        runtime.update(view).unwrap();
+        runtime.update(view);
         assert_eq!(
             runtime
                 .graph()
@@ -825,13 +1003,11 @@ fn svg_sources_preserve_format_and_byte_value_identity() {
 #[test]
 fn final_value_parity_contracts_are_typed() {
     let mut image = Runtime::new(RecordingAdapter::default());
-    image
-        .update(
-            Image::new()
-                .source("https://example.com/image.png")
-                .unwrap(),
-        )
-        .unwrap();
+    image.update(
+        Image::new()
+            .source("https://example.com/image.png")
+            .unwrap(),
+    );
     assert!(matches!(
         &image.graph().properties(image.graph().root().unwrap()).unwrap()[0].value,
         PropertyValue::ImageSource(value)
@@ -841,9 +1017,7 @@ fn final_value_parity_contracts_are_typed() {
                     if value.as_ref() == "https://example.com/image.png"
             )
     ));
-    image
-        .update(Image::new().source_file(r"C:\work dir\a#b%20.png").unwrap())
-        .unwrap();
+    image.update(Image::new().source_file(r"C:\work dir\a#b%20.png").unwrap());
     assert!(matches!(
         &image.graph().properties(image.graph().root().unwrap()).unwrap()[0].value,
         PropertyValue::ImageSource(value)
@@ -854,9 +1028,7 @@ fn final_value_parity_contracts_are_typed() {
             )
     ));
     let encoded = EncodedImage::new(Vec::from(b"encoded image"));
-    image
-        .update(Image::new().source_data(encoded.clone()))
-        .unwrap();
+    image.update(Image::new().source_data(encoded.clone()));
     assert!(matches!(
         &image.graph().properties(image.graph().root().unwrap()).unwrap()[0].value,
         PropertyValue::ImageSource(value)
@@ -879,8 +1051,7 @@ fn final_value_parity_contracts_are_typed() {
         })]),
     ]);
     let mut rich = Runtime::new(RecordingAdapter::default());
-    rich.update(RichTextBlock::new().paragraphs(rich_text.clone()))
-        .unwrap();
+    rich.update(RichTextBlock::new().paragraphs(rich_text.clone()));
     assert_eq!(
         rich.graph()
             .properties(rich.graph().root().unwrap())
@@ -896,13 +1067,11 @@ fn final_value_parity_contracts_are_typed() {
         Callback::new(move |value| values.borrow_mut().push(value))
     };
     let mut picker = Runtime::new(RecordingAdapter::default());
-    picker
-        .update(
-            ColorPicker::new()
-                .color(color)
-                .on_color_changed(color_callback.clone()),
-        )
-        .unwrap();
+    picker.update(
+        ColorPicker::new()
+            .color(color)
+            .on_color_changed(color_callback.clone()),
+    );
     let object = picker.graph().root().unwrap();
     picker.adapter_mut().queue_event(EventDispatch::new(
         object,
@@ -910,7 +1079,7 @@ fn final_value_parity_contracts_are_typed() {
         EventValue::Color(color_callback),
         EventPayload::Color(color),
     ));
-    assert_eq!(picker.dispatch_native_events().unwrap(), 1);
+    assert_eq!(picker.dispatch_native_events(), 1);
     assert_eq!(&*color_values.borrow(), &[color]);
 
     let date = DateTime::from_unix_secs(1_700_000_000);
@@ -920,9 +1089,7 @@ fn final_value_parity_contracts_are_typed() {
         Callback::new(move |value| values.borrow_mut().push(value))
     };
     let mut date_picker = Runtime::new(RecordingAdapter::default());
-    date_picker
-        .update(DatePicker::new().on_date_changed(date_callback.clone()))
-        .unwrap();
+    date_picker.update(DatePicker::new().on_date_changed(date_callback.clone()));
     let object = date_picker.graph().root().unwrap();
     date_picker.adapter_mut().queue_event(EventDispatch::new(
         object,
@@ -930,7 +1097,7 @@ fn final_value_parity_contracts_are_typed() {
         EventValue::OptionalDateTime(date_callback),
         EventPayload::OptionalDateTime(Some(date)),
     ));
-    assert_eq!(date_picker.dispatch_native_events().unwrap(), 1);
+    assert_eq!(date_picker.dispatch_native_events(), 1);
     assert_eq!(&*date_values.borrow(), &[Some(date)]);
 
     let time = TimeSpan::from_millis(90_000);
@@ -940,9 +1107,7 @@ fn final_value_parity_contracts_are_typed() {
         Callback::new(move |value| values.borrow_mut().push(value))
     };
     let mut time_picker = Runtime::new(RecordingAdapter::default());
-    time_picker
-        .update(TimePicker::new().on_time_changed(time_callback.clone()))
-        .unwrap();
+    time_picker.update(TimePicker::new().on_time_changed(time_callback.clone()));
     let object = time_picker.graph().root().unwrap();
     time_picker.adapter_mut().queue_event(EventDispatch::new(
         object,
@@ -950,7 +1115,7 @@ fn final_value_parity_contracts_are_typed() {
         EventValue::OptionalTimeSpan(time_callback),
         EventPayload::OptionalTimeSpan(Some(time)),
     ));
-    assert_eq!(time_picker.dispatch_native_events().unwrap(), 1);
+    assert_eq!(time_picker.dispatch_native_events(), 1);
     assert_eq!(&*time_values.borrow(), &[Some(time)]);
 
     let modes = Rc::new(RefCell::new(Vec::new()));
@@ -959,9 +1124,7 @@ fn final_value_parity_contracts_are_typed() {
         Callback::new(move |value| values.borrow_mut().push(value))
     };
     let mut navigation = Runtime::new(RecordingAdapter::default());
-    navigation
-        .update(NavigationView::new().on_display_mode_changed(mode_callback.clone()))
-        .unwrap();
+    navigation.update(NavigationView::new().on_display_mode_changed(mode_callback.clone()));
     let object = navigation.graph().root().unwrap();
     navigation.adapter_mut().queue_event(EventDispatch::new(
         object,
@@ -969,36 +1132,34 @@ fn final_value_parity_contracts_are_typed() {
         EventValue::NavigationViewDisplayMode(mode_callback),
         EventPayload::NavigationViewDisplayMode(NavigationViewDisplayMode::Compact),
     ));
-    assert_eq!(navigation.dispatch_native_events().unwrap(), 1);
+    assert_eq!(navigation.dispatch_native_events(), 1);
     assert_eq!(&*modes.borrow(), &[NavigationViewDisplayMode::Compact]);
 }
 
 #[test]
 fn generated_controls_cover_distinct_native_value_and_relation_shapes() {
     let mut runtime = Runtime::new(RecordingAdapter::default());
-    runtime
-        .update(
-            StackPanel::new()
-                .spacing(8.0)
-                .orientation(Orientation::Horizontal)
-                .children([
-                    Slider::new().minimum(-10.0).maximum(10.0).value(2.5).into(),
-                    CheckBox::new()
-                        .is_checked(Some(true))
-                        .content(TextBlock::new().text("Enabled"))
-                        .into(),
-                    ScrollViewer::new()
-                        .content(
-                            Canvas::new().children([TextBlock::new()
-                                .text("Scrollable canvas")
-                                .canvas_left(12.0)
-                                .canvas_top(24.0)
-                                .into()]),
-                        )
-                        .into(),
-                ]),
-        )
-        .unwrap();
+    runtime.update(
+        StackPanel::new()
+            .spacing(8.0)
+            .orientation(Orientation::Horizontal)
+            .children([
+                Slider::new().minimum(-10.0).maximum(10.0).value(2.5).into(),
+                CheckBox::new()
+                    .is_checked(Some(true))
+                    .content(TextBlock::new().text("Enabled"))
+                    .into(),
+                ScrollViewer::new()
+                    .content(
+                        Canvas::new().children([TextBlock::new()
+                            .text("Scrollable canvas")
+                            .canvas_left(12.0)
+                            .canvas_top(24.0)
+                            .into()]),
+                    )
+                    .into(),
+            ]),
+    );
 
     let root = runtime.graph().root().unwrap();
     assert_eq!(
@@ -1097,46 +1258,42 @@ fn generated_controls_cover_distinct_native_value_and_relation_shapes() {
         ]
     );
 
-    let mutations = runtime
-        .update(
-            StackPanel::new()
-                .orientation(Orientation::Horizontal)
-                .spacing(8.0)
-                .children([
-                    Slider::new().value(2.5).maximum(10.0).minimum(-10.0).into(),
-                    CheckBox::new()
-                        .content(TextBlock::new().text("Enabled"))
-                        .is_checked(Some(true))
-                        .into(),
-                    ScrollViewer::new()
-                        .content(
-                            Canvas::new().children([TextBlock::new()
-                                .text("Scrollable canvas")
-                                .canvas_top(24.0)
-                                .canvas_left(12.0)
-                                .into()]),
-                        )
-                        .into(),
-                ]),
-        )
-        .unwrap();
-    assert!(mutations.is_empty());
-
-    let mutations = runtime
-        .update(
-            StackPanel::new().children([
-                Slider::new().into(),
+    let mutations = runtime.update(
+        StackPanel::new()
+            .orientation(Orientation::Horizontal)
+            .spacing(8.0)
+            .children([
+                Slider::new().value(2.5).maximum(10.0).minimum(-10.0).into(),
                 CheckBox::new()
                     .content(TextBlock::new().text("Enabled"))
+                    .is_checked(Some(true))
                     .into(),
                 ScrollViewer::new()
                     .content(
-                        Canvas::new().children([TextBlock::new().text("Scrollable canvas").into()]),
+                        Canvas::new().children([TextBlock::new()
+                            .text("Scrollable canvas")
+                            .canvas_top(24.0)
+                            .canvas_left(12.0)
+                            .into()]),
                     )
                     .into(),
             ]),
-        )
-        .unwrap();
+    );
+    assert!(mutations.is_empty());
+
+    let mutations = runtime.update(
+        StackPanel::new().children([
+            Slider::new().into(),
+            CheckBox::new()
+                .content(TextBlock::new().text("Enabled"))
+                .into(),
+            ScrollViewer::new()
+                .content(
+                    Canvas::new().children([TextBlock::new().text("Scrollable canvas").into()]),
+                )
+                .into(),
+        ]),
+    );
     assert!(mutations.iter().any(|mutation| {
         matches!(
             mutation,

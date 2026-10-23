@@ -137,7 +137,8 @@ impl Component for WebViewPage {
                     .on_click(context.message(Message::Reload))
                     .grid_column(2)
                     .content("↻"),
-                TextBox::new(self.address.clone())
+                TextBox::new()
+                    .text(self.address.clone())
                     .placeholder_text("Enter a URL")
                     .on_text_changed(context.callback(|value: std::rc::Rc<str>| {
                         Message::AddressChanged(value.to_string())

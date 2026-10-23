@@ -23,7 +23,6 @@ fn main() {
     bindgen(["--etc", "crates/tools/bindings/src/animation.txt"]);
     bindgen(["--etc", "crates/tools/bindings/src/pickers.txt"]);
     bindgen(["--etc", "crates/tools/bindings/src/notifyicon.txt"]);
-    bindgen(["--etc", "crates/tools/bindings/src/notifyicon_test.txt"]);
     bindgen(["--etc", "crates/tools/bindings/src/window.txt"]);
     bindgen(["--etc", "crates/tools/bindings/src/notifications.txt"]);
 
