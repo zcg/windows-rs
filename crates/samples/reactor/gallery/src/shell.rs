@@ -170,16 +170,6 @@ impl Component for Gallery {
             WindowVisuals::new()
                 .theme(self.theme)
                 .backdrop(self.backdrop)
-                .backdrop_tuning(match self.backdrop {
-                    WindowBackdrop::Solid => WindowBackdropTuning {
-                        fallback_color: Some(match self.theme {
-                            WindowTheme::Dark => Color::rgb(32, 32, 32),
-                            _ => Color::rgb(243, 243, 243),
-                        }),
-                        ..WindowBackdropTuning::default()
-                    },
-                    _ => WindowBackdropTuning::default(),
-                })
                 .client_size(1400.0, 900.0),
         );
 

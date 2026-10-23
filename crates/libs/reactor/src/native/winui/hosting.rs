@@ -1,3 +1,16 @@
+/// Loads the style that paints the theme background on the window surface.
+///
+/// The XAML is parsed on every call: the `ThemeResource` in the setter resolves while
+/// loading, so a style kept from an earlier theme keeps painting that theme's brush.
+fn load_background_style() -> Result<native::Style, WinUiError> {
+    Ok(native::XamlReader::Load(
+        "<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' \
+         TargetType='Border'><Setter Property='Background' \
+         Value='{ThemeResource SystemControlBackgroundAltHighBrush}'/></Style>",
+    )?
+    .cast::<native::Style>()?)
+}
+
 impl WinUiAdapter {
     fn set_resource_overrides(
         &mut self,
@@ -225,12 +238,7 @@ impl WinUiAdapter {
         let root = self.ui_element(root_object)?;
         // The opaque XAML island follows the app theme, not the requested window theme.
         let surface = native::Border::new()?;
-        let background_style = native::XamlReader::Load(
-            "<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' \
-             TargetType='Border'><Setter Property='Background' \
-             Value='{ThemeResource SystemControlBackgroundAltHighBrush}'/></Style>",
-        )?
-        .cast::<native::Style>()?;
+        let background_style = load_background_style()?;
         surface
             .cast::<native::FrameworkElement>()?
             .SetStyle(&background_style)?;
@@ -242,7 +250,8 @@ impl WinUiAdapter {
             root: root_object,
             root_element: root.cast()?,
             surface,
-            background_style,
+            background_style: RefCell::new(background_style),
+            theme_background: Cell::new(true),
             backdrop_controller: RefCell::new(None),
             title_bar: Cell::new(None),
             shown: Cell::new(false),

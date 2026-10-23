@@ -371,7 +371,10 @@ pub(crate) fn validate_property(kind: ObjectType, property: &Property) -> Result
         | (ValueType::SelectionIndex, PropertyValue::SelectionIndex(_))
         | (ValueType::StringList, PropertyValue::StringList(_))
         | (ValueType::ThemeTransitions, PropertyValue::ThemeTransitions(_))
-        | (ValueType::Thickness, PropertyValue::Thickness(_)) => true,
+        | (ValueType::Thickness, PropertyValue::Thickness(_))
+        // `Translation` carries a `Vector3`, so without this arm every `translation(..)`
+        // fails validation and the graph rejects the property value.
+        | (ValueType::Vector3, PropertyValue::Vector3(_)) => true,
         (
             ValueType::Enum {
                 kind: expected,

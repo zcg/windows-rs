@@ -1943,7 +1943,8 @@ struct NativeWindowState {
     root: ObjectId,
     root_element: native::FrameworkElement,
     surface: native::Border,
-    background_style: native::Style,
+    background_style: RefCell<native::Style>,
+    theme_background: Cell<bool>,
     backdrop_controller: RefCell<Option<BackdropController>>,
     title_bar: Cell<Option<(ObjectId, WindowTitleBarHeight)>>,
     shown: Cell<bool>,
@@ -2138,6 +2139,38 @@ impl NativeWindow {
             Ok(value)
         };
 
+        // The XAML island resolves theme resources against the application theme, so the window
+        // theme is re-asserted on every pass: a page that replaces the element tree would
+        // otherwise come back with application-theme brushes.
+        app_window
+            .TitleBar()?
+            .cast::<native::IAppWindowTitleBar3>()?
+            .SetPreferredTheme(match visuals.theme {
+                WindowTheme::System => native::TitleBarTheme::UseDefaultAppMode,
+                WindowTheme::Light => native::TitleBarTheme::Light,
+                WindowTheme::Dark => native::TitleBarTheme::Dark,
+            })?;
+        self.state
+            .surface
+            .cast::<native::FrameworkElement>()?
+            .SetRequestedTheme(match visuals.theme {
+                WindowTheme::System => native::ElementTheme::Default,
+                WindowTheme::Light => native::ElementTheme::Light,
+                WindowTheme::Dark => native::ElementTheme::Dark,
+            })?;
+        if changes.theme {
+            // The style holds a `ThemeResource`, which resolves while its XAML is parsed, so the
+            // style is replaced rather than reused when the theme changes.
+            *self.state.background_style.borrow_mut() = load_background_style()?;
+        }
+        if self.state.theme_background.get() {
+            let style = self.state.background_style.borrow();
+            self.state
+                .surface
+                .cast::<native::FrameworkElement>()?
+                .SetStyle(Some(&*style))?;
+        }
+
         if changes.backdrop || changes.backdrop_tuning {
             let tuning = visuals.backdrop_tuning;
             // The materials are mutually exclusive, so a controller from a previous backdrop is
@@ -2149,12 +2182,16 @@ impl NativeWindow {
                     self.state.window.cast()?;
                 targets.RemoveSystemBackdropTarget(&target)?;
             }
-            // Only the theme background leaves the surface brush unset. The controller materials
-            // and an explicit solid color own the surface instead.
-            let mut theme_style = true;
+            // Every material owns the surface, so the theme background is off unless a branch
+            // below falls back to it.
+            let mut theme_style = false;
+            // A local background outranks the style setter that restores the theme background,
+            // so a fill left by an earlier solid backdrop is cleared here.
+            self.state.surface.SetBackground(None::<&native::Brush>)?;
             match visuals.backdrop {
                 WindowBackdrop::None => {
                     window_2.SetSystemBackdrop(None::<&native::SystemBackdrop>)?;
+                    theme_style = true;
                 }
                 WindowBackdrop::Mica | WindowBackdrop::MicaAlt => {
                     let mica = native::MicaBackdrop::new()?;
@@ -2204,41 +2241,27 @@ impl NativeWindow {
                             controller,
                             _configuration: configuration,
                         });
+                    } else {
+                        theme_style = true;
                     }
                 }
                 WindowBackdrop::Solid => {
                     window_2.SetSystemBackdrop(None::<&native::SystemBackdrop>)?;
                     if let Some(color) = tuning.fallback_color {
-                        theme_style = false;
                         let brush = native::SolidColorBrush::new()?;
                         brush.SetColor(ui_color(color))?;
                         self.state.surface.SetBackground(&brush)?;
+                    } else {
+                        theme_style = true;
                     }
                 }
             }
+            self.state.theme_background.set(theme_style);
+            let style = self.state.background_style.borrow();
             self.state
                 .surface
                 .cast::<native::FrameworkElement>()?
-                .SetStyle(theme_style.then_some(&self.state.background_style))?;
-        }
-
-        if changes.theme {
-            app_window
-                .TitleBar()?
-                .cast::<native::IAppWindowTitleBar3>()?
-                .SetPreferredTheme(match visuals.theme {
-                    WindowTheme::System => native::TitleBarTheme::UseDefaultAppMode,
-                    WindowTheme::Light => native::TitleBarTheme::Light,
-                    WindowTheme::Dark => native::TitleBarTheme::Dark,
-                })?;
-            self.state
-                .surface
-                .cast::<native::FrameworkElement>()?
-                .SetRequestedTheme(match visuals.theme {
-                    WindowTheme::System => native::ElementTheme::Default,
-                    WindowTheme::Light => native::ElementTheme::Light,
-                    WindowTheme::Dark => native::ElementTheme::Dark,
-                })?;
+                .SetStyle(theme_style.then_some(&*style))?;
         }
 
         if changes.icon {
